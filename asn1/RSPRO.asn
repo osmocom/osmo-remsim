@@ -1,0 +1,275 @@
+----------------------------------------------------------------------
+-- RSPRO - Remote SIM Protocol, part of Osmocom Remote SIM Suite
+-- (C) 2018 by Harald Welte <laforge@gnumonks.org>
+----------------------------------------------------------------------
+
+RSPRO {} DEFINITIONS
+
+IMPLICIT TAGS
+
+::=
+
+BEGIN
+
+EXPORTS
+	RsproPDU
+;
+
+----------------------------------------------------------------------
+-- Elementary Data Types
+----------------------------------------------------------------------
+
+-- Some random ID the requestor can chose and which the client echos back in a response.
+-- This allows multiple outstanding commands in flight and matching of responses to requests.
+OperationTag ::= INTEGER(0..2147483647)
+
+-- Unique identifier of a given SIM bank
+BankId ::= INTEGER(0..1023)
+
+-- Unique identifier of a given client (modem)
+ClientId ::= INTEGER(0..1023)
+
+ComponentType ::= ENUMERATED {
+	-- client: Modems / Phones
+	remsimClient			(0),
+	-- server: Coordination
+	remsimServer			(1),
+	-- bank daemon: SIM cards
+	remsimBankd			(2)
+}
+ComponentName ::= IA5String (SIZE (1..32))
+ComponentIdentity ::= SEQUENCE {
+	type		ComponentType,
+	name		ComponentName,
+	software	[0] ComponentName,
+	swVersion	[1] ComponentName,
+	hwManufacturer	[2] ComponentName OPTIONAL,
+	hwModel		[3] ComponentName OPTIONAL,
+	hwSerialNr	[4] ComponentName OPTIONAL,
+	hwVersion	[5] ComponentName OPTIONAL,
+	fwVersion	[6] ComponentName OPTIONAL,
+	...
+}
+
+-- IP address / port details
+Ipv4Address ::= OCTET STRING (SIZE (4))
+Ipv6Address ::= OCTET STRING (SIZE (16))
+IpAddress ::= CHOICE {
+	ipv4	[0] Ipv4Address,
+	ipv6	[1] Ipv6Address
+}
+PortNumber ::= INTEGER (0..65535)
+IpPort ::= SEQUENCE {
+	ip	IpAddress,
+	port	PortNumber
+}
+
+-- Result of a given operation
+ResultCode ::= ENUMERATED {
+	ok				(0),
+	-- client / bank / slot ID not accepted
+	illegalClientId			(1),
+	illegalBankId			(2),
+	illegalSlotId			(3),
+
+	-- no card is present in given slot
+	cardNotPresent			(100),
+	-- card is present but unresponsive in given slot
+	cardUnresponsive		(101),
+	-- unrecoverable transmission errors detected
+	cardTransmissionError		(102),
+	...
+}
+
+-- Slot number within a SIM bank or a client.
+SlotNumber ::= INTEGER(0..1023)
+
+-- Slot identity on client (modem) side
+ClientSlot ::= SEQUENCE {
+	clientId	ClientId,
+	slotNr		SlotNumber,
+	...
+}
+
+-- Slot identity on SIM bank side
+BankSlot ::= SEQUENCE {
+	bankId		BankId,
+	slotNr		SlotNumber,
+	...
+}
+
+ATR ::= OCTET STRING (SIZE (1..55))
+
+-- flags related to a TPDU in either of the two directions
+TpduFlags ::= SEQUENCE {
+	-- indicates a TPDU header is present in this message
+	tpduHeaderPresent	BOOLEAN,
+	-- indicates last part of transmission in this direction
+	finalPart		BOOLEAN,
+	-- indicates a PB is present and we should continue with TX
+	procByteContinueTx	BOOLEAN,
+	-- indicates a PB is present and we should continue with RX
+	procByteContinueRx	BOOLEAN,
+	...
+}
+
+--- physical state of a given slot
+SlotPhysStatus ::= SEQUENCE {
+	-- is RST activated by the modem?
+	resetActive	[0] BOOLEAN,
+	-- is VCC applied by the modem?
+	vccPresent	[1] BOOLEAN OPTIONAL,
+	-- is CLK applied by the modem?
+	clkActive	[2] BOOLEAN OPTIONAL, -- not all hardware supports this
+	-- is card presence signalled to the modem?
+	cardPresent	[3] BOOLEAN OPTIONAL,
+	...
+}
+
+----------------------------------------------------------------------
+-- Messages
+----------------------------------------------------------------------
+
+
+-- SIM Bank connects to central server
+ConnectBankReq ::= SEQUENCE {
+	-- identity of the bank that is connecting to the server
+	identity	ComponentIdentity,
+	-- bank number, pre-configured on bank side
+	bankId		BankId,
+	numberOfSlots	SlotNumber,
+	...
+}
+ConnectBankRes ::= SEQUENCE {
+	-- identity of the server to which the bank is connecting
+	identity	ComponentIdentity,
+	result		ResultCode,
+	...
+}
+
+ConnectClientReq ::= SEQUENCE {
+	-- identity of the bank that is connecting to the server
+	identity	ComponentIdentity,
+	...
+}
+ConnectClientRes ::= SEQUENCE {
+	-- identity of the bnak to which the client is connecting
+	identity	ComponentIdentity,
+	result		ResultCode,
+	...
+}
+
+-- create a mapping between a given Bank:Slot <-> Client:Slot
+CreateMappingReq ::= SEQUENCE {
+	client		ClientSlot,
+	bank		BankSlot,
+	...
+}
+CreateMappingRes ::= SEQUENCE {
+	result		ResultCode,
+	...
+}
+
+-- remove a mapping between a given Bank:Slot <-> Client:Slot
+RemoveMappingReq ::= SEQUENCE {
+	client		ClientSlot,
+	bank		BankSlot,
+	...
+}
+RemoveMappingRes ::= SEQUENCE {
+	result		ResultCode,
+	...
+}
+
+ConfigClientReq ::= SEQUENCE {
+	-- server-allocated assignment of a client ID
+	clientId	ClientId,
+	-- bank to which the client shall connect
+	bankd		IpPort,
+	...
+}
+ConfigClientRes ::= SEQUENCE {
+	result		ResultCode,
+	...
+}
+
+-- configure the ATR which the card emulator (client) shall send to the modem
+SetAtrReq ::= SEQUENCE {
+	slot		ClientSlot,
+	atr		ATR,
+	...
+}
+SetAtrRes ::= SEQUENCE {
+	result		ResultCode,
+	...
+}
+
+-- TPDU in Modem -> Card direction
+TpduModemToCard ::= SEQUENCE {
+	-- we include fully-qualified bank and client slots for easier debugging
+	fromClientSlot	ClientSlot,
+	toBankSlot	BankSlot,
+	flags		TpduFlags,
+	data		OCTET STRING,
+	...
+}
+
+-- TPDU in Card -> Modem direction
+TpduCardToModem ::= SEQUENCE {
+	-- we include fully-qualified bank and client slots for easier debugging
+	fromBankSlot	BankSlot,
+	toClientSlot	ClientSlot,
+	flags		TpduFlags,
+	data		OCTET STRING,
+	...
+}
+
+-- indciation about the current status of a client (modem side)
+ClientSlotStatusInd ::= SEQUENCE {
+	fromClientSlot	ClientSlot,
+	toBankSlot	BankSlot,
+	slotPhysStatus	SlotPhysStatus,
+	...
+}
+
+-- indciation about the current status of a bank (modem side)
+BankSlotStatusInd ::= SEQUENCE {
+	fromBankSlot	BankSlot,
+	toClientSlot	ClientSlot,
+	slotPhysStatus	SlotPhysStatus,
+	...
+}
+
+----------------------------------------------------------------------
+-- PDU
+----------------------------------------------------------------------
+
+RsproPDUchoice ::= CHOICE {
+	-- configuration + management
+	connectBankReq		[0]	ConnectBankReq,
+	connectBankRes		[1]	ConnectBankRes,
+	connectClientReq	[2]	ConnectClientReq,
+	connectClientRes	[3]	ConnectClientRes,
+	createMappingReq	[4]	CreateMappingReq,
+	createMappingRes	[5]	CreateMappingRes,
+	removeMappingReq	[6]	RemoveMappingReq,
+	removeMappingRes	[7]	RemoveMappingRes,
+	configClientReq		[8]	ConfigClientReq,
+	configClientRes		[9]	ConfigClientRes,
+	-- APDUs etc.
+	setAtrReq		[10]	SetAtrReq,
+	setAtrRes		[11]	SetAtrRes,
+	tpduModemToCard		[12]	TpduModemToCard,
+	tpduCardToModem		[13]	TpduCardToModem,
+	clientSlotStatusInd	[14]	ClientSlotStatusInd,
+	bankSlotStatusInd	[15]	BankSlotStatusInd,
+	...
+}
+
+RsproPDU ::= SEQUENCE {
+	version		[0] INTEGER(0..32) DEFAULT 1,
+	tag		[1] OperationTag,
+	msg		[2] RsproPDUchoice
+}
+
+END
