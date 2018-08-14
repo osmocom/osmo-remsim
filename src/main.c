@@ -36,7 +36,12 @@
 
 #include "internal.h"
 
+static void *g_ctx;
+__thread void *talloc_asn1_ctx;
+
 int main(int argc, char **argv)
 {
-	card_readers_probe(NULL);
+	g_ctx = talloc_named_const(NULL, 0, "main");
+	talloc_asn1_ctx = talloc_named_const(g_ctx, 0, "asn1_context");
+	card_readers_probe(g_ctx);
 }

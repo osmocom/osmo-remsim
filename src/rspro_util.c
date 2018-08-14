@@ -152,5 +152,3 @@ RsproPDU_t *rspro_gen_SetAtrReq(uint16_t client_id, uint16_t slot_nr, const uint
 
 	return pdu;
 }
-
-

@@ -36,3 +36,9 @@ noinst_HEADERS = \
 	TpduFlags.h \
 	TpduModemToCard.h \
 	$(NULL)
+
+
+rspro_HEADERS = \
+	rspro_client.h
+
+rsprodir = $(includedir)/osmocom/rspro

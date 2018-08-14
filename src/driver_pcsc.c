@@ -83,6 +83,7 @@ end:
 
 static int pcsc_reader_open_slot(struct card_reader_slot *slot)
 {
+#if 0
 	struct osim_card_hdl *card;
 	LONG rc;
 
@@ -101,7 +102,8 @@ static int pcsc_reader_open_slot(struct card_reader_slot *slot)
 	rh->card = card;
 
 end:
-	return NULL;
+#endif
+	return -1;
 }
 
 
