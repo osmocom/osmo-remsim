@@ -37,7 +37,7 @@ static void bankd_init(struct bankd *bankd)
 }
 
 /* create + start a new bankd_worker thread */
-static struct bankd_worker *bankd_create_worker(struct bankd *bankd)
+static struct bankd_worker *bankd_create_worker(struct bankd *bankd, unsigned int i)
 {
 	struct bankd_worker *worker;
 	int rc;
@@ -47,6 +47,7 @@ static struct bankd_worker *bankd_create_worker(struct bankd *bankd)
 		return NULL;
 
 	worker->bankd = bankd;
+	worker->num = i;
 
 	/* in the initial state, the worker has no client.fd, bank_slot or pcsc handle yet */
 
@@ -75,7 +76,7 @@ int main(int argc, char **argv)
 
 	for (i = 0; i < 10; i++) {
 		struct bankd_worker *w;
-		w = bankd_create_worker(bankd);
+		w = bankd_create_worker(bankd, i);
 		if (!w)
 			exit(21);
 	}
@@ -103,6 +104,24 @@ if (rv != SCARD_S_SUCCESS) { \
         printf(text ": OK\n\n"); \
 }
 
+#define LOGW(w, fmt, args...) \
+	printf("[%u] " fmt, (w)->num, args)
+
+struct value_string worker_state_names[] = {
+	{ BW_ST_INIT, 			"INIT" },
+	{ BW_ST_ACCEPTING,		"ACCEPTING" },
+	{ BW_ST_CONN_WAIT_ID,		"CONN_WAIT_ID" },
+	{ BW_ST_CONN_CLIENT,		"CONN_CLIENT" },
+	{ BW_ST_CONN_CLIENT_MAPPED,	"CONN_CLIENT_MAPPED" },
+	{ BW_ST_CONN_CLIENT_MAPPED_CARD,"CONN_CLIENT_MAPPED_CARD" },
+	{ 0, NULL }
+};
+
+static void worker_set_state(struct bankd_worker *worker, enum bankd_worker_state new_state)
+{
+	LOGW(worker, "Changing state to %s\n", get_value_string(worker_state_names, new_state));
+	worker->state = new_state;
+}
 
 static void worker_cleanup(void *arg)
 {
@@ -237,6 +256,8 @@ static void *worker_main(void *arg)
 	void *top_ctx;
 	int rc;
 
+	worker_set_state(worker, BW_ST_INIT);
+
 	/* not permitted in multithreaded environment */
 	talloc_disable_null_tracking();
 	top_ctx = talloc_named_const(NULL, 0, "top");
@@ -250,6 +271,7 @@ static void *worker_main(void *arg)
 	while (1) {
 		worker->client.peer_addr_len = sizeof(worker->client.peer_addr);
 
+		worker_set_state(worker, BW_ST_ACCEPTING);
 		/* first wait for an incoming TCP connection */
 		rc = accept(worker->bankd->accept_fd, (struct sockaddr *) &worker->client.peer_addr,
 			    &worker->client.peer_addr_len);
@@ -257,6 +279,7 @@ static void *worker_main(void *arg)
 			continue;
 		}
 		worker->client.fd = rc;
+		worker_set_state(worker, BW_ST_CONN_WAIT_ID);
 
 		/* run the main worker transceive loop body until there was some error */
 		while (1) {

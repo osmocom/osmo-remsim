@@ -64,6 +64,21 @@ int bankd_slotmap_add(struct bankd *bankd, const struct bank_slot *bank,
 /* thread-safe removal of a bank<->client map */
 void bankd_slotmap_del(struct bankd *bankd, struct bankd_slot_mapping *map);
 
+enum bankd_worker_state {
+	/* just started*/
+	BW_ST_INIT,
+	/* blocking in the accept() call on the server socket fd */
+	BW_ST_ACCEPTING,
+	/* TCP established, but peer not yet identified itself */
+	BW_ST_CONN_WAIT_ID,
+	/* TCP established, client has identified itself, no mapping */
+	BW_ST_CONN_CLIENT,
+	/* TCP established, client has identified itself, mapping exists */
+	BW_ST_CONN_CLIENT_MAPPED,
+	/* TCP established, client identified, mapping exists, card opened */
+	BW_ST_CONN_CLIENT_MAPPED_CARD,
+};
+
 
 /* bankd worker instance; one per card/slot, includes thread */
 struct bankd_worker {
@@ -71,6 +86,11 @@ struct bankd_worker {
 	struct llist_head list;
 	/* back-pointer to bankd */
 	struct bankd *bankd;
+
+	/* thread number */
+	unsigned int num;
+	/* worker thread state */
+	enum bankd_worker_state state;
 
 	/* slot number we are representing */
 	struct bank_slot slot;
