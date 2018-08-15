@@ -9,6 +9,7 @@
 #include <winscard.h>
 #include <pcsclite.h>
 
+#include <osmocom/core/socket.h>
 #include <osmocom/core/linuxlist.h>
 
 #include <osmocom/gsm/ipa.h>
@@ -74,6 +75,13 @@ int main(int argc, char **argv)
 	OSMO_ASSERT(bankd);
 	bankd_init(bankd);
 
+	/* create listening socket */
+	rc = osmo_sock_init(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 9999, OSMO_SOCK_F_BIND);
+	if (rc < 0)
+		exit(1);
+	bankd->accept_fd = rc;
+
+	/* create worker threads.  FIXME: one per reader/slot! */
 	for (i = 0; i < 10; i++) {
 		struct bankd_worker *w;
 		w = bankd_create_worker(bankd, i);
