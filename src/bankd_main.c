@@ -116,9 +116,6 @@ if (rv != SCARD_S_SUCCESS) { \
         printf(text ": OK\n\n"); \
 }
 
-#define LOGW(w, fmt, args...) \
-	printf("[%u] " fmt, (w)->num, args)
-
 struct value_string worker_state_names[] = {
 	{ BW_ST_INIT, 			"INIT" },
 	{ BW_ST_ACCEPTING,		"ACCEPTING" },
@@ -128,6 +125,10 @@ struct value_string worker_state_names[] = {
 	{ BW_ST_CONN_CLIENT_MAPPED_CARD,"CONN_CLIENT_MAPPED_CARD" },
 	{ 0, NULL }
 };
+
+#define LOGW(w, fmt, args...) \
+	printf("[%03u %s] %s:%u " fmt, (w)->num, get_value_string(worker_state_names, (w)->state), \
+		__FILE__, __LINE__, ## args)
 
 static void worker_set_state(struct bankd_worker *worker, enum bankd_worker_state new_state)
 {
