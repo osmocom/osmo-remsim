@@ -12,6 +12,7 @@
 
 /* Including external dependencies */
 #include <osmocom/rspro/ComponentIdentity.h>
+#include <osmocom/rspro/ClientId.h>
 #include <constr_SEQUENCE.h>
 
 #ifdef __cplusplus
@@ -21,6 +22,7 @@ extern "C" {
 /* ConnectClientReq */
 typedef struct ConnectClientReq {
 	ComponentIdentity_t	 identity;
+	ClientId_t	*clientId	/* OPTIONAL */;
 	/*
 	 * This type is extensible,
 	 * possible extensions are below.

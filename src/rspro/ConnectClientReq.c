@@ -16,21 +16,31 @@ static asn_TYPE_member_t asn_MBR_ConnectClientReq_1[] = {
 		0,
 		"identity"
 		},
+	{ ATF_POINTER, 1, offsetof(struct ConnectClientReq, clientId),
+		(ASN_TAG_CLASS_UNIVERSAL | (2 << 2)),
+		0,
+		&asn_DEF_ClientId,
+		0,	/* Defer constraints checking to the member type */
+		0,	/* PER is not compiled, use -gen-PER */
+		0,
+		"clientId"
+		},
 };
 static const ber_tlv_tag_t asn_DEF_ConnectClientReq_tags_1[] = {
 	(ASN_TAG_CLASS_UNIVERSAL | (16 << 2))
 };
 static const asn_TYPE_tag2member_t asn_MAP_ConnectClientReq_tag2el_1[] = {
+    { (ASN_TAG_CLASS_UNIVERSAL | (2 << 2)), 1, 0, 0 }, /* clientId */
     { (ASN_TAG_CLASS_UNIVERSAL | (16 << 2)), 0, 0, 0 } /* identity */
 };
 static asn_SEQUENCE_specifics_t asn_SPC_ConnectClientReq_specs_1 = {
 	sizeof(struct ConnectClientReq),
 	offsetof(struct ConnectClientReq, _asn_ctx),
 	asn_MAP_ConnectClientReq_tag2el_1,
-	1,	/* Count of tags in the map */
+	2,	/* Count of tags in the map */
 	0, 0, 0,	/* Optional elements (not needed) */
-	0,	/* Start extensions */
-	2	/* Stop extensions */
+	1,	/* Start extensions */
+	3	/* Stop extensions */
 };
 asn_TYPE_descriptor_t asn_DEF_ConnectClientReq = {
 	"ConnectClientReq",
@@ -53,7 +63,7 @@ asn_TYPE_descriptor_t asn_DEF_ConnectClientReq = {
 		/sizeof(asn_DEF_ConnectClientReq_tags_1[0]), /* 1 */
 	0,	/* No PER visible constraints */
 	asn_MBR_ConnectClientReq_1,
-	1,	/* Elements count */
+	2,	/* Elements count */
 	&asn_SPC_ConnectClientReq_specs_1	/* Additional specs */
 };
 
