@@ -92,6 +92,7 @@ int main(int argc, char **argv)
 	while (1) {
 		if (terminate)
 			break;
+		sleep(1);
 	}
 
 	talloc_free(bankd);
