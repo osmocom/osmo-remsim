@@ -365,6 +365,7 @@ static void *worker_main(void *arg)
 		}
 		if (worker->client.fd >= 0)
 			close(worker->client.fd);
+		memset(&worker->client.peer_addr, 0, sizeof(worker->client.peer_addr));
 		worker->client.fd = -1;
 	}
 
