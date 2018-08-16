@@ -196,12 +196,41 @@ static int blocking_ipa_read(int fd, uint8_t *buf, unsigned int buf_size)
 	return len;
 }
 
+static int worker_handle_connectClientReq(struct bankd_worker *worker, const RsproPDU_t *pdu)
+{
+	OSMO_ASSERT(pdu->msg.present == RsproPDUchoice_PR_connectClientReq);
+
+	const struct ComponentIdentity *cid = &pdu->msg.choice.connectClientReq.identity;
+
+	LOGW(worker, "connectClientReq(T=%lu, N='%s', SW='%s', VER='%s')\n",
+		cid->type, cid->name.buf, cid->software.buf, cid->swVersion.buf);
+	/* FIXME: store somewhere? */
+
+	if (worker->state != BW_ST_CONN_WAIT_ID) {
+		LOGW(worker, "Unexpected connectClientReq\n");
+		return -102;
+	}
+
+	if (!pdu->msg.choice.connectClientReq.clientId) {
+		LOGW(worker, "missing clientID, aborting\n");
+		return -103;
+	}
+	worker->client.id = *pdu->msg.choice.connectClientReq.clientId;
+	worker_set_state(worker, BW_ST_CONN_CLIENT);
+
+	/* FIXME: resolve mapping */
+
+	return 0;
+}
+
 /* handle one incoming RSPRO message from a client inside a worker thread */
 static int worker_handle_rspro(struct bankd_worker *worker, const RsproPDU_t *pdu)
 {
+	int rc = -100;
+
 	switch (pdu->msg.present) {
 	case RsproPDUchoice_PR_connectClientReq:
-		/* FIXME */
+		rc = worker_handle_connectClientReq(worker, pdu);
 		break;
 	case RsproPDUchoice_PR_tpduModemToCard:
 		/* FIXME */
@@ -210,10 +239,11 @@ static int worker_handle_rspro(struct bankd_worker *worker, const RsproPDU_t *pd
 		/* FIXME */
 		break;
 	default:
-		return -100;
+		rc = -101;
+		break;
 	}
 
-	return 0;
+	return rc; 
 }
 
 /* body of the main transceive loop */
