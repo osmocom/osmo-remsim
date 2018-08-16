@@ -131,7 +131,7 @@ SlotPhysStatus ::= SEQUENCE {
 ----------------------------------------------------------------------
 
 
--- SIM Bank connects to central server
+-- BANKD->SERVER: SIM Bank connects to central server
 ConnectBankReq ::= SEQUENCE {
 	-- identity of the bank that is connecting to the server
 	identity	ComponentIdentity,
@@ -147,19 +147,20 @@ ConnectBankRes ::= SEQUENCE {
 	...
 }
 
+-- CLIENT->SERVER or CLIENT->BANKD
 ConnectClientReq ::= SEQUENCE {
-	-- identity of the bank that is connecting to the server
+	-- identity of the client that is connecting to the server/bankd
 	identity	ComponentIdentity,
 	...
 }
 ConnectClientRes ::= SEQUENCE {
-	-- identity of the bnak to which the client is connecting
+	-- identity of the bankd/server to which the client is connecting
 	identity	ComponentIdentity,
 	result		ResultCode,
 	...
 }
 
--- create a mapping between a given Bank:Slot <-> Client:Slot
+-- SERVER->BANKD: create a mapping between a given Bank:Slot <-> Client:Slot
 CreateMappingReq ::= SEQUENCE {
 	client		ClientSlot,
 	bank		BankSlot,
@@ -170,7 +171,7 @@ CreateMappingRes ::= SEQUENCE {
 	...
 }
 
--- remove a mapping between a given Bank:Slot <-> Client:Slot
+-- SERVER->BANKD: remove a mapping between a given Bank:Slot <-> Client:Slot
 RemoveMappingReq ::= SEQUENCE {
 	client		ClientSlot,
 	bank		BankSlot,
@@ -181,6 +182,7 @@ RemoveMappingRes ::= SEQUENCE {
 	...
 }
 
+-- SERVER->CLIENT: set configuration (client ID and BANK IP/Port)
 ConfigClientReq ::= SEQUENCE {
 	-- server-allocated assignment of a client ID
 	clientId	ClientId,
@@ -193,7 +195,7 @@ ConfigClientRes ::= SEQUENCE {
 	...
 }
 
--- configure the ATR which the card emulator (client) shall send to the modem
+-- BANKD->CLIENT: configure the ATR which the card emulator (client) shall send to the modem
 SetAtrReq ::= SEQUENCE {
 	slot		ClientSlot,
 	atr		ATR,
@@ -204,7 +206,7 @@ SetAtrRes ::= SEQUENCE {
 	...
 }
 
--- TPDU in Modem -> Card direction
+-- CLIENT->BANKD: TPDU in Modem -> Card direction
 TpduModemToCard ::= SEQUENCE {
 	-- we include fully-qualified bank and client slots for easier debugging
 	fromClientSlot	ClientSlot,
@@ -214,7 +216,7 @@ TpduModemToCard ::= SEQUENCE {
 	...
 }
 
--- TPDU in Card -> Modem direction
+-- BANKD->CLIENT: TPDU in Card -> Modem direction
 TpduCardToModem ::= SEQUENCE {
 	-- we include fully-qualified bank and client slots for easier debugging
 	fromBankSlot	BankSlot,
@@ -224,7 +226,7 @@ TpduCardToModem ::= SEQUENCE {
 	...
 }
 
--- indciation about the current status of a client (modem side)
+-- CLIENT->BANKD: indciation about the current status of a client (modem side)
 ClientSlotStatusInd ::= SEQUENCE {
 	fromClientSlot	ClientSlot,
 	toBankSlot	BankSlot,
@@ -232,7 +234,7 @@ ClientSlotStatusInd ::= SEQUENCE {
 	...
 }
 
--- indciation about the current status of a bank (modem side)
+-- BANKD->CLIENT: indciation about the current status of a bank (modem side)
 BankSlotStatusInd ::= SEQUENCE {
 	fromBankSlot	BankSlot,
 	toClientSlot	ClientSlot,
