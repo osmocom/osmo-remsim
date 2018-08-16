@@ -9,6 +9,9 @@
 #include <winscard.h>
 #include <pcsclite.h>
 
+#include <sys/socket.h>
+#include <netdb.h>
+
 #include <osmocom/core/socket.h>
 #include <osmocom/core/linuxlist.h>
 
@@ -288,6 +291,23 @@ static int worker_transceive_loop(struct bankd_worker *worker)
 	return 0;
 }
 
+/* obtain an ascii representation of the client IP/port */
+static int worker_client_addrstr(char *out, unsigned int outlen, const struct bankd_worker *worker)
+{
+	char hostbuf[32], portbuf[32];
+	int rc;
+
+	rc = getnameinfo((const struct sockaddr *)&worker->client.peer_addr,
+			 worker->client.peer_addr_len, hostbuf, sizeof(hostbuf),
+			 portbuf, sizeof(portbuf), NI_NUMERICHOST | NI_NUMERICSERV);
+	if (rc != 0) {
+		out[0] = '\0';
+		return -1;
+	}
+	snprintf(out, outlen, "%s:%s", hostbuf, portbuf);
+	return 0;
+}
+
 /* worker thread main function */
 static void *worker_main(void *arg)
 {
@@ -308,6 +328,8 @@ static void *worker_main(void *arg)
 	/* we continuously perform the same loop here, recycling the worker thread
 	 * once the client connection is gone or we have some trouble with the card/reader */
 	while (1) {
+		char buf[128];
+
 		worker->client.peer_addr_len = sizeof(worker->client.peer_addr);
 
 		worker_set_state(worker, BW_ST_ACCEPTING);
@@ -318,6 +340,8 @@ static void *worker_main(void *arg)
 			continue;
 		}
 		worker->client.fd = rc;
+		worker_client_addrstr(buf, sizeof(buf), worker);
+		LOGW(worker, "Accepted connection from %s\n", buf);
 		worker_set_state(worker, BW_ST_CONN_WAIT_ID);
 
 		/* run the main worker transceive loop body until there was some error */
@@ -326,6 +350,8 @@ static void *worker_main(void *arg)
 			if (rc < 0)
 				break;
 		}
+
+		LOGW(worker, "Error %d occurred: Cleaning up state\n", rc);
 
 		/* clean-up: reset to sane state */
 		if (worker->reader.pcsc.hCard) {
