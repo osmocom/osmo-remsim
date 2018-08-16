@@ -151,7 +151,7 @@ ConnectBankRes ::= SEQUENCE {
 ConnectClientReq ::= SEQUENCE {
 	-- identity of the client that is connecting to the server/bankd
 	identity	ComponentIdentity,
-	clientId	ClientId OPTIONAL, -- old identity, if any
+	clientSlot	ClientSlot OPTIONAL, -- old identity, if any
 	...
 }
 ConnectClientRes ::= SEQUENCE {
@@ -186,7 +186,7 @@ RemoveMappingRes ::= SEQUENCE {
 -- SERVER->CLIENT: set configuration (client ID and BANK IP/Port)
 ConfigClientReq ::= SEQUENCE {
 	-- server-allocated assignment of a client ID
-	clientId	ClientId,
+	clientSlot	ClientSlot,
 	-- bank to which the client shall connect
 	bankd		IpPort,
 	...

@@ -215,11 +215,12 @@ static int worker_handle_connectClientReq(struct bankd_worker *worker, const Rsp
 		return -102;
 	}
 
-	if (!pdu->msg.choice.connectClientReq.clientId) {
+	if (!pdu->msg.choice.connectClientReq.clientSlot) {
 		LOGW(worker, "missing clientID, aborting\n");
 		return -103;
 	}
-	worker->client.id = *pdu->msg.choice.connectClientReq.clientId;
+	worker->client.clslot.client_id = pdu->msg.choice.connectClientReq.clientSlot->clientId;
+	worker->client.clslot.slot_nr = pdu->msg.choice.connectClientReq.clientSlot->slotNr;
 	worker_set_state(worker, BW_ST_CONN_CLIENT);
 
 	/* FIXME: resolve mapping */
@@ -367,6 +368,7 @@ static void *worker_main(void *arg)
 			close(worker->client.fd);
 		memset(&worker->client.peer_addr, 0, sizeof(worker->client.peer_addr));
 		worker->client.fd = -1;
+		worker->client.clslot.client_id = worker->client.clslot.slot_nr = 0;
 	}
 
 	pthread_cleanup_pop(1);

@@ -16,22 +16,22 @@ static asn_TYPE_member_t asn_MBR_ConnectClientReq_1[] = {
 		0,
 		"identity"
 		},
-	{ ATF_POINTER, 1, offsetof(struct ConnectClientReq, clientId),
-		(ASN_TAG_CLASS_UNIVERSAL | (2 << 2)),
+	{ ATF_POINTER, 1, offsetof(struct ConnectClientReq, clientSlot),
+		(ASN_TAG_CLASS_UNIVERSAL | (16 << 2)),
 		0,
-		&asn_DEF_ClientId,
+		&asn_DEF_ClientSlot,
 		0,	/* Defer constraints checking to the member type */
 		0,	/* PER is not compiled, use -gen-PER */
 		0,
-		"clientId"
+		"clientSlot"
 		},
 };
 static const ber_tlv_tag_t asn_DEF_ConnectClientReq_tags_1[] = {
 	(ASN_TAG_CLASS_UNIVERSAL | (16 << 2))
 };
 static const asn_TYPE_tag2member_t asn_MAP_ConnectClientReq_tag2el_1[] = {
-    { (ASN_TAG_CLASS_UNIVERSAL | (2 << 2)), 1, 0, 0 }, /* clientId */
-    { (ASN_TAG_CLASS_UNIVERSAL | (16 << 2)), 0, 0, 0 } /* identity */
+    { (ASN_TAG_CLASS_UNIVERSAL | (16 << 2)), 0, 0, 1 }, /* identity */
+    { (ASN_TAG_CLASS_UNIVERSAL | (16 << 2)), 1, -1, 0 } /* clientSlot */
 };
 static asn_SEQUENCE_specifics_t asn_SPC_ConnectClientReq_specs_1 = {
 	sizeof(struct ConnectClientReq),

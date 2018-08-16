@@ -103,7 +103,7 @@ struct bankd_worker {
 		int fd;
 		struct sockaddr_storage peer_addr;
 		socklen_t peer_addr_len;
-		unsigned int id;
+		struct client_slot clslot;
 	} client;
 
 	struct {

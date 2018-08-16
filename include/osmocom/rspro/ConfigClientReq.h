@@ -11,7 +11,7 @@
 #include <asn_application.h>
 
 /* Including external dependencies */
-#include <osmocom/rspro/ClientId.h>
+#include <osmocom/rspro/ClientSlot.h>
 #include <osmocom/rspro/IpPort.h>
 #include <constr_SEQUENCE.h>
 
@@ -21,7 +21,7 @@ extern "C" {
 
 /* ConfigClientReq */
 typedef struct ConfigClientReq {
-	ClientId_t	 clientId;
+	ClientSlot_t	 clientSlot;
 	IpPort_t	 bankd;
 	/*
 	 * This type is extensible,

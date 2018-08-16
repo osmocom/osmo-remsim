@@ -127,13 +127,13 @@ RsproPDU_t *rspro_gen_CreateMappingReq(const ClientSlot_t *client, const BankSlo
 	return pdu;
 }
 
-RsproPDU_t *rspro_gen_ConfigClientReq(uint16_t client_id, uint32_t ip, uint16_t port)
+RsproPDU_t *rspro_gen_ConfigClientReq(const ClientSlot_t *client, uint32_t ip, uint16_t port)
 {
 	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
 	if (!pdu)
 		return NULL;
 	pdu->msg.present = RsproPDUchoice_PR_configClientReq;
-	pdu->msg.choice.configClientReq.clientId = client_id;
+	pdu->msg.choice.configClientReq.clientSlot = *client;
 	fill_ip4_port(&pdu->msg.choice.configClientReq.bankd, ip, port);
 
 	return pdu;

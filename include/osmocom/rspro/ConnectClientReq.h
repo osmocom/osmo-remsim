@@ -12,17 +12,19 @@
 
 /* Including external dependencies */
 #include <osmocom/rspro/ComponentIdentity.h>
-#include <osmocom/rspro/ClientId.h>
 #include <constr_SEQUENCE.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/* Forward declarations */
+struct ClientSlot;
+
 /* ConnectClientReq */
 typedef struct ConnectClientReq {
 	ComponentIdentity_t	 identity;
-	ClientId_t	*clientId	/* OPTIONAL */;
+	struct ClientSlot	*clientSlot	/* OPTIONAL */;
 	/*
 	 * This type is extensible,
 	 * possible extensions are below.
@@ -38,6 +40,9 @@ extern asn_TYPE_descriptor_t asn_DEF_ConnectClientReq;
 #ifdef __cplusplus
 }
 #endif
+
+/* Referred external types */
+#include <osmocom/rspro/ClientSlot.h>
 
 #endif	/* _ConnectClientReq_H_ */
 #include <asn_internal.h>

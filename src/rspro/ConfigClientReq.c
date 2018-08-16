@@ -7,14 +7,14 @@
 #include <osmocom/rspro/ConfigClientReq.h>
 
 static asn_TYPE_member_t asn_MBR_ConfigClientReq_1[] = {
-	{ ATF_NOFLAGS, 0, offsetof(struct ConfigClientReq, clientId),
-		(ASN_TAG_CLASS_UNIVERSAL | (2 << 2)),
+	{ ATF_NOFLAGS, 0, offsetof(struct ConfigClientReq, clientSlot),
+		(ASN_TAG_CLASS_UNIVERSAL | (16 << 2)),
 		0,
-		&asn_DEF_ClientId,
+		&asn_DEF_ClientSlot,
 		0,	/* Defer constraints checking to the member type */
 		0,	/* PER is not compiled, use -gen-PER */
 		0,
-		"clientId"
+		"clientSlot"
 		},
 	{ ATF_NOFLAGS, 0, offsetof(struct ConfigClientReq, bankd),
 		(ASN_TAG_CLASS_UNIVERSAL | (16 << 2)),
@@ -30,8 +30,8 @@ static const ber_tlv_tag_t asn_DEF_ConfigClientReq_tags_1[] = {
 	(ASN_TAG_CLASS_UNIVERSAL | (16 << 2))
 };
 static const asn_TYPE_tag2member_t asn_MAP_ConfigClientReq_tag2el_1[] = {
-    { (ASN_TAG_CLASS_UNIVERSAL | (2 << 2)), 0, 0, 0 }, /* clientId */
-    { (ASN_TAG_CLASS_UNIVERSAL | (16 << 2)), 1, 0, 0 } /* bankd */
+    { (ASN_TAG_CLASS_UNIVERSAL | (16 << 2)), 0, 0, 1 }, /* clientSlot */
+    { (ASN_TAG_CLASS_UNIVERSAL | (16 << 2)), 1, -1, 0 } /* bankd */
 };
 static asn_SEQUENCE_specifics_t asn_SPC_ConfigClientReq_specs_1 = {
 	sizeof(struct ConfigClientReq),
