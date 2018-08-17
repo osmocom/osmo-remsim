@@ -108,19 +108,12 @@ int main(int argc, char **argv)
  * bankd worker thread
  ***********************************************************************/
 
-#define PCSC_ERROR(rv, text) \
-if (rv != SCARD_S_SUCCESS) { \
-	fprintf(stderr, text ": %s (0x%lX)\n", pcsc_stringify_error(rv), rv); \
-	goto end; \
-} else { \
-        printf(text ": OK\n\n"); \
-}
-
 struct value_string worker_state_names[] = {
 	{ BW_ST_INIT, 			"INIT" },
 	{ BW_ST_ACCEPTING,		"ACCEPTING" },
 	{ BW_ST_CONN_WAIT_ID,		"CONN_WAIT_ID" },
 	{ BW_ST_CONN_CLIENT,		"CONN_CLIENT" },
+	{ BW_ST_CONN_CLIENT_WAIT_MAP,	"CONN_CLIENT_WAIT_MAP" },
 	{ BW_ST_CONN_CLIENT_MAPPED,	"CONN_CLIENT_MAPPED" },
 	{ BW_ST_CONN_CLIENT_MAPPED_CARD,"CONN_CLIENT_MAPPED_CARD" },
 	{ 0, NULL }
@@ -129,6 +122,14 @@ struct value_string worker_state_names[] = {
 #define LOGW(w, fmt, args...) \
 	printf("[%03u %s] %s:%u " fmt, (w)->num, get_value_string(worker_state_names, (w)->state), \
 		__FILE__, __LINE__, ## args)
+
+#define PCSC_ERROR(w, rv, text) \
+if (rv != SCARD_S_SUCCESS) { \
+	LOGW((w), text ": %s (0x%lX)\n", pcsc_stringify_error(rv), rv); \
+	goto end; \
+} else { \
+        LOGW((w), ": OK\n\n"); \
+}
 
 static void worker_set_state(struct bankd_worker *worker, enum bankd_worker_state new_state)
 {
@@ -149,28 +150,22 @@ static void worker_cleanup(void *arg)
 }
 
 
-#if 0
-/* function running inside a worker thread; doing some initialization */
-static void worker_init(struct bankd_worker *worker)
+static int worker_open_card(struct bankd_worker *worker)
 {
-	int rc;
-
-	/* push cleanup helper */
-	pthread_cleanup_push(&worker_cleanup, worker);
+	long rc;
 
 	/* The PC/SC context must be created inside the thread where we'll later use it */
 	rc = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &worker->reader.pcsc.hContext);
-	PCSC_ERROR(rc, "SCardEstablishContext")
+	PCSC_ERROR(worker, rc, "SCardEstablishContext")
 
 	rc = SCardConnect(worker->reader.pcsc.hContext, worker->reader.name, SCARD_SHARE_SHARED,
 			  SCARD_PROTOCOL_T0, &worker->reader.pcsc.hCard, NULL);
-	PCSC_ERROR(rc, "SCardConnect")
+	PCSC_ERROR(worker, rc, "SCardConnect")
 
-	return;
+	return 0;
 end:
-	pthread_exit(NULL);
+	return rc;
 }
-#endif
 
 
 static int blocking_ipa_read(int fd, uint8_t *buf, unsigned int buf_size)
@@ -202,9 +197,11 @@ static int blocking_ipa_read(int fd, uint8_t *buf, unsigned int buf_size)
 
 static int worker_handle_connectClientReq(struct bankd_worker *worker, const RsproPDU_t *pdu)
 {
+	const struct ComponentIdentity *cid = &pdu->msg.choice.connectClientReq.identity;
+	struct bankd_slot_mapping *slmap;
+
 	OSMO_ASSERT(pdu->msg.present == RsproPDUchoice_PR_connectClientReq);
 
-	const struct ComponentIdentity *cid = &pdu->msg.choice.connectClientReq.identity;
 
 	LOGW(worker, "connectClientReq(T=%lu, N='%s', SW='%s', VER='%s')\n",
 		cid->type, cid->name.buf, cid->software.buf, cid->swVersion.buf);
@@ -223,7 +220,19 @@ static int worker_handle_connectClientReq(struct bankd_worker *worker, const Rsp
 	worker->client.clslot.slot_nr = pdu->msg.choice.connectClientReq.clientSlot->slotNr;
 	worker_set_state(worker, BW_ST_CONN_CLIENT);
 
-	/* FIXME: resolve mapping */
+	slmap = bankd_slotmap_by_client(worker->bankd, &worker->client.clslot);
+	if (!slmap) {
+		LOGW(worker, "No slotmap (yet) for client C(%u:%u)\n",
+			worker->client.clslot.client_id, worker->client.clslot.slot_nr);
+		worker_set_state(worker, BW_ST_CONN_CLIENT_WAIT_MAP);
+		/* FIXME: how to update the map in case a map is installed later */
+	} else {
+		LOGW(worker, "slotmap found: C(%u:%u) -> B(%u:%u)\n",
+			slmap->client.client_id, slmap->client.slot_nr,
+			slmap->bank.bank_id, slmap->bank.slot_nr);
+		worker_set_state(worker, BW_ST_CONN_CLIENT_MAPPED);
+		/* FIXME: actually open the mapped reader/card/slot */
+	}
 
 	return 0;
 }

@@ -73,6 +73,8 @@ enum bankd_worker_state {
 	BW_ST_CONN_WAIT_ID,
 	/* TCP established, client has identified itself, no mapping */
 	BW_ST_CONN_CLIENT,
+	/* TCP established, client has identified itself, waiting for mapping */
+	BW_ST_CONN_CLIENT_WAIT_MAP,
 	/* TCP established, client has identified itself, mapping exists */
 	BW_ST_CONN_CLIENT_MAPPED,
 	/* TCP established, client identified, mapping exists, card opened */
