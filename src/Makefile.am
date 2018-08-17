@@ -13,7 +13,7 @@ libosmo_rspro_la_SOURCES = rspro_util.c rspro_client.c
 
 noinst_HEADERS = bankd.h internal.h rspro_util.h
 
-bin_PROGRAMS = pcsc_test remsim-bankd
+bin_PROGRAMS = pcsc_test remsim-bankd remsim-client
 
 pcsc_test_SOURCES = driver_core.c driver_pcsc.c main.c
 pcsc_test_LDADD = $(OSMOCORE_LIBS) \
@@ -22,3 +22,7 @@ pcsc_test_LDADD = $(OSMOCORE_LIBS) \
 remsim_bankd_SOURCES = bankd_slotmap.c bankd_main.c
 remsim_bankd_LDADD = $(OSMOCORE_LIBS) \
 		     $(ASN1C_LIBS) $(PCSC_LIBS) libosmo-rspro.la
+
+remsim_client_SOURCES = remsim_client.c
+remsim_client_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
+		     $(ASN1C_LIBS) libosmo-rspro.la
