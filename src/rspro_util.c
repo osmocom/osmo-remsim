@@ -29,7 +29,7 @@ struct msgb *rspro_enc_msg(RsproPDU_t *pdu)
 	if (rval.encoded < 0) {
 		return NULL;
 	}
-	msgb_put(msg, rval.encoded/8);
+	msgb_put(msg, rval.encoded);
 
 	ASN_STRUCT_FREE(asn_DEF_RsproPDU, pdu);
 
