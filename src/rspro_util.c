@@ -35,7 +35,7 @@ struct msgb *rspro_enc_msg(RsproPDU_t *pdu)
 	if (!msg)
 		return NULL;
 
-	rval = der_encode_to_buffer(&asn_DEF_RsproPDU, pdu, msgb_data(msg), msgb_length(msg));
+	rval = der_encode_to_buffer(&asn_DEF_RsproPDU, pdu, msgb_data(msg), msgb_tailroom(msg));
 	if (rval.encoded < 0) {
 		return NULL;
 	}
