@@ -8,6 +8,16 @@
 
 #include "rspro_util.h"
 
+#define ASN_ALLOC_COPY(out, in) \
+do {						\
+	if (in)	 {				\
+		out = CALLOC(1, sizeof(*in));	\
+		OSMO_ASSERT(out);		\
+		memcpy(out, in, sizeof(*in));	\
+	}					\
+} while (0)
+
+
 struct msgb *rspro_msgb_alloc(void)
 {
 	return msgb_alloc_headroom(1024, 8, "RSPRO");
@@ -95,13 +105,14 @@ RsproPDU_t *rspro_gen_ConnectBankReq(const struct app_comp_id *a_cid,
 	return pdu;
 }
 
-RsproPDU_t *rspro_gen_ConnectClientReq(const struct app_comp_id *a_cid)
+RsproPDU_t *rspro_gen_ConnectClientReq(const struct app_comp_id *a_cid, const ClientSlot_t *client)
 {
 	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
 	if (!pdu)
 		return NULL;
 	pdu->msg.present = RsproPDUchoice_PR_connectClientReq;
 	fill_comp_id(&pdu->msg.choice.connectClientReq.identity, a_cid);
+	ASN_ALLOC_COPY(pdu->msg.choice.connectClientReq.clientSlot, client);
 
 	return pdu;
 }
