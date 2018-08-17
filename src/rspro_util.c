@@ -6,6 +6,8 @@
 #include <osmocom/core/msgb.h>
 #include <osmocom/rspro/RsproPDU.h>
 
+#include "rspro_util.h"
+
 struct msgb *rspro_msgb_alloc(void)
 {
 	return msgb_alloc_headroom(1024, 8, "RSPRO");
@@ -51,20 +53,9 @@ RsproPDU_t *rspro_dec_msg(struct msgb *msg)
 	return pdu;
 }
 
-#define MAX_NAME_LEN 32
-struct app_comp_id {
-	char name[MAX_NAME_LEN+1];
-	char software[MAX_NAME_LEN+1];
-	char sw_version[MAX_NAME_LEN+1];
-	char hw_manufacturer[MAX_NAME_LEN+1];
-	char hw_model[MAX_NAME_LEN+1];
-	char hw_serial_nr[MAX_NAME_LEN+1];
-	char hw_version[MAX_NAME_LEN+1];
-	char fw_version[MAX_NAME_LEN+1];
-};
-
 static void fill_comp_id(ComponentIdentity_t *out, const struct app_comp_id *in)
 {
+	out->type = in->type;
 	OCTET_STRING_fromString(&out->name, in->name);
 	OCTET_STRING_fromString(&out->software, in->software);
 	OCTET_STRING_fromString(&out->swVersion, in->sw_version);
