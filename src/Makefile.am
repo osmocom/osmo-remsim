@@ -23,6 +23,6 @@ remsim_bankd_SOURCES = bankd_slotmap.c bankd_main.c
 remsim_bankd_LDADD = $(OSMOCORE_LIBS) \
 		     $(ASN1C_LIBS) $(PCSC_LIBS) libosmo-rspro.la
 
-remsim_client_SOURCES = remsim_client.c
+remsim_client_SOURCES = remsim_client.c remsim_client_fsm.c
 remsim_client_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
 		     $(ASN1C_LIBS) libosmo-rspro.la

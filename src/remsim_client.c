@@ -14,20 +14,7 @@
 #include <osmocom/gsm/protocol/ipaccess.h>
 
 #include "rspro_util.h"
-
-struct bankd_client {
-	/* connection to the remsim-server (control) */
-	struct ipa_client_conn *srv_conn;
-
-	/* our own component ID */
-	struct app_comp_id own_comp_id;
-
-	/* connection to the remsim-bankd */
-	char *bankd_host;
-	uint16_t bankd_port;
-	struct ipa_client_conn *bankd_conn;
-};
-
+#include "client.h"
 
 static void bankd_send(struct bankd_client *bc, struct msgb *msg_tx)
 {
@@ -37,43 +24,38 @@ static void bankd_send(struct bankd_client *bc, struct msgb *msg_tx)
 	/* msg_tx is now queued and will be freed. */
 }
 
-static void bankd_send_rspro(struct bankd_client *bc, RsproPDU_t *rspro)
+void bankd_send_rspro(struct bankd_client *bc, RsproPDU_t *rspro)
 {
 	struct msgb *msg = rspro_enc_msg(rspro);
 	OSMO_ASSERT(msg);
 	bankd_send(bc, msg);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-static void bankd_updown_cb(struct ipa_client_conn *conn, int up)
+static int bankd_handle_msg(struct bankd_client *bc, struct msgb *msg)
 {
-	struct bankd_client *bc = conn->data;
-
-	printf("RSPRO link to %s:%d %s\n", conn->addr, conn->port, up ? "UP" : "DOWN");
-	if (!up)
-		exit(3);
-	else {
-		const ClientSlot_t clslot = { .clientId = 23, .slotNr = 1 };
-		RsproPDU_t *pdu = rspro_gen_ConnectClientReq(&bc->own_comp_id, &clslot);
-		bankd_send_rspro(bc, pdu);
+	RsproPDU_t *pdu = rspro_dec_msg(msg);
+	if (!pdu) {
+		fprintf(stderr, "Error decoding PDU\n");
+		return -1;
 	}
+
+	switch (pdu->msg.present) {
+	case RsproPDUchoice_PR_connectClientRes:
+		break;
+	default:
+		fprintf(stderr, "Unknown/Unsuppoerted RSPRO PDU: %s\n", msgb_hexdump(msg));
+		return -1;
+	}
+
+	return 0;
 }
 
-static int bankd_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
+int bankd_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 {
 	struct ipaccess_head *hh = (struct ipaccess_head *) msg->data;
 	struct ipaccess_head_ext *he = (struct ipaccess_head_ext *) msgb_l2(msg);
 	struct bankd_client *bc = conn->data;
+	int rc;
 
 	if (msgb_length(msg) < sizeof(*hh))
 		goto invalid;
@@ -87,11 +69,12 @@ static int bankd_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 	if (he->proto != IPAC_PROTO_EXT_RSPRO)
 		goto invalid;
 
-	/* FIXME: do something */
 	printf("Received RSPRO %s\n", msgb_hexdump(msg));
 
+	rc = bankd_handle_msg(bc, msg);
 	msgb_free(msg);
-	return 0;
+
+	return rc;
 
 invalid:
 	msgb_free(msg);
@@ -99,6 +82,11 @@ invalid:
 }
 
 static const struct log_info_cat default_categories[] = {
+	[DMAIN] = {
+		.name = "DMAIN",
+		.loglevel = LOGL_DEBUG,
+		.enabled = 1,
+	},
 };
 
 static const struct log_info log_info = {
@@ -106,40 +94,32 @@ static const struct log_info log_info = {
 	.num_cat = ARRAY_SIZE(default_categories),
 };
 
-static struct bankd_client g_client;
+static struct bankd_client *g_client;
 static void *g_tall_ctx;
 void __thread *talloc_asn1_ctx;
 extern int asn_debug;
 
 int main(int argc, char **argv)
 {
-	int rc;
-
 	g_tall_ctx = talloc_named_const(NULL, 0, "global");
 
-	g_client.bankd_host = "localhost";
-	g_client.bankd_port = 9999;
-	g_client.own_comp_id.type = ComponentType_remsimClient;
-	OSMO_STRLCPY_ARRAY(g_client.own_comp_id.name, "fixme-name");
-	OSMO_STRLCPY_ARRAY(g_client.own_comp_id.software, "remsim-client");
-	OSMO_STRLCPY_ARRAY(g_client.own_comp_id.sw_version, PACKAGE_VERSION);
+	osmo_fsm_register(&remsim_client_bankd_fsm);
+	osmo_fsm_register(&remsim_client_server_fsm);
+
+	g_client = talloc_zero(g_tall_ctx, struct bankd_client);
+	g_client->bankd_host = "localhost";
+	g_client->bankd_port = 9999;
+	g_client->own_comp_id.type = ComponentType_remsimClient;
+	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.name, "fixme-name");
+	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.software, "remsim-client");
+	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.sw_version, PACKAGE_VERSION);
 
 	//asn_debug = 1;
 	osmo_init_logging2(g_tall_ctx, &log_info);
 
-	g_client.bankd_conn = ipa_client_conn_create(g_tall_ctx, NULL, 0,
-						   g_client.bankd_host, g_client.bankd_port,
-						   bankd_updown_cb, bankd_read_cb,
-						   NULL, &g_client);
-	if (!g_client.bankd_conn) {
+	if (bankd_conn_fsm_alloc(g_client) < 0) {
 		fprintf(stderr, "Unable to connect: %s\n", strerror(errno));
 		exit(1);
-	}
-	rc = ipa_client_conn_open(g_client.bankd_conn);
-	if (rc < 0) {
-		fprintf(stderr, "Unable to connect RSPRO to %s:%d - %s\n",
-			g_client.bankd_conn->addr, g_client.bankd_conn->port, strerror(errno));
-		return 0;
 	}
 
 	while (1) {
