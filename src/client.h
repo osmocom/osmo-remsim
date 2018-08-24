@@ -44,6 +44,6 @@ struct bankd_client {
 	struct osmo_fsm_inst *bankd_fi;
 };
 
-void bankd_send_rspro(struct bankd_client *bc, RsproPDU_t *rspro);
+void ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *rspro);
 int bankd_read_cb(struct ipa_client_conn *conn, struct msgb *msg);
 int bankd_conn_fsm_alloc(struct bankd_client *bc);
