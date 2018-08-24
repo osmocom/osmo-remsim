@@ -225,21 +225,152 @@ static const struct value_string server_conn_fsm_event_names[] = {
 	{ 0, NULL }
 };
 
+/* representing a client-side connection to a RSPRO server */
+struct rspro_server_conn {
+	/* state */
+	struct ipa_client_conn *conn;
+	struct osmo_fsm_inst *fi;
+
+	/* our own component ID */
+	struct app_comp_id own_comp_id;
+
+	/* configuration */
+	char *server_host;
+	uint16_t server_port;
+};
+
+static void srvc_updown_cb(struct ipa_client_conn *conn, int up)
+{
+	struct rspro_server_conn *srvc = conn->data;
+
+	printf("RSPRO link to %s:%d %s\n", conn->addr, conn->port, up ? "UP" : "DOWN");
+
+	osmo_fsm_inst_dispatch(srvc->fi, up ? SRVC_E_TCP_UP: SRVC_E_TCP_DOWN, 0);
+}
+
+static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
+{
+	struct ipaccess_head *hh = (struct ipaccess_head *) msg->data;
+	struct ipaccess_head_ext *he = (struct ipaccess_head_ext *) msgb_l2(msg);
+	struct rspro_server_conn *srvc = conn->data;
+	int rc;
+
+	if (msgb_length(msg) < sizeof(*hh))
+		goto invalid;
+	msg->l2h = &hh->data[0];
+	if (hh->proto != IPAC_PROTO_OSMO)
+		goto invalid;
+	if (!he || msgb_l2len(msg) < sizeof(*he))
+		goto invalid;
+	msg->l2h = &he->data[0];
+
+	if (he->proto != IPAC_PROTO_EXT_RSPRO)
+		goto invalid;
+
+	printf("Received RSPRO %s\n", msgb_hexdump(msg));
+#if 0
+	rc = bankd_handle_msg(srvc, msg);
+	msgb_free(msg);
+
+	return rc;
+#endif
+
+invalid:
+	msgb_free(msg);
+	return -1;
+}
+
+
+static void srvc_st_init_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
+{
+	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
+	int rc;
+
+	srvc->conn = ipa_client_conn_create(srvc, NULL, 0, srvc->server_host, srvc->server_port,
+						srvc_updown_cb, srvc_read_cb, NULL, srvc);
+	if (!srvc->conn) {
+		fprintf(stderr, "Unable to create socket: %s\n", strerror(errno));
+		/* FIXME */
+	}
+	/* Attempt to connect TCP socket */
+	rc = ipa_client_conn_open(srvc->conn);
+	if (rc < 0) {
+		fprintf(stderr, "Unable to connect: %s\n", strerror(errno));
+		/* FIXME */
+	}
+}
 
 static void srvc_st_init(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
+	switch (event) {
+	case SRVC_E_TCP_UP:
+		osmo_fsm_inst_state_chg(fi, SRVC_ST_ESTABLISHED, T1_WAIT_CLIENT_CONN_RES, 1);
+		break;
+	default:
+		OSMO_ASSERT(0);
+	}
+}
+
+static void srvc_st_established_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
+{
+	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
+	RsproPDU_t *pdu;
+
+	/* FIXME: Bankd in case of Bankd connection! */
+	pdu = rspro_gen_ConnectClientReq(&srvc->own_comp_id, NULL);
+	ipa_client_conn_send_rspro(srvc->conn, pdu);
 }
 
 static void srvc_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
+	switch (event) {
+	case SRVC_E_TCP_DOWN:
+		osmo_fsm_inst_state_chg(fi, SRVC_ST_REESTABLISH, T2_RECONNECT, 2);
+		break;
+	case SRVC_E_CLIENT_CONN_RES:
+		/* somehow notify the main code? */
+		osmo_fsm_inst_state_chg(fi, SRVC_ST_CONNECTED, 0, 0);
+		break;
+	default:
+		OSMO_ASSERT(0);
+	}
 }
 
 static void srvc_st_connected(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
+	switch (event) {
+	case SRVC_E_TCP_DOWN:
+		osmo_fsm_inst_state_chg(fi, SRVC_ST_REESTABLISH, T2_RECONNECT, 2);
+		break;
+	default:
+		OSMO_ASSERT(0);
+	}
+}
+
+static void srvc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
+{
+	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
+	int rc;
+
+	/* Attempt to connect TCP socket */
+	rc = ipa_client_conn_open(srvc->conn);
+	if (rc < 0) {
+		fprintf(stderr, "Unable to connect RSPRO to %s:%d - %s\n",
+			srvc->server_host, srvc->server_port, strerror(errno));
+		/* FIXME: retry? Timer? Abort? */
+		OSMO_ASSERT(0);
+	}
 }
 
 static void srvc_st_reestablish(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
+	switch (event) {
+	case BDC_E_TCP_UP:
+		osmo_fsm_inst_state_chg(fi, SRVC_ST_ESTABLISHED, T1_WAIT_CLIENT_CONN_RES, 1);
+		break;
+	default:
+		OSMO_ASSERT(0);
+	}
 }
 
 static int server_conn_fsm_timer_cb(struct osmo_fsm_inst *fi)
@@ -253,12 +384,14 @@ static const struct osmo_fsm_state server_conn_fsm_states[] = {
 		.in_event_mask = S(SRVC_E_TCP_UP),
 		.out_state_mask = S(SRVC_ST_ESTABLISHED),
 		.action = srvc_st_init,
+		.onenter = srvc_st_init_onenter,
 	},
 	[SRVC_ST_ESTABLISHED] = {
 		.name = "ESTABLISHED",
 		.in_event_mask = S(SRVC_E_TCP_DOWN) | S(SRVC_E_CLIENT_CONN_RES),
 		.out_state_mask = S(SRVC_ST_CONNECTED) | S(SRVC_ST_REESTABLISH),
 		.action = srvc_st_established,
+		.onenter = srvc_st_established_onenter,
 	},
 	[SRVC_ST_CONNECTED] = {
 		.name = "CONNECTED",
@@ -271,6 +404,7 @@ static const struct osmo_fsm_state server_conn_fsm_states[] = {
 		.in_event_mask = S(SRVC_E_TCP_UP),
 		.out_state_mask = S(SRVC_ST_ESTABLISHED),
 		.action = srvc_st_reestablish,
+		.onenter = srvc_st_reestablish_onenter,
 	},
 };
 
@@ -283,16 +417,16 @@ struct osmo_fsm remsim_client_server_fsm = {
 	.event_names = server_conn_fsm_event_names,
 };
 
-int server_conn_fsm_alloc(struct bankd_client *bc)
+int server_conn_fsm_alloc(struct rspro_server_conn *srvc)
 {
 	struct osmo_fsm_inst *fi;
 
-	fi = osmo_fsm_inst_alloc(&remsim_client_server_fsm, bc, bc, LOGL_DEBUG, "server");
+	fi = osmo_fsm_inst_alloc(&remsim_client_server_fsm, srvc, srvc, LOGL_DEBUG, "server");
 	if (!fi)
 		return -1;
 
-	bc->srv_fi = fi;
+	srvc->fi = fi;
 	/* onenter of the initial state is not automatically executed by osmo_fsm :( */
-	///srvc_st_init_onenter(fi, 0);
+	srvc_st_init_onenter(fi, 0);
 	return 0;
 }
