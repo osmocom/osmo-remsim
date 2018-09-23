@@ -170,8 +170,9 @@ static int worker_open_card(struct bankd_worker *worker)
 	rc = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &worker->reader.pcsc.hContext);
 	PCSC_ERROR(worker, rc, "SCardEstablishContext")
 
+	DWORD dwActiveProtocol;
 	rc = SCardConnect(worker->reader.pcsc.hContext, worker->reader.name, SCARD_SHARE_SHARED,
-			  SCARD_PROTOCOL_T0, &worker->reader.pcsc.hCard, NULL);
+			  SCARD_PROTOCOL_T0, &worker->reader.pcsc.hCard, &dwActiveProtocol);
 	PCSC_ERROR(worker, rc, "SCardConnect")
 
 	return 0;
