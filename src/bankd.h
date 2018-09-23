@@ -138,4 +138,9 @@ struct bankd {
 	/* list of bankd_workers. accessed/modified by multiple threads; protected by mutex */
 	struct llist_head workers;
 	pthread_mutex_t workers_mutex;
+
+	struct llist_head pcsc_slot_names;
 };
+
+int bankd_pcsc_read_slotnames(struct bankd *bankd, const char *csv_file);
+const char *bankd_pcsc_get_slot_name(struct bankd *bankd, const struct bank_slot *slot);

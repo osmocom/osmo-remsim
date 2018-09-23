@@ -19,9 +19,9 @@ pcsc_test_SOURCES = driver_core.c driver_pcsc.c main.c
 pcsc_test_LDADD = $(OSMOCORE_LIBS) \
 		  $(ASN1C_LIBS) $(PCSC_LIBS) libosmo-rspro.la
 
-remsim_bankd_SOURCES = bankd_slotmap.c bankd_main.c
-remsim_bankd_LDADD = $(OSMOCORE_LIBS) \
-		     $(ASN1C_LIBS) $(PCSC_LIBS) libosmo-rspro.la
+remsim_bankd_SOURCES = bankd_slotmap.c bankd_main.c bankd_pcsc.c
+remsim_bankd_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) \
+		     $(ASN1C_LIBS) $(PCSC_LIBS) libosmo-rspro.la -lcsv
 
 remsim_client_SOURCES = remsim_client.c remsim_client_fsm.c
 remsim_client_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \

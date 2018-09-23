@@ -38,6 +38,12 @@ static void bankd_init(struct bankd *bankd)
 	pthread_rwlock_init(&bankd->slot_mappings_rwlock, NULL);
 	INIT_LLIST_HEAD(&bankd->workers);
 	pthread_mutex_init(&bankd->workers_mutex, NULL);
+
+	/* Np lock or mutex required for the pcsc_slot_names list, as this is only
+	 * read once during bankd initialization, when the worker threads haven't
+	 * started yet */
+	INIT_LLIST_HEAD(&bankd->pcsc_slot_names);
+	OSMO_ASSERT(bankd_pcsc_read_slotnames(bankd, "bankd_pcsc_slots.csv") == 0);
 }
 
 /* create + start a new bankd_worker thread */
@@ -153,6 +159,12 @@ static void worker_cleanup(void *arg)
 static int worker_open_card(struct bankd_worker *worker)
 {
 	long rc;
+
+	/* resolve PC/SC reader name from slot_id -> name map */
+	worker->reader.name = bankd_pcsc_get_slot_name(worker->bankd, &worker->slot);
+	OSMO_ASSERT(worker->reader.name);
+
+	LOGW(worker, "Attempting to open card/slot '%s'\n", worker->reader.name);
 
 	/* The PC/SC context must be created inside the thread where we'll later use it */
 	rc = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &worker->reader.pcsc.hContext);
