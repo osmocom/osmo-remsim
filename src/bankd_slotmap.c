@@ -80,7 +80,7 @@ int bankd_slotmap_add(struct bankd *bankd, const struct bank_slot *bank, const s
 	llist_add_tail(&map->list, &bankd->slot_mappings);
 	pthread_rwlock_unlock(&bankd->slot_mappings_rwlock);
 
-	printf("Added Slot Map B(%u:%u) <-> C(%u:%u)\n",
+	printf("Added Slot Map C(%u:%u) <-> B(%u:%u)\n",
 		map->client.client_id, map->client.slot_nr, map->bank.bank_id, map->bank.slot_nr);
 
 	return 0;
@@ -89,7 +89,7 @@ int bankd_slotmap_add(struct bankd *bankd, const struct bank_slot *bank, const s
 /* thread-safe removal of a bank<->client map */
 void bankd_slotmap_del(struct bankd *bankd, struct bankd_slot_mapping *map)
 {
-	printf("Deleting Slot Map B(%u:%u) <-> C(%u:%u)\n",
+	printf("Deleting Slot Map C(%u:%u) <-> B(%u:%u)\n",
 		map->client.client_id, map->client.slot_nr, map->bank.bank_id, map->bank.slot_nr);
 
 	pthread_rwlock_wrlock(&bankd->slot_mappings_rwlock);
