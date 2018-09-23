@@ -45,6 +45,17 @@ static void bankd_init(struct bankd *bankd)
 	 * started yet */
 	INIT_LLIST_HEAD(&bankd->pcsc_slot_names);
 	OSMO_ASSERT(bankd_pcsc_read_slotnames(bankd, "bankd_pcsc_slots.csv") == 0);
+
+	/* HACK HACK HACK */
+	{
+		struct bank_slot bs = { .bank_id = 1, };
+		struct client_slot cs = { .client_id = 23, };
+		int i;
+		for (i = 0; i < 5; i++) {
+			bs.slot_nr = cs.slot_nr = i;
+			bankd_slotmap_add(bankd, &bs, &cs);
+		}
+	}
 }
 
 /* create + start a new bankd_worker thread */
