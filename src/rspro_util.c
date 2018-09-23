@@ -155,3 +155,33 @@ RsproPDU_t *rspro_gen_SetAtrReq(uint16_t client_id, uint16_t slot_nr, const uint
 
 	return pdu;
 }
+
+RsproPDU_t *rspro_gen_TpduModem2Card(const ClientSlot_t *client, const BankSlot_t *bank,
+				     const uint8_t *tpdu, unsigned int tpdu_len)
+{
+	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
+	if (!pdu)
+		return NULL;
+	pdu->msg.present = RsproPDUchoice_PR_tpduModemToCard;
+	pdu->msg.choice.tpduModemToCard.fromClientSlot = *client;
+	pdu->msg.choice.tpduModemToCard.toBankSlot = *bank;
+	/* TODO: flags? */
+	OCTET_STRING_fromBuf(&pdu->msg.choice.tpduModemToCard.data, (const char *)tpdu, tpdu_len);
+
+	return pdu;
+}
+
+RsproPDU_t *rspro_gen_TpduCard2Modem(const BankSlot_t *bank, const ClientSlot_t *client,
+				     const uint8_t *tpdu, unsigned int tpdu_len)
+{
+	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
+	if (!pdu)
+		return NULL;
+	pdu->msg.present = RsproPDUchoice_PR_tpduCardToModem;
+	pdu->msg.choice.tpduCardToModem.fromBankSlot = *bank;
+	pdu->msg.choice.tpduCardToModem.toClientSlot = *client;
+	/* TODO: flags? */
+	OCTET_STRING_fromBuf(&pdu->msg.choice.tpduCardToModem.data, (const char *)tpdu, tpdu_len);
+
+	return pdu;
+}

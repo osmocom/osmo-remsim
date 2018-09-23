@@ -27,3 +27,7 @@ RsproPDU_t *rspro_gen_CreateMappingReq(const ClientSlot_t *client, const BankSlo
 RsproPDU_t *rspro_gen_ConfigClientReq(const ClientSlot_t *client, uint32_t ip, uint16_t port);
 RsproPDU_t *rspro_gen_SetAtrReq(uint16_t client_id, uint16_t slot_nr, const uint8_t *atr,
 				unsigned int atr_len);
+RsproPDU_t *rspro_gen_TpduModem2Card(const ClientSlot_t *client, const BankSlot_t *bank,
+				     const uint8_t *tpdu, unsigned int tpdu_len);
+RsproPDU_t *rspro_gen_TpduCard2Modem(const BankSlot_t *bank, const ClientSlot_t *client,
+				     const uint8_t *tpdu, unsigned int tpdu_len);
