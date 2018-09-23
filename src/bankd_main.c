@@ -175,6 +175,8 @@ static int worker_open_card(struct bankd_worker *worker)
 			  SCARD_PROTOCOL_T0, &worker->reader.pcsc.hCard, &dwActiveProtocol);
 	PCSC_ERROR(worker, rc, "SCardConnect")
 
+	worker_set_state(worker, BW_ST_CONN_CLIENT_MAPPED_CARD);
+
 	return 0;
 end:
 	return rc;
