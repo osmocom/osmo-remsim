@@ -22,6 +22,7 @@
 #include <osmocom/rspro/RsproPDU.h>
 
 #include "bankd.h"
+#include "rspro_util.h"
 
 __thread void *talloc_asn1_ctx;
 
@@ -210,6 +211,33 @@ static int blocking_ipa_read(int fd, uint8_t *buf, unsigned int buf_size)
 	return len;
 }
 
+static int worker_send_rspro(struct bankd_worker *worker, RsproPDU_t *pdu)
+{
+	struct msgb *msg = rspro_enc_msg(pdu);
+	int rc;
+
+	if (!msg) {
+		LOGW(worker, "error encoding RSPRO\n");
+		return -1;
+	}
+
+	/* prepend the header */
+	ipa_prepend_header_ext(msg, IPAC_PROTO_EXT_RSPRO);
+
+	/* actually send it through the socket */
+	rc = write(worker->client.fd, msgb_data(msg), msgb_length(msg));
+	if (rc == msgb_length(msg))
+		rc = 0;
+	else {
+		LOGW(worker, "error during write: %d != %d\n", rc, msgb_length(msg));
+		rc = -1;
+	}
+
+	msgb_free(msg);
+
+	return rc;
+}
+
 static int worker_handle_connectClientReq(struct bankd_worker *worker, const RsproPDU_t *pdu)
 {
 	const struct ComponentIdentity *cid = &pdu->msg.choice.connectClientReq.identity;
@@ -245,11 +273,47 @@ static int worker_handle_connectClientReq(struct bankd_worker *worker, const Rsp
 		LOGW(worker, "slotmap found: C(%u:%u) -> B(%u:%u)\n",
 			slmap->client.client_id, slmap->client.slot_nr,
 			slmap->bank.bank_id, slmap->bank.slot_nr);
+		worker->slot = slmap->bank;
 		worker_set_state(worker, BW_ST_CONN_CLIENT_MAPPED);
-		/* FIXME: actually open the mapped reader/card/slot */
+		/* actually open the mapped reader/card/slot */
+		worker_open_card(worker);
 	}
 
 	return 0;
+}
+
+static int worker_handle_tpduModemToCard(struct bankd_worker *worker, const RsproPDU_t *pdu)
+{
+	const struct TpduModemToCard *mdm2sim = &pdu->msg.choice.tpduModemToCard;
+	const SCARD_IO_REQUEST *pioSendPci = SCARD_PCI_T0;
+	SCARD_IO_REQUEST pioRecvPci;
+	uint8_t rx_buf[1024];
+	DWORD rx_buf_len = sizeof(rx_buf);
+	RsproPDU_t *pdu_resp;
+	long rc;
+
+	LOGW(worker, "tpduModemToCard(%s)\n", osmo_hexdump_nospc(mdm2sim->data.buf, mdm2sim->data.size));
+
+	if (worker->state != BW_ST_CONN_CLIENT_MAPPED_CARD) {
+		LOGW(worker, "Unexpected tpduModemToCaard\n");
+		return -104;
+	}
+
+	/* FIXME: Validate that toBankSlot / fromClientSlot match our expectations */
+
+	rc = SCardTransmit(worker->reader.pcsc.hCard,
+			   pioSendPci, mdm2sim->data.buf, mdm2sim->data.size,
+			   &pioRecvPci, rx_buf, &rx_buf_len);
+	PCSC_ERROR(worker, rc, "SCardTransmit");
+
+	/* encode response PDU and send it */
+	pdu_resp = rspro_gen_TpduCard2Modem(&mdm2sim->toBankSlot, &mdm2sim->fromClientSlot,
+					    rx_buf, rx_buf_len);
+	worker_send_rspro(worker, pdu_resp);
+
+	return 0;
+end:
+	return rc;
 }
 
 /* handle one incoming RSPRO message from a client inside a worker thread */
@@ -262,7 +326,7 @@ static int worker_handle_rspro(struct bankd_worker *worker, const RsproPDU_t *pd
 		rc = worker_handle_connectClientReq(worker, pdu);
 		break;
 	case RsproPDUchoice_PR_tpduModemToCard:
-		/* FIXME */
+		rc = worker_handle_tpduModemToCard(worker, pdu);
 		break;
 	case RsproPDUchoice_PR_clientSlotStatusInd:
 		/* FIXME */
