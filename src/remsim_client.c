@@ -41,6 +41,7 @@ static int bankd_handle_msg(struct bankd_client *bc, struct msgb *msg)
 
 	switch (pdu->msg.present) {
 	case RsproPDUchoice_PR_connectClientRes:
+		osmo_fsm_inst_dispatch(bc->bankd_fi, BDC_E_CLIENT_CONN_RES, pdu);
 		break;
 	default:
 		fprintf(stderr, "Unknown/Unsuppoerted RSPRO PDU: %s\n", msgb_hexdump(msg));
