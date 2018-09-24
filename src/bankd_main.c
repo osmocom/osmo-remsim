@@ -255,9 +255,11 @@ static int worker_handle_connectClientReq(struct bankd_worker *worker, const Rsp
 {
 	const struct ComponentIdentity *cid = &pdu->msg.choice.connectClientReq.identity;
 	struct bankd_slot_mapping *slmap;
+	e_ResultCode res;
+	RsproPDU_t *resp;
+	int rc;
 
 	OSMO_ASSERT(pdu->msg.present == RsproPDUchoice_PR_connectClientReq);
-
 
 	LOGW(worker, "connectClientReq(T=%lu, N='%s', SW='%s', VER='%s')\n",
 		cid->type, cid->name.buf, cid->software.buf, cid->swVersion.buf);
@@ -282,6 +284,7 @@ static int worker_handle_connectClientReq(struct bankd_worker *worker, const Rsp
 			worker->client.clslot.client_id, worker->client.clslot.slot_nr);
 		worker_set_state(worker, BW_ST_CONN_CLIENT_WAIT_MAP);
 		/* FIXME: how to update the map in case a map is installed later */
+		res = ResultCode_cardNotPresent;
 	} else {
 		LOGW(worker, "slotmap found: C(%u:%u) -> B(%u:%u)\n",
 			slmap->client.client_id, slmap->client.slot_nr,
@@ -289,10 +292,15 @@ static int worker_handle_connectClientReq(struct bankd_worker *worker, const Rsp
 		worker->slot = slmap->bank;
 		worker_set_state(worker, BW_ST_CONN_CLIENT_MAPPED);
 		/* actually open the mapped reader/card/slot */
-		worker_open_card(worker);
+		rc = worker_open_card(worker);
+		if (rc == 0)
+			res = ResultCode_ok;
+		else
+			res = ResultCode_cardNotPresent;
 	}
 
-	return 0;
+	resp = rspro_gen_ConnectClientRes(&worker->bankd->comp_id, res);
+	return worker_send_rspro(worker, resp);
 }
 
 static int worker_handle_tpduModemToCard(struct bankd_worker *worker, const RsproPDU_t *pdu)
