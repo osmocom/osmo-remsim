@@ -122,6 +122,20 @@ RsproPDU_t *rspro_gen_ConnectClientReq(const struct app_comp_id *a_cid, const Cl
 	return pdu;
 }
 
+RsproPDU_t *rspro_gen_ConnectClientRes(const struct app_comp_id *a_cid, e_ResultCode res)
+{
+	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
+	if (!pdu)
+		return NULL;
+	pdu->version = 2;
+	pdu->tag = 2342;
+	pdu->msg.present = RsproPDUchoice_PR_connectClientRes;
+	fill_comp_id(&pdu->msg.choice.connectClientRes.identity, a_cid);
+	pdu->msg.choice.connectClientRes.result = res;
+
+	return pdu;
+}
+
 RsproPDU_t *rspro_gen_CreateMappingReq(const ClientSlot_t *client, const BankSlot_t *bank)
 {
 	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
