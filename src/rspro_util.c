@@ -54,9 +54,12 @@ RsproPDU_t *rspro_dec_msg(struct msgb *msg)
 	RsproPDU_t *pdu;
 	asn_dec_rval_t rval;
 
-	rval = ber_decode(NULL, &asn_DEF_RsproPDU, (void **) &pdu, msgb_data(msg), msgb_length(msg));
+	printf("decoding %s\n", msgb_hexdump(msg));
+	rval = ber_decode(NULL, &asn_DEF_RsproPDU, (void **) &pdu, msgb_l2(msg), msgb_l2len(msg));
 	if (rval.code != RC_OK) {
-		/* FIXME */
+		fprintf(stderr, "Failed to decode: %d. Consumed %lu of %u bytes\n",
+			rval.code, rval.consumed, msgb_length(msg));
+		msgb_free(msg);
 		return NULL;
 	}
 
