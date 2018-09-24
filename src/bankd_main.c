@@ -383,26 +383,36 @@ static int worker_transceive_loop(struct bankd_worker *worker)
 	data_len = rc;
 
 	hh = (struct ipaccess_head *) buf;
-	if (hh->proto != IPAC_PROTO_OSMO)
+	if (hh->proto != IPAC_PROTO_OSMO) {
+		LOGW(worker, "Received unsupported IPA protocol != OSMO: 0x%02x\n", hh->proto);
 		return -4;
+	}
 
 	hh_ext = (struct ipaccess_head_ext *) buf + sizeof(*hh);
-	if (data_len < sizeof(*hh_ext))
+	if (data_len < sizeof(*hh_ext)) {
+		LOGW(worker, "Received short message\n");
 		return -5;
+	}
 	data_len -= sizeof(*hh_ext);
-	if (hh_ext->proto != IPAC_PROTO_EXT_RSPRO)
+	if (hh_ext->proto != IPAC_PROTO_EXT_RSPRO) {
+		LOGW(worker, "Received unsupported IPA EXT protocol != RSPRO: 0x%02x\n", hh_ext->proto);
 		return -6;
+	}
 
 	/* 2) ASN1 BER decode of the message */
 	rval = ber_decode(NULL, &asn_DEF_RsproPDU, (void **) &pdu, hh_ext->data, data_len);
-	if (rval.code != RC_OK)
+	if (rval.code != RC_OK) {
+		LOGW(worker, "Error during BER decode of RSPRO\n");
 		return -7;
+	}
 
 	/* 3) handling of the message, possibly resulting in PCSC commands */
 	rc = worker_handle_rspro(worker, pdu);
 	ASN_STRUCT_FREE(asn_DEF_RsproPDU, pdu);
-	if (rc < 0)
+	if (rc < 0) {
+		LOGW(worker, "Error handling RSPRO\n");
 		return rc;
+	}
 
 	/* everything OK if we reach here */
 	return 0;
