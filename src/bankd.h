@@ -12,6 +12,8 @@
 
 #include <osmocom/core/linuxlist.h>
 
+#include "rspro_util.h"
+
 struct bankd;
 
 struct bank_slot {
@@ -127,6 +129,8 @@ struct bankd {
 	struct {
 		uint16_t bank_id;
 	} cfg;
+
+	struct app_comp_id comp_id;
 
 	/* TCP socket at which we are listening */
 	int accept_fd;

@@ -40,6 +40,12 @@ static void bankd_init(struct bankd *bankd)
 	INIT_LLIST_HEAD(&bankd->workers);
 	pthread_mutex_init(&bankd->workers_mutex, NULL);
 
+	bankd->comp_id.type = ComponentType_remsimBankd;
+	OSMO_STRLCPY_ARRAY(bankd->comp_id.name, "fixme-name");
+	OSMO_STRLCPY_ARRAY(bankd->comp_id.software, "remsim-bankd");
+	OSMO_STRLCPY_ARRAY(bankd->comp_id.sw_version, PACKAGE_VERSION);
+	/* FIXME: other members of app_comp_id */
+
 	/* Np lock or mutex required for the pcsc_slot_names list, as this is only
 	 * read once during bankd initialization, when the worker threads haven't
 	 * started yet */
