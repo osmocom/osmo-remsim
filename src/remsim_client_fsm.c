@@ -78,6 +78,9 @@ static void bdc_st_init(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 	case BDC_E_TCP_UP:
 		osmo_fsm_inst_state_chg(fi, BDC_ST_ESTABLISHED, T1_WAIT_CLIENT_CONN_RES, 1);
 		break;
+	case BDC_E_TCP_DOWN:
+		osmo_fsm_inst_state_chg(fi, BDC_ST_REESTABLISH, T2_RECONNECT, 2);
+		break;
 	default:
 		OSMO_ASSERT(0);
 	}
@@ -141,6 +144,9 @@ static void bdc_st_reestablish(struct osmo_fsm_inst *fi, uint32_t event, void *d
 	case BDC_E_TCP_UP:
 		osmo_fsm_inst_state_chg(fi, BDC_ST_ESTABLISHED, T1_WAIT_CLIENT_CONN_RES, 1);
 		break;
+	case BDC_E_TCP_DOWN:
+		/* wait for normal T2 timeout */
+		break;
 	default:
 		OSMO_ASSERT(0);
 	}
@@ -148,14 +154,24 @@ static void bdc_st_reestablish(struct osmo_fsm_inst *fi, uint32_t event, void *d
 
 static int remsim_client_bankd_fsm_timer_cb(struct osmo_fsm_inst *fi)
 {
+	switch (fi->T) {
+	case 2:
+		osmo_fsm_inst_state_chg(fi, BDC_ST_REESTABLISH, T2_RECONNECT, 2);
+		break;
+	case 1:
+		/* FIXME: close connection and re-start */
+		break;
+	default:
+		OSMO_ASSERT(0);
+	}
 	return 0;
 }
 
 static const struct osmo_fsm_state bankd_conn_fsm_states[] = {
 	[BDC_ST_INIT] = {
 		.name = "INIT",
-		.in_event_mask = S(BDC_E_TCP_UP),
-		.out_state_mask = S(BDC_ST_ESTABLISHED),
+		.in_event_mask = S(BDC_E_TCP_UP) | S(BDC_E_TCP_DOWN),
+		.out_state_mask = S(BDC_ST_ESTABLISHED) | S(BDC_ST_REESTABLISH),
 		.action = bdc_st_init,
 	},
 	[BDC_ST_ESTABLISHED] = {
@@ -173,8 +189,8 @@ static const struct osmo_fsm_state bankd_conn_fsm_states[] = {
 	},
 	[BDC_ST_REESTABLISH] = {
 		.name = "REESTABLISH",
-		.in_event_mask = S(BDC_E_TCP_UP),
-		.out_state_mask = S(BDC_ST_ESTABLISHED),
+		.in_event_mask = S(BDC_E_TCP_UP) | S(BDC_E_TCP_DOWN),
+		.out_state_mask = S(BDC_ST_ESTABLISHED) | S(BDC_ST_REESTABLISH),
 		.action = bdc_st_reestablish,
 		.onenter = bdc_st_reestablish_onenter,
 	},
@@ -306,6 +322,9 @@ static void srvc_st_init(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 	case SRVC_E_TCP_UP:
 		osmo_fsm_inst_state_chg(fi, SRVC_ST_ESTABLISHED, T1_WAIT_CLIENT_CONN_RES, 1);
 		break;
+	case SRVC_E_TCP_DOWN:
+		osmo_fsm_inst_state_chg(fi, SRVC_ST_REESTABLISH, T2_RECONNECT, 2);
+		break;
 	default:
 		OSMO_ASSERT(0);
 	}
@@ -365,8 +384,11 @@ static void srvc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 static void srvc_st_reestablish(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
 	switch (event) {
-	case BDC_E_TCP_UP:
+	case SRVC_E_TCP_UP:
 		osmo_fsm_inst_state_chg(fi, SRVC_ST_ESTABLISHED, T1_WAIT_CLIENT_CONN_RES, 1);
+		break;
+	case SRVC_E_TCP_DOWN:
+		/* wait for normal T2 call-back */
 		break;
 	default:
 		OSMO_ASSERT(0);
@@ -375,14 +397,25 @@ static void srvc_st_reestablish(struct osmo_fsm_inst *fi, uint32_t event, void *
 
 static int server_conn_fsm_timer_cb(struct osmo_fsm_inst *fi)
 {
+	switch (fi->T) {
+	case 2:
+		osmo_fsm_inst_state_chg(fi, SRVC_ST_REESTABLISH, T2_RECONNECT, 2);
+		break;
+	case 1:
+		/* FIXME: close connection and re-start connection attempt */
+		break;
+	default:
+		OSMO_ASSERT(0);
+	}
+
 	return 0;
 }
 
 static const struct osmo_fsm_state server_conn_fsm_states[] = {
 	[SRVC_ST_INIT] = {
 		.name = "INIT",
-		.in_event_mask = S(SRVC_E_TCP_UP),
-		.out_state_mask = S(SRVC_ST_ESTABLISHED),
+		.in_event_mask = S(SRVC_E_TCP_UP) | S(SRVC_E_TCP_DOWN),
+		.out_state_mask = S(SRVC_ST_ESTABLISHED) | S(SRVC_ST_REESTABLISH),
 		.action = srvc_st_init,
 		.onenter = srvc_st_init_onenter,
 	},
@@ -401,8 +434,8 @@ static const struct osmo_fsm_state server_conn_fsm_states[] = {
 	},
 	[SRVC_ST_REESTABLISH] = {
 		.name = "REESTABLISH",
-		.in_event_mask = S(SRVC_E_TCP_UP),
-		.out_state_mask = S(SRVC_ST_ESTABLISHED),
+		.in_event_mask = S(SRVC_E_TCP_UP) | S(SRVC_E_TCP_DOWN),
+		.out_state_mask = S(SRVC_ST_ESTABLISHED) | S(SRVC_ST_REESTABLISH),
 		.action = srvc_st_reestablish,
 		.onenter = srvc_st_reestablish_onenter,
 	},
