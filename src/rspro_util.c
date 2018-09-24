@@ -51,7 +51,7 @@ struct msgb *rspro_enc_msg(RsproPDU_t *pdu)
 /* consumes 'msg' _if_ it is successful */
 RsproPDU_t *rspro_dec_msg(struct msgb *msg)
 {
-	RsproPDU_t *pdu;
+	RsproPDU_t *pdu = NULL;
 	asn_dec_rval_t rval;
 
 	printf("decoding %s\n", msgb_hexdump(msg));

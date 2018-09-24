@@ -374,7 +374,7 @@ static int worker_transceive_loop(struct bankd_worker *worker)
 	uint8_t buf[65536]; /* maximum length expressed in 16bit length field */
 	asn_dec_rval_t rval;
 	int data_len, rc;
-	RsproPDU_t *pdu;
+	RsproPDU_t *pdu = NULL;
 
 	/* 1) blocking read of entire IPA message from the socket */
 	rc = blocking_ipa_read(worker->client.fd, buf, sizeof(buf));
