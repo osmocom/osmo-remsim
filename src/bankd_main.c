@@ -232,8 +232,10 @@ static int worker_send_rspro(struct bankd_worker *worker, RsproPDU_t *pdu)
 		return -1;
 	}
 
+	msg->l2h = msg->data;
 	/* prepend the header */
 	ipa_prepend_header_ext(msg, IPAC_PROTO_EXT_RSPRO);
+	ipa_prepend_header(msg, IPAC_PROTO_OSMO);
 
 	/* actually send it through the socket */
 	rc = write(worker->client.fd, msgb_data(msg), msgb_length(msg));
