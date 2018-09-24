@@ -22,7 +22,7 @@ extern "C" {
 
 /* RsproPDU */
 typedef struct RsproPDU {
-	long	*version	/* DEFAULT 1 */;
+	long	 version;
 	OperationTag_t	 tag;
 	RsproPDUchoice_t	 msg;
 	

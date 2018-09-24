@@ -31,32 +31,14 @@ memb_version_constraint_1(asn_TYPE_descriptor_t *td, const void *sptr,
 	}
 }
 
-static int asn_DFL_2_set_1(int set_value, void **sptr) {
-	long *st = *sptr;
-	
-	if(!st) {
-		if(!set_value) return -1;	/* Not a default value */
-		st = (*sptr = CALLOC(1, sizeof(*st)));
-		if(!st) return -1;
-	}
-	
-	if(set_value) {
-		/* Install default value 1 */
-		*st = 1l;
-		return 0;
-	} else {
-		/* Test default value 1 */
-		return (*st == 1);
-	}
-}
 static asn_TYPE_member_t asn_MBR_RsproPDU_1[] = {
-	{ ATF_POINTER, 1, offsetof(struct RsproPDU, version),
+	{ ATF_NOFLAGS, 0, offsetof(struct RsproPDU, version),
 		(ASN_TAG_CLASS_CONTEXT | (0 << 2)),
 		-1,	/* IMPLICIT tag at current level */
 		&asn_DEF_NativeInteger,
 		memb_version_constraint_1,
 		0,	/* PER is not compiled, use -gen-PER */
-		asn_DFL_2_set_1,	/* DEFAULT 1 */
+		0,
 		"version"
 		},
 	{ ATF_NOFLAGS, 0, offsetof(struct RsproPDU, tag),

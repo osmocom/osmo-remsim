@@ -270,7 +270,7 @@ RsproPDUchoice ::= CHOICE {
 }
 
 RsproPDU ::= SEQUENCE {
-	version		[0] INTEGER(0..32) DEFAULT 1,
+	version		[0] INTEGER(0..32),
 	tag		[1] OperationTag,
 	msg		[2] RsproPDUchoice
 }
