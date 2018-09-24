@@ -39,6 +39,7 @@ struct msgb *rspro_enc_msg(RsproPDU_t *pdu)
 	rval = der_encode_to_buffer(&asn_DEF_RsproPDU, pdu, msgb_data(msg), msgb_tailroom(msg));
 	if (rval.encoded < 0) {
 		fprintf(stderr, "Failed to encode %s\n", rval.failed_type->name);
+		msgb_free(msg);
 		return NULL;
 	}
 	msgb_put(msg, rval.encoded);
