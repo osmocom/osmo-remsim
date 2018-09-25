@@ -14,6 +14,10 @@
 
 #include "rspro_util.h"
 
+enum {
+	DMAIN,
+};
+
 struct bankd;
 
 struct bank_slot {

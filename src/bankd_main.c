@@ -14,6 +14,8 @@
 
 #include <osmocom/core/socket.h>
 #include <osmocom/core/linuxlist.h>
+#include <osmocom/core/logging.h>
+#include <osmocom/core/application.h>
 
 #include <osmocom/gsm/ipa.h>
 #include <osmocom/gsm/protocol/ipaccess.h>
@@ -32,8 +34,24 @@ static void *worker_main(void *arg);
 * bankd core / main thread
 ***********************************************************************/
 
+static const struct log_info_cat default_categories[] = {
+	[DMAIN] = {
+		.name = "DMAIN",
+		.loglevel = LOGL_DEBUG,
+		.enabled = 1,
+	},
+};
+
+static const struct log_info log_info = {
+	.cat = default_categories,
+	.num_cat = ARRAY_SIZE(default_categories),
+};
+
 static void bankd_init(struct bankd *bankd)
 {
+	void *g_tall_ctx = talloc_named_const(NULL, 0, "global");
+	osmo_init_logging2(g_tall_ctx, &log_info);
+
 	/* intialize members of 'bankd' */
 	INIT_LLIST_HEAD(&bankd->slot_mappings);
 	pthread_rwlock_init(&bankd->slot_mappings_rwlock, NULL);
