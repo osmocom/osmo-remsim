@@ -72,6 +72,7 @@ worker threads have the following states:
 * ACCEPTING (they're blocking in the accept() call on the server socket fd)
 * CONNECTED_WAIT_ID (TCP established, but peer not yet identified itself)
 * CONNECTED_CLIENT (TCP established, client has identified itself, no mapping)
+* CONNECTED_CLIENT_WAIT_MAP(TCP established, client has identified, waiting for mapping)
 * CONNECTED_CLIENT_MAPPED (TCP established, client has identified itself, mapping exists)
 * CONNECTED_CLIENT_MAPPED_CARD (TCP established, client identified, mapping exists, card opened)
 * CONNECTED_SERVER (TCP established, server has identified itself)

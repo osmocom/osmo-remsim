@@ -46,6 +46,15 @@ static inline bool client_slot_equals(const struct client_slot *a, const struct 
 		return false;
 }
 
+static inline ClientSlot_t client_slot2asn(const struct client_slot *in)
+{
+	ClientSlot_t out = {
+		.clientId = in->client_id,
+		.slotNr = in->slot_nr,
+	};
+	return out;
+}
+
 /* slot mappings are created / removed by the server */
 struct bankd_slot_mapping {
 	/* global lits of bankd slot mappings */
@@ -100,6 +109,9 @@ struct bankd_worker {
 	/* worker thread state */
 	enum bankd_worker_state state;
 
+	uint8_t atr[32];
+	unsigned int atr_len;
+
 	/* slot number we are representing */
 	struct bank_slot slot;
 
@@ -116,12 +128,15 @@ struct bankd_worker {
 
 	struct {
 		const char *name;
+		struct osmo_fsm_inst *fi;
 		union {
 			struct {
 				/* PC/SC context / application handle */
 				SCARDCONTEXT hContext;
 				/* PC/SC card handle */
 				SCARDHANDLE hCard;
+				/* PC/SC slot status (SCARD_ABSENT, ...) bit-mask */
+				DWORD dwState;
 			} pcsc;
 		};
 	} reader;
@@ -152,3 +167,14 @@ struct bankd {
 
 int bankd_pcsc_read_slotnames(struct bankd *bankd, const char *csv_file);
 const char *bankd_pcsc_get_slot_name(struct bankd *bankd, const struct bank_slot *slot);
+
+enum sc_fsm_events {
+	SC_E_CONNECT_CMD,
+	SC_E_DISCONNECT_CMD,
+	SC_E_TPDU_CMD,
+};
+
+struct osmo_fsm_inst *sc_fsm_alloc(struct bankd_worker *worker);
+
+int worker_handle_tpduModemToCard(struct bankd_worker *worker, const RsproPDU_t *pdu);
+int worker_send_rspro(struct bankd_worker *worker, RsproPDU_t *pdu);

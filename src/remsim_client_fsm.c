@@ -91,7 +91,7 @@ static void bdc_st_established_onenter(struct osmo_fsm_inst *fi, uint32_t prev_s
 	struct bankd_client *bc = (struct bankd_client *) fi->priv;
 	RsproPDU_t *pdu;
 
-	/* FIXME: Send ClientConnReq */
+	/* FIXME: make configurable */
 	const ClientSlot_t clslot = { .clientId = 23, .slotNr = 1 };
 	pdu = rspro_gen_ConnectClientReq(&bc->own_comp_id, &clslot);
 	ipa_client_conn_send_rspro(bc->bankd_conn, pdu);
@@ -307,12 +307,14 @@ static void srvc_st_init_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
 	if (!srvc->conn) {
 		fprintf(stderr, "Unable to create socket: %s\n", strerror(errno));
 		/* FIXME */
+		OSMO_ASSERT(0);
 	}
 	/* Attempt to connect TCP socket */
 	rc = ipa_client_conn_open(srvc->conn);
 	if (rc < 0) {
 		fprintf(stderr, "Unable to connect: %s\n", strerror(errno));
 		/* FIXME */
+		OSMO_ASSERT(0);
 	}
 }
 

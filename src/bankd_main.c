@@ -16,6 +16,7 @@
 #include <osmocom/core/linuxlist.h>
 #include <osmocom/core/logging.h>
 #include <osmocom/core/application.h>
+#include <osmocom/core/fsm.h>
 
 #include <osmocom/gsm/ipa.h>
 #include <osmocom/gsm/protocol/ipaccess.h>
@@ -206,10 +207,7 @@ static int worker_open_card(struct bankd_worker *worker)
 	rc = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &worker->reader.pcsc.hContext);
 	PCSC_ERROR(worker, rc, "SCardEstablishContext")
 
-	DWORD dwActiveProtocol;
-	rc = SCardConnect(worker->reader.pcsc.hContext, worker->reader.name, SCARD_SHARE_SHARED,
-			  SCARD_PROTOCOL_T0, &worker->reader.pcsc.hCard, &dwActiveProtocol);
-	PCSC_ERROR(worker, rc, "SCardConnect")
+	worker->reader.fi = sc_fsm_alloc(worker);
 
 	worker_set_state(worker, BW_ST_CONN_CLIENT_MAPPED_CARD);
 
@@ -246,7 +244,7 @@ static int blocking_ipa_read(int fd, uint8_t *buf, unsigned int buf_size)
 	return len;
 }
 
-static int worker_send_rspro(struct bankd_worker *worker, RsproPDU_t *pdu)
+int worker_send_rspro(struct bankd_worker *worker, RsproPDU_t *pdu)
 {
 	struct msgb *msg = rspro_enc_msg(pdu);
 	int rc;
@@ -261,6 +259,7 @@ static int worker_send_rspro(struct bankd_worker *worker, RsproPDU_t *pdu)
 	ipa_prepend_header_ext(msg, IPAC_PROTO_EXT_RSPRO);
 	ipa_prepend_header(msg, IPAC_PROTO_OSMO);
 
+	printf("tx: %s\n", msgb_hexdump(msg));
 	/* actually send it through the socket */
 	rc = write(worker->client.fd, msgb_data(msg), msgb_length(msg));
 	if (rc == msgb_length(msg))
@@ -327,7 +326,7 @@ static int worker_handle_connectClientReq(struct bankd_worker *worker, const Rsp
 	return worker_send_rspro(worker, resp);
 }
 
-static int worker_handle_tpduModemToCard(struct bankd_worker *worker, const RsproPDU_t *pdu)
+int worker_handle_tpduModemToCard(struct bankd_worker *worker, const RsproPDU_t *pdu)
 {
 	const struct TpduModemToCard *mdm2sim = &pdu->msg.choice.tpduModemToCard;
 	const SCARD_IO_REQUEST *pioSendPci = SCARD_PCI_T0;
@@ -338,11 +337,6 @@ static int worker_handle_tpduModemToCard(struct bankd_worker *worker, const Rspr
 	long rc;
 
 	LOGW(worker, "tpduModemToCard(%s)\n", osmo_hexdump_nospc(mdm2sim->data.buf, mdm2sim->data.size));
-
-	if (worker->state != BW_ST_CONN_CLIENT_MAPPED_CARD) {
-		LOGW(worker, "Unexpected tpduModemToCaard\n");
-		return -104;
-	}
 
 	/* FIXME: Validate that toBankSlot / fromClientSlot match our expectations */
 
@@ -371,7 +365,8 @@ static int worker_handle_rspro(struct bankd_worker *worker, const RsproPDU_t *pd
 		rc = worker_handle_connectClientReq(worker, pdu);
 		break;
 	case RsproPDUchoice_PR_tpduModemToCard:
-		rc = worker_handle_tpduModemToCard(worker, pdu);
+		osmo_fsm_inst_dispatch(worker->reader.fi, SC_E_TPDU_CMD, (void *)pdu);
+		rc = 0;
 		break;
 	case RsproPDUchoice_PR_clientSlotStatusInd:
 		/* FIXME */

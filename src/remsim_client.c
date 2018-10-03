@@ -33,6 +33,7 @@ void ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *rspro)
 
 static int bankd_handle_msg(struct bankd_client *bc, struct msgb *msg)
 {
+	printf("Decoding RSPRO %s\n", msgb_hexdump(msg));
 	RsproPDU_t *pdu = rspro_dec_msg(msg);
 	if (!pdu) {
 		fprintf(stderr, "Error decoding PDU\n");

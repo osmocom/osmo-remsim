@@ -43,6 +43,7 @@ struct msgb *rspro_enc_msg(RsproPDU_t *pdu)
 		return NULL;
 	}
 	msgb_put(msg, rval.encoded);
+	printf("encoded %s\n", msgb_hexdump(msg));
 
 	ASN_STRUCT_FREE(asn_DEF_RsproPDU, pdu);
 
@@ -128,8 +129,8 @@ RsproPDU_t *rspro_gen_ConnectClientRes(const struct app_comp_id *a_cid, e_Result
 	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
 	if (!pdu)
 		return NULL;
-	pdu->version = 2;
-	pdu->tag = 2342;
+	//pdu->version = 2;
+	//pdu->tag = 2342;
 	pdu->msg.present = RsproPDUchoice_PR_connectClientRes;
 	fill_comp_id(&pdu->msg.choice.connectClientRes.identity, a_cid);
 	pdu->msg.choice.connectClientRes.result = res;
@@ -161,15 +162,13 @@ RsproPDU_t *rspro_gen_ConfigClientReq(const ClientSlot_t *client, uint32_t ip, u
 	return pdu;
 }
 
-RsproPDU_t *rspro_gen_SetAtrReq(uint16_t client_id, uint16_t slot_nr, const uint8_t *atr,
-				unsigned int atr_len)
+RsproPDU_t *rspro_gen_SetAtrReq(const ClientSlot_t *client, const uint8_t *atr, unsigned int atr_len)
 {
 	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
 	if (!pdu)
 		return NULL;
 	pdu->msg.present = RsproPDUchoice_PR_setAtrReq;
-	pdu->msg.choice.setAtrReq.slot.clientId = client_id;
-	pdu->msg.choice.setAtrReq.slot.slotNr = slot_nr;
+	pdu->msg.choice.setAtrReq.slot = *client;
 	OCTET_STRING_fromBuf(&pdu->msg.choice.setAtrReq.atr, (const char *)atr, atr_len);
 
 	return pdu;
