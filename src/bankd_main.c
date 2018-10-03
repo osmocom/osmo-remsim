@@ -179,6 +179,16 @@ static void worker_set_state(struct bankd_worker *worker, enum bankd_worker_stat
 {
 	LOGW(worker, "Changing state to %s\n", get_value_string(worker_state_names, new_state));
 	worker->state = new_state;
+	worker->timeout = 0;
+}
+
+static void worker_set_state_timeout(struct bankd_worker *worker, enum bankd_worker_state new_state,
+				     unsigned int timeout_secs)
+{
+	LOGW(worker, "Changing state to %s (timeout=%u)\n",
+		get_value_string(worker_state_names, new_state), timeout_secs);
+	worker->state = new_state;
+	worker->timeout = timeout_secs;
 }
 
 static void worker_cleanup(void *arg)
@@ -197,6 +207,8 @@ static void worker_cleanup(void *arg)
 static int worker_open_card(struct bankd_worker *worker)
 {
 	long rc;
+
+	OSMO_ASSERT(worker->state == BW_ST_CONN_CLIENT_MAPPED);
 
 	if (!worker->reader.name) {
 		/* resolve PC/SC reader name from slot_id -> name map */
@@ -226,11 +238,10 @@ static int worker_open_card(struct bankd_worker *worker)
 	}
 
 	worker_set_state(worker, BW_ST_CONN_CLIENT_MAPPED_CARD);
+	/* FIXME: notify client about this state change */
 
 	return 0;
 end:
-	/* retry in 10s */
-	worker->timeout = 10;
 	return rc;
 }
 
@@ -291,13 +302,34 @@ static int worker_send_rspro(struct bankd_worker *worker, RsproPDU_t *pdu)
 	return rc;
 }
 
+/* attempt to obtain slot-map */
+static int worker_try_slotmap(struct bankd_worker *worker)
+{
+	struct bankd_slot_mapping *slmap;
+
+	slmap = bankd_slotmap_by_client(worker->bankd, &worker->client.clslot);
+	if (!slmap) {
+		LOGW(worker, "No slotmap (yet) for client C(%u:%u)\n",
+			worker->client.clslot.client_id, worker->client.clslot.slot_nr);
+		/* check in 10s if the map has been installed meanwhile by main thread */
+		worker_set_state_timeout(worker, BW_ST_CONN_CLIENT_WAIT_MAP, 10);
+		return -1;
+	} else {
+		LOGW(worker, "slotmap found: C(%u:%u) -> B(%u:%u)\n",
+			slmap->client.client_id, slmap->client.slot_nr,
+			slmap->bank.bank_id, slmap->bank.slot_nr);
+		worker->slot = slmap->bank;
+		worker_set_state_timeout(worker, BW_ST_CONN_CLIENT_MAPPED, 10);
+		return worker_open_card(worker);
+	}
+}
+
+
 static int worker_handle_connectClientReq(struct bankd_worker *worker, const RsproPDU_t *pdu)
 {
 	const struct ComponentIdentity *cid = &pdu->msg.choice.connectClientReq.identity;
-	struct bankd_slot_mapping *slmap;
 	e_ResultCode res;
 	RsproPDU_t *resp;
-	int rc;
 
 	OSMO_ASSERT(pdu->msg.present == RsproPDUchoice_PR_connectClientReq);
 
@@ -318,26 +350,10 @@ static int worker_handle_connectClientReq(struct bankd_worker *worker, const Rsp
 	worker->client.clslot.slot_nr = pdu->msg.choice.connectClientReq.clientSlot->slotNr;
 	worker_set_state(worker, BW_ST_CONN_CLIENT);
 
-	slmap = bankd_slotmap_by_client(worker->bankd, &worker->client.clslot);
-	if (!slmap) {
-		LOGW(worker, "No slotmap (yet) for client C(%u:%u)\n",
-			worker->client.clslot.client_id, worker->client.clslot.slot_nr);
-		worker_set_state(worker, BW_ST_CONN_CLIENT_WAIT_MAP);
-		/* FIXME: how to update the map in case a map is installed later */
+	if (worker_try_slotmap(worker) >= 0)
+		res = ResultCode_ok;
+	else
 		res = ResultCode_cardNotPresent;
-	} else {
-		LOGW(worker, "slotmap found: C(%u:%u) -> B(%u:%u)\n",
-			slmap->client.client_id, slmap->client.slot_nr,
-			slmap->bank.bank_id, slmap->bank.slot_nr);
-		worker->slot = slmap->bank;
-		worker_set_state(worker, BW_ST_CONN_CLIENT_MAPPED);
-		/* actually open the mapped reader/card/slot */
-		rc = worker_open_card(worker);
-		if (rc == 0)
-			res = ResultCode_ok;
-		else
-			res = ResultCode_cardNotPresent;
-	}
 
 	resp = rspro_gen_ConnectClientRes(&worker->bankd->comp_id, res);
 	return worker_send_rspro(worker, resp);
@@ -423,7 +439,19 @@ static int worker_transceive_loop(struct bankd_worker *worker)
 	rc = wait_for_fd_or_timeout(worker->client.fd, worker->timeout);
 	if (rc == 0) {
 		/* TIMEOUT case */
-		worker_open_card(worker);
+		switch (worker->state) {
+		case BW_ST_CONN_CLIENT_WAIT_MAP:
+			/* re-check if mapping exists meanwhile? */
+			worker_try_slotmap(worker);
+			break;
+		case BW_ST_CONN_CLIENT_MAPPED:
+			/* re-check if reader/card can be opened meanwhile? */
+			worker_open_card(worker);
+			break;
+		default:
+			OSMO_ASSERT(0);
+		}
+		/* return early, so we do another select rather than the blocking read below */
 		return 0;
 	};
 
