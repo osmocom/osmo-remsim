@@ -49,10 +49,14 @@ static const struct log_info log_info = {
 	.num_cat = ARRAY_SIZE(default_categories),
 };
 
+int asn_debug;
+
 static void bankd_init(struct bankd *bankd)
 {
 	void *g_tall_ctx = talloc_named_const(NULL, 0, "global");
 	osmo_init_logging2(g_tall_ctx, &log_info);
+
+	asn_debug = 0;
 
 	/* intialize members of 'bankd' */
 	INIT_LLIST_HEAD(&bankd->slot_mappings);

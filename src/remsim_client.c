@@ -97,7 +97,7 @@ static const struct log_info log_info = {
 static struct bankd_client *g_client;
 static void *g_tall_ctx;
 void __thread *talloc_asn1_ctx;
-extern int asn_debug;
+int asn_debug;
 
 int main(int argc, char **argv)
 {
@@ -114,7 +114,7 @@ int main(int argc, char **argv)
 	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.software, "remsim-client");
 	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.sw_version, PACKAGE_VERSION);
 
-	//asn_debug = 1;
+	asn_debug = 0;
 	osmo_init_logging2(g_tall_ctx, &log_info);
 
 	if (bankd_conn_fsm_alloc(g_client) < 0) {

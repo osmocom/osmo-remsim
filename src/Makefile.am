@@ -2,13 +2,14 @@ SUBDIRS = rspro
 
 AM_CFLAGS = -Wall -I$(top_srcdir)/include -I$(top_builddir)/include \
 	    $(OSMOCORE_CFLAGS) $(OSMOGSM_CFLAGS) $(OSMOABIS_CFLAGS) \
-	    $(ASN1C_CFLAGS) $(PCSC_CFLAGS)
+	    $(PCSC_CFLAGS) \
+	    -I$(top_srcdir)/include/osmocom/rspro -DEMIT_ASN_DEBUG
 
 RSPRO_LIBVERSION=0:0:0
 lib_LTLIBRARIES = libosmo-rspro.la
 libosmo_rspro_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(RSPRO_LIBVERSION)
 libosmo_rspro_la_LIBADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
-			  $(ASN1C_LIBS) rspro/libosmo-asn1-rspro.la
+			  rspro/libosmo-asn1-rspro.la
 libosmo_rspro_la_SOURCES = rspro_util.c
 
 noinst_HEADERS = bankd.h internal.h rspro_util.h
@@ -17,12 +18,12 @@ bin_PROGRAMS = pcsc_test remsim-bankd remsim-client
 
 pcsc_test_SOURCES = driver_core.c driver_pcsc.c main.c
 pcsc_test_LDADD = $(OSMOCORE_LIBS) \
-		  $(ASN1C_LIBS) $(PCSC_LIBS) libosmo-rspro.la
+		  $(PCSC_LIBS) libosmo-rspro.la
 
 remsim_bankd_SOURCES = bankd_slotmap.c bankd_main.c bankd_pcsc.c
 remsim_bankd_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) \
-		     $(ASN1C_LIBS) $(PCSC_LIBS) libosmo-rspro.la -lcsv
+		     $(PCSC_LIBS) libosmo-rspro.la -lcsv
 
 remsim_client_SOURCES = remsim_client.c remsim_client_fsm.c
 remsim_client_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
-		     $(ASN1C_LIBS) libosmo-rspro.la
+		     libosmo-rspro.la
