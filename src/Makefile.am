@@ -9,7 +9,7 @@ lib_LTLIBRARIES = libosmo-rspro.la
 libosmo_rspro_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(RSPRO_LIBVERSION)
 libosmo_rspro_la_LIBADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
 			  $(ASN1C_LIBS) rspro/libosmo-asn1-rspro.la
-libosmo_rspro_la_SOURCES = rspro_util.c rspro_client.c
+libosmo_rspro_la_SOURCES = rspro_util.c
 
 noinst_HEADERS = bankd.h internal.h rspro_util.h
 
