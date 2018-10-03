@@ -99,6 +99,8 @@ struct bankd_worker {
 	unsigned int num;
 	/* worker thread state */
 	enum bankd_worker_state state;
+	/* timeout to use for blocking read */
+	unsigned int timeout;
 
 	/* slot number we are representing */
 	struct bank_slot slot;

@@ -198,25 +198,39 @@ static int worker_open_card(struct bankd_worker *worker)
 {
 	long rc;
 
-	/* resolve PC/SC reader name from slot_id -> name map */
-	worker->reader.name = bankd_pcsc_get_slot_name(worker->bankd, &worker->slot);
+	if (!worker->reader.name) {
+		/* resolve PC/SC reader name from slot_id -> name map */
+		worker->reader.name = bankd_pcsc_get_slot_name(worker->bankd, &worker->slot);
+		if (!worker->reader.name) {
+			LOGW(worker, "No PC/SC reader name configured for %u/%u, fix your config\n",
+				worker->slot.bank_id, worker->slot.slot_nr);
+			rc = -1;
+			goto end;
+		}
+	}
 	OSMO_ASSERT(worker->reader.name);
 
-	LOGW(worker, "Attempting to open card/slot '%s'\n", worker->reader.name);
+	if (!worker->reader.pcsc.hContext) {
+		LOGW(worker, "Attempting to open PC/SC context\n");
+		/* The PC/SC context must be created inside the thread where we'll later use it */
+		rc = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &worker->reader.pcsc.hContext);
+		PCSC_ERROR(worker, rc, "SCardEstablishContext")
+	}
 
-	/* The PC/SC context must be created inside the thread where we'll later use it */
-	rc = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &worker->reader.pcsc.hContext);
-	PCSC_ERROR(worker, rc, "SCardEstablishContext")
-
-	DWORD dwActiveProtocol;
-	rc = SCardConnect(worker->reader.pcsc.hContext, worker->reader.name, SCARD_SHARE_SHARED,
-			  SCARD_PROTOCOL_T0, &worker->reader.pcsc.hCard, &dwActiveProtocol);
-	PCSC_ERROR(worker, rc, "SCardConnect")
+	if (!worker->reader.pcsc.hCard) {
+		LOGW(worker, "Attempting to open card/slot '%s'\n", worker->reader.name);
+		DWORD dwActiveProtocol;
+		rc = SCardConnect(worker->reader.pcsc.hContext, worker->reader.name, SCARD_SHARE_SHARED,
+				  SCARD_PROTOCOL_T0, &worker->reader.pcsc.hCard, &dwActiveProtocol);
+		PCSC_ERROR(worker, rc, "SCardConnect")
+	}
 
 	worker_set_state(worker, BW_ST_CONN_CLIENT_MAPPED_CARD);
 
 	return 0;
 end:
+	/* retry in 10s */
+	worker->timeout = 10;
 	return rc;
 }
 
@@ -386,6 +400,16 @@ static int worker_handle_rspro(struct bankd_worker *worker, const RsproPDU_t *pd
 	return rc; 
 }
 
+static int wait_for_fd_or_timeout(int fd, unsigned int timeout_secs)
+{
+	struct timeval tout = { timeout_secs, 0 };
+	fd_set readset;
+
+	FD_ZERO(&readset);
+	FD_SET(fd, &readset);
+	return select(fd + 1, &readset, NULL, NULL, timeout_secs ? &tout : NULL);
+}
+
 /* body of the main transceive loop */
 static int worker_transceive_loop(struct bankd_worker *worker)
 {
@@ -395,6 +419,13 @@ static int worker_transceive_loop(struct bankd_worker *worker)
 	asn_dec_rval_t rval;
 	int data_len, rc;
 	RsproPDU_t *pdu = NULL;
+
+	rc = wait_for_fd_or_timeout(worker->client.fd, worker->timeout);
+	if (rc == 0) {
+		/* TIMEOUT case */
+		worker_open_card(worker);
+		return 0;
+	};
 
 	/* 1) blocking read of entire IPA message from the socket */
 	rc = blocking_ipa_read(worker->client.fd, buf, sizeof(buf));
@@ -514,6 +545,8 @@ static void *worker_main(void *arg)
 			SCardReleaseContext(worker->reader.pcsc.hContext);
 			worker->reader.pcsc.hContext = 0;
 		}
+		if (worker->reader.name)
+			worker->reader.name = NULL;
 		if (worker->client.fd >= 0)
 			close(worker->client.fd);
 		memset(&worker->client.peer_addr, 0, sizeof(worker->client.peer_addr));
