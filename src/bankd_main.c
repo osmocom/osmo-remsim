@@ -139,6 +139,13 @@ int main(int argc, char **argv)
 	while (1) {
 		if (terminate)
 			break;
+		/* FIXME: Connect to remsim-server from the main thread, register with
+		 * it and await + process any slot mapping or other configuration commands.
+		 * Ensure to re-connect as needed. */
+
+		/* we should generalize the SRVC (server connection) FSM from remsim-client
+		 * and use it here.  As long as only the main thread is using osmo_fsm, things
+		 * are safe with regard to other threads */
 		sleep(1);
 	}
 
