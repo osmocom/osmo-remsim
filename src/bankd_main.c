@@ -172,7 +172,7 @@ if (rv != SCARD_S_SUCCESS) { \
 	LOGW((w), text ": %s (0x%lX)\n", pcsc_stringify_error(rv), rv); \
 	goto end; \
 } else { \
-        LOGW((w), ": OK\n\n"); \
+        LOGW((w), ": OK\n"); \
 }
 
 static void worker_set_state(struct bankd_worker *worker, enum bankd_worker_state new_state)
