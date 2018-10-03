@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -459,6 +461,11 @@ static void *worker_main(void *arg)
 	struct bankd_worker *worker = (struct bankd_worker *) arg;
 	void *top_ctx;
 	int rc;
+	char worker_name[32];
+
+	/* set the thread name */
+	snprintf(worker_name, sizeof(worker_name), "bankd-worker(%u)", worker->num);
+	pthread_setname_np(pthread_self(), worker_name);
 
 	worker_set_state(worker, BW_ST_INIT);
 
