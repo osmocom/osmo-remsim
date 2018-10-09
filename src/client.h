@@ -42,6 +42,9 @@ struct bankd_client {
 	uint16_t bankd_port;
 	struct ipa_client_conn *bankd_conn;
 	struct osmo_fsm_inst *bankd_fi;
+
+	/* client id and slot number */
+	ClientSlot_t *clslot;
 };
 
 void ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *rspro);

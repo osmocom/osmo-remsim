@@ -92,8 +92,7 @@ static void bdc_st_established_onenter(struct osmo_fsm_inst *fi, uint32_t prev_s
 	RsproPDU_t *pdu;
 
 	/* FIXME: Send ClientConnReq */
-	const ClientSlot_t clslot = { .clientId = 23, .slotNr = 1 };
-	pdu = rspro_gen_ConnectClientReq(&bc->own_comp_id, &clslot);
+	pdu = rspro_gen_ConnectClientReq(&bc->own_comp_id, bc->clslot);
 	ipa_client_conn_send_rspro(bc->bankd_conn, pdu);
 }
 
