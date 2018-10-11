@@ -129,7 +129,7 @@ ASN_MODULE_INC+=per_encoder.h
 ASN_MODULE_INC+=per_opentype.h
 
 AM_CFLAGS = -I$(top_srcdir)/include $(OSMOCORE_CFLAGS) \
-		-I$(top_srcdir)/include/osmocom/rspro -DEMIT_ASN_DEBUG
+		-I$(top_srcdir)/include/osmocom/rspro
 
 noinst_LTLIBRARIES=libosmo-asn1-rspro.la
 libosmo_asn1_rspro_la_SOURCES=$(ASN_MODULE_SOURCES)
