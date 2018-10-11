@@ -473,9 +473,14 @@ static int worker_transceive_loop(struct bankd_worker *worker)
 	data_len = rc;
 
 	hh = (struct ipaccess_head *) buf;
-	if (hh->proto != IPAC_PROTO_OSMO) {
+	if (hh->proto != IPAC_PROTO_OSMO && hh->proto != IPAC_PROTO_IPACCESS) {
 		LOGW(worker, "Received unsupported IPA protocol != OSMO: 0x%02x\n", hh->proto);
 		return -4;
+	}
+
+	if (hh->proto == IPAC_PROTO_IPACCESS) {
+		LOGW(worker, "IPA CCM not implemented yet\n");
+		return 0;
 	}
 
 	hh_ext = (struct ipaccess_head_ext *) buf + sizeof(*hh);
