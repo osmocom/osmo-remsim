@@ -3,7 +3,7 @@ SUBDIRS = rspro
 AM_CFLAGS = -Wall -I$(top_srcdir)/include -I$(top_builddir)/include \
 	    $(OSMOCORE_CFLAGS) $(OSMOGSM_CFLAGS) $(OSMOABIS_CFLAGS) \
 	    $(PCSC_CFLAGS) $(USB_CFLAGS) $(OSMOSIM_CFLAGS) \
-	    -I$(top_srcdir)/include/osmocom/rspro -DEMIT_ASN_DEBUG
+	    -I$(top_srcdir)/include/osmocom/rspro
 
 RSPRO_LIBVERSION=0:0:0
 lib_LTLIBRARIES = libosmo-rspro.la
