@@ -740,7 +740,7 @@ int main(int argc, char **argv)
 	g_client->bankd_port = bankd_port;
 	g_client->own_comp_id.type = ComponentType_remsimClient;
 	g_client->clslot = &(ClientSlot_t){ .clientId = 23, .slotNr = 1 };
-	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.name, "fixme-name");
+	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.name, "simtrace2-remsim-client");
 	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.software, "remsim-client");
 	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.sw_version, PACKAGE_VERSION);
 
