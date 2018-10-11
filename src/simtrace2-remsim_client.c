@@ -384,49 +384,33 @@ static int process_do_error(struct cardem_inst *ci, uint8_t *buf, int len)
 	return 0;
 }
 
+static struct apdu_context ac; // this will hold the complete APDU (across calls)
+
 /*! \brief Process a RX-DATA indication message from the SIMtrace2 */
 static int process_do_rx_da(struct cardem_inst *ci, uint8_t *buf, int len)
 {
-	static struct apdu_context ac;
-	struct cardemu_usb_msg_rx_data *data;
+	struct cardemu_usb_msg_rx_data *data = (struct cardemu_usb_msg_rx_data *) buf; // cast the data from the USB message
 	int rc;
-
-	data = (struct cardemu_usb_msg_rx_data *) buf;
 
 	printf("=> DATA: flags=%x, %s: ", data->flags,
 		osmo_hexdump(data->data, data->data_len));
 
 	rc = apdu_segment_in(&ac, data->data, data->data_len,
-			     data->flags & CEMU_DATA_F_TPDU_HDR);
+			     data->flags & CEMU_DATA_F_TPDU_HDR); // parse the APDU data in the USB message
 
-	if (rc & APDU_ACT_TX_CAPDU_TO_CARD) {
-		struct msgb *tmsg = msgb_alloc(1024, "TPDU");
-		uint8_t *cur;
-
-		/* Copy TPDU header */
-		cur = msgb_put(tmsg, sizeof(ac.hdr));
-		memcpy(cur, &ac.hdr, sizeof(ac.hdr));
-		/* Copy D(c), if any */
+	if (rc & APDU_ACT_TX_CAPDU_TO_CARD) { // there is no pending data coming from the modem
+		uint8_t* apdu_command = calloc(1, sizeof(ac.hdr) + ac.lc.tot); // to store the APDU command to send
+		memcpy(apdu_command, &ac.hdr, sizeof(ac.hdr)); // copy APDU command header
 		if (ac.lc.tot) {
-			cur = msgb_put(tmsg, ac.lc.tot);
-			memcpy(cur, ac.dc, ac.lc.tot);
+			memcpy(apdu_command + sizeof(ac.hdr), ac.dc, ac.lc.tot); // copy APDU command data 
 		}
-		/* send to actual card */
-		tmsg->l3h = tmsg->tail;
-		printf("ok\n");
-		RsproPDU_t *pdu = rspro_gen_TpduModem2Card(g_client->clslot, NULL, NULL, 0);
-		printf("ko\n");
-		ipa_client_conn_send_rspro(g_client->bankd_conn, pdu);
-		// FIXME
-		msgb_apdu_sw(tmsg) = msgb_get_u16(tmsg);
-		ac.sw[0] = msgb_apdu_sw(tmsg) >> 8;
-		ac.sw[1] = msgb_apdu_sw(tmsg) & 0xff;
-		printf("SW=0x%04x, len_rx=%d\n", msgb_apdu_sw(tmsg), msgb_l3len(tmsg));
-		if (msgb_l3len(tmsg))
-			cardem_request_pb_and_tx(ci, ac.hdr.ins, tmsg->l3h, msgb_l3len(tmsg));
-		cardem_request_sw_tx(ci, ac.sw);
-	} else if (ac.lc.tot > ac.lc.cur) {
-		cardem_request_pb_and_rx(ci, ac.hdr.ins, ac.lc.tot - ac.lc.cur);
+		// send APDU to card
+		RsproPDU_t *pdu = rspro_gen_TpduModem2Card(g_client->clslot, &(BankSlot_t){ .bankId = 0, .slotNr = 0}, apdu_command, sizeof(ac.hdr) + ac.lc.tot); // create RSPRO packet
+		ipa_client_conn_send_rspro(g_client->bankd_conn, pdu); // send RSPRO packet
+		// the response will come separately
+		free(apdu_command);
+	} else if (ac.lc.tot > ac.lc.cur) { // there is pending data from the modem
+		cardem_request_pb_and_rx(ci, ac.hdr.ins, ac.lc.tot - ac.lc.cur); // send procedure byte to get remaining data
 	}
 	return 0;
 }
