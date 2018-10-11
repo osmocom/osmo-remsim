@@ -567,6 +567,28 @@ void ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *rspro)
 	push_and_send(ipa, msg);
 }
 
+static int bankd_handle_tpduCardToModem(struct bankd_client *bc, RsproPDU_t *pdu)
+{
+	OSMO_ASSERT(pdu);
+	OSMO_ASSERT(RsproPDUchoice_PR_tpduCardToModem == pdu->msg.present);
+
+	const struct TpduCardToModem *card2modem = &pdu->msg.choice.tpduCardToModem;
+	if (card2modem->data.size < 2) { // at least the two SW bytes are needed
+		return -1;
+	}
+
+	// save SW to our current APDU context
+	ac.sw[0] = card2modem->data.buf[card2modem->data.size - 2];
+	ac.sw[1] = card2modem->data.buf[card2modem->data.size - 1];
+	printf("SW=0x%02x%02x, len_rx=%d\n", ac.sw[0], ac.sw[1], card2modem->data.size - 2);
+	if (card2modem->data.size > 2) { // send PB and data to modem
+		cardem_request_pb_and_tx(ci, ac.hdr.ins, card2modem->data.buf, card2modem->data.size - 2);
+	}
+	cardem_request_sw_tx(ci, ac.sw); // send SW to modem
+
+	return 0;
+}
+
 static int bankd_handle_msg(struct bankd_client *bc, struct msgb *msg)
 {
 	RsproPDU_t *pdu = rspro_dec_msg(msg);
@@ -578,6 +600,9 @@ static int bankd_handle_msg(struct bankd_client *bc, struct msgb *msg)
 	switch (pdu->msg.present) {
 	case RsproPDUchoice_PR_connectClientRes:
 		osmo_fsm_inst_dispatch(bc->bankd_fi, BDC_E_CLIENT_CONN_RES, pdu);
+		break;
+	case RsproPDUchoice_PR_tpduCardToModem: // APDU response from card received
+		bankd_handle_tpduCardToModem(bc, pdu);
 		break;
 	default:
 		fprintf(stderr, "Unknown/Unsuppoerted RSPRO PDU: %s\n", msgb_hexdump(msg));
