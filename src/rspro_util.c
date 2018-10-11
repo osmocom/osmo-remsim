@@ -1,7 +1,7 @@
 
 
-#include <asn1c/asn_application.h>
-#include <asn1c/der_encoder.h>
+#include <asn_application.h>
+#include <der_encoder.h>
 
 #include <osmocom/core/msgb.h>
 #include <osmocom/rspro/RsproPDU.h>
