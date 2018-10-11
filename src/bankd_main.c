@@ -22,7 +22,7 @@
 #include <osmocom/gsm/ipa.h>
 #include <osmocom/gsm/protocol/ipaccess.h>
 
-#include <asn1c/asn_application.h>
+#include <asn_application.h>
 #include <osmocom/rspro/RsproPDU.h>
 
 #include "bankd.h"
