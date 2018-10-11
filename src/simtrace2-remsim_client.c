@@ -617,6 +617,8 @@ static void print_help(void)
 {
 	printf( "\t-d\t--bankd-host HOST\n"
 		"\t-p\t--bankd-port PORT\n"
+		"\t-c\t--client-id REMSIM_CLIENT_ID\n"
+		"\t-s\t--slot-nr REMSIM_SLOT_NUMBER\n"
 		"\t-h\t--help\n"
 		"\t-i\t--gsmtap-ip\tA.B.C.D\n"
 		"\t-k\t--keep-running\n"
@@ -634,6 +636,8 @@ static void print_help(void)
 static const struct option opts[] = {
 	{ "bankd-host", 1, 0, 'b' },
 	{ "bankd-port", 1, 0, 'p' },
+	{ "client-id", 1, 0, 'c' },
+	{ "slot-nr", 1, 0, 's' },
 	{ "gsmtap-ip", 1, 0, 'i' },
 	{ "help", 0, 0, 'h' },
 	{ "keep-running", 0, 0, 'k' },
@@ -655,6 +659,7 @@ int main(int argc, char **argv)
 	int c, ret = 1;
 	int keep_running = 0;
 	int bankd_port = 9999;
+	int client_id = -1, slot_nr = -1;
 	int if_num = 0, vendor_id = -1, product_id = -1;
 	int config_id = -1, altsetting = 0, addr = -1;
 	char *bankd_host = "127.0.0.1";
@@ -665,7 +670,7 @@ int main(int argc, char **argv)
 	while (1) {
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "b:p:hi:V:P:C:I:S:A:H:k", opts, &option_index);
+		c = getopt_long(argc, argv, "b:p:c:s:hi:V:P:C:I:S:A:H:k", opts, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -674,6 +679,12 @@ int main(int argc, char **argv)
 			break;
 		case 'p':
 			bankd_port = atoi(optarg);
+			break;
+		case 'c':
+			client_id = atoi(optarg);
+			break;
+		case 's':
+			slot_nr = atoi(optarg);
 			break;
 		case 'h':
 			print_help();
@@ -714,6 +725,11 @@ int main(int argc, char **argv)
 		goto do_exit;
 	}
 
+	if (client_id < 0 || slot_nr < 0) {
+		fprintf(stderr, "You have to specify the remote SIM client ID and slot number\n");
+		goto do_exit;
+	}
+
 	rc = libusb_init(NULL);
 	if (rc < 0) {
 		fprintf(stderr, "libusb initialization failed\n");
@@ -739,7 +755,7 @@ int main(int argc, char **argv)
 	g_client->bankd_host = bankd_host;
 	g_client->bankd_port = bankd_port;
 	g_client->own_comp_id.type = ComponentType_remsimClient;
-	g_client->clslot = &(ClientSlot_t){ .clientId = 23, .slotNr = 1 };
+	g_client->clslot = &(ClientSlot_t){ .clientId = client_id, .slotNr = slot_nr };
 	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.name, "simtrace2-remsim-client");
 	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.software, "remsim-client");
 	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.sw_version, PACKAGE_VERSION);
