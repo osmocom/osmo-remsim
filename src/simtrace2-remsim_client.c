@@ -507,7 +507,6 @@ static void run_mainloop(struct cardem_inst *ci)
 		}
 		/* dispatch any incoming data */
 		if (xfer_len > 0) {
-			printf("URB: %s\n", osmo_hexdump(buf, xfer_len));
 			process_usb_msg(ci, buf, xfer_len);
 			msg_count++;
 			byte_count += xfer_len;
