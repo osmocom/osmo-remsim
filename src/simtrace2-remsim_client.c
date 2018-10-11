@@ -122,7 +122,7 @@ int st_transp_tx_msg(struct st_transport *transp, struct msgb *msg)
 {
 	int rc;
 
-	printf("<- %s\n", msgb_hexdump(msg));
+	printf("SIMtrace <- %s\n", msgb_hexdump(msg));
 
 	int xfer_len;
 
@@ -185,7 +185,7 @@ static int cardem_request_pb_and_rx(struct cardem_inst *ci, uint8_t pb, uint8_t 
 	struct cardemu_usb_msg_tx_data *txd;
 	txd = (struct cardemu_usb_msg_tx_data *) msgb_put(msg, sizeof(*txd));
 
-	printf("<= %s(%02x, %d)\n", __func__, pb, le);
+	printf("SIMtrace <= %s(%02x, %d)\n", __func__, pb, le);
 
 	memset(txd, 0, sizeof(*txd));
 	txd->data_len = 1;
@@ -206,7 +206,7 @@ static int cardem_request_pb_and_tx(struct cardem_inst *ci, uint8_t pb,
 
 	txd = (struct cardemu_usb_msg_tx_data *) msgb_put(msg, sizeof(*txd));
 
-	printf("<= %s(%02x, %s, %d)\n", __func__, pb,
+	printf("SIMtrace <= %s(%02x, %s, %d)\n", __func__, pb,
 		osmo_hexdump(data, data_len_in), data_len_in);
 
 	memset(txd, 0, sizeof(*txd));
@@ -230,7 +230,7 @@ static int cardem_request_sw_tx(struct cardem_inst *ci, const uint8_t *sw)
 
 	txd = (struct cardemu_usb_msg_tx_data *) msgb_put(msg, sizeof(*txd));
 
-	printf("<= %s(%02x %02x)\n", __func__, sw[0], sw[1]);
+	printf("SIMtrace <= %s(%02x %02x)\n", __func__, sw[0], sw[1]);
 
 	memset(txd, 0, sizeof(*txd));
 	txd->data_len = 2;
@@ -261,7 +261,7 @@ static int cardem_request_set_atr(struct cardem_inst *ci, const uint8_t *atr, un
 
 	satr = (struct cardemu_usb_msg_set_atr *) msgb_put(msg, sizeof(*satr));
 
-	printf("<= %s(%s)\n", __func__, osmo_hexdump(atr, atr_len));
+	printf("SIMtrace <= %s(%s)\n", __func__, osmo_hexdump(atr, atr_len));
 
 	memset(satr, 0, sizeof(*satr));
 	satr->atr_len = atr_len;
@@ -347,7 +347,7 @@ static int process_do_status(struct cardem_inst *ci, uint8_t *buf, int len)
 	struct cardemu_usb_msg_status *status;
 	status = (struct cardemu_usb_msg_status *) buf;
 
-	printf("=> STATUS: flags=0x%x, fi=%u, di=%u, wi=%u wtime=%u\n",
+	printf("SIMtrace => STATUS: flags=0x%x, fi=%u, di=%u, wi=%u wtime=%u\n",
 		status->flags, status->fi, status->di, status->wi,
 		status->waiting_time);
 
@@ -360,7 +360,7 @@ static int process_do_pts(struct cardem_inst *ci, uint8_t *buf, int len)
 	struct cardemu_usb_msg_pts_info *pts;
 	pts = (struct cardemu_usb_msg_pts_info *) buf;
 
-	printf("=> PTS req: %s\n", osmo_hexdump(pts->req, sizeof(pts->req)));
+	printf("SIMtrace => PTS req: %s\n", osmo_hexdump(pts->req, sizeof(pts->req)));
 
 	return 0;
 }
@@ -371,7 +371,7 @@ static int process_do_error(struct cardem_inst *ci, uint8_t *buf, int len)
 	struct cardemu_usb_msg_error *err;
 	err = (struct cardemu_usb_msg_error *) buf;
 
-	printf("=> ERROR: %u/%u/%u: %s\n",
+	printf("SIMtrace => ERROR: %u/%u/%u: %s\n",
 		err->severity, err->subsystem, err->code,
 		err->msg_len ? (char *)err->msg : "");
 
@@ -386,7 +386,7 @@ static int process_do_rx_da(struct cardem_inst *ci, uint8_t *buf, int len)
 	struct cardemu_usb_msg_rx_data *data = (struct cardemu_usb_msg_rx_data *) buf; // cast the data from the USB message
 	int rc;
 
-	printf("=> DATA: flags=%x, %s: ", data->flags,
+	printf("SIMtrace => DATA: flags=%x, %s: ", data->flags,
 		osmo_hexdump(data->data, data->data_len));
 
 	rc = apdu_segment_in(&ac, data->data, data->data_len,
@@ -421,7 +421,7 @@ static int process_usb_msg(struct cardem_inst *ci, uint8_t *buf, int len)
 	struct simtrace_msg_hdr *sh = (struct simtrace_msg_hdr *)buf;
 	int rc;
 
-	printf("-> %s\n", osmo_hexdump(buf, len));
+	printf("SIMtrace -> %s\n", osmo_hexdump(buf, len));
 
 	buf += sizeof(*sh);
 
@@ -573,7 +573,7 @@ static int bankd_handle_tpduCardToModem(struct bankd_client *bc, RsproPDU_t *pdu
 	// save SW to our current APDU context
 	ac.sw[0] = card2modem->data.buf[card2modem->data.size - 2];
 	ac.sw[1] = card2modem->data.buf[card2modem->data.size - 1];
-	printf("SW=0x%02x%02x, len_rx=%d\n", ac.sw[0], ac.sw[1], card2modem->data.size - 2);
+	printf("SIMtrace <= SW=0x%02x%02x, len_rx=%d\n", ac.sw[0], ac.sw[1], card2modem->data.size - 2);
 	if (card2modem->data.size > 2) { // send PB and data to modem
 		cardem_request_pb_and_tx(ci, ac.hdr.ins, card2modem->data.buf, card2modem->data.size - 2);
 	}
