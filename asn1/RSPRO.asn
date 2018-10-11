@@ -151,7 +151,7 @@ ConnectBankRes ::= SEQUENCE {
 ConnectClientReq ::= SEQUENCE {
 	-- identity of the client that is connecting to the server/bankd
 	identity	ComponentIdentity,
-	clientSlot	ClientSlot OPTIONAL, -- old identity, if any
+	clientSlot	ClientSlot OPTIONAL, -- mandatory for CL->BANKD; CL->SERVER: old identity, if any
 	...
 }
 ConnectClientRes ::= SEQUENCE {
