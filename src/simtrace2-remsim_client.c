@@ -443,47 +443,6 @@ static int process_usb_msg(struct cardem_inst *ci, uint8_t *buf, int len)
 	return rc;
 }
 
-static void print_welcome(void)
-{
-	printf("simtrace2-remsim-client - Remote SIM card client for SIMtrace\n"
-	       "(C) 2010-2017, Harald Welte <laforge@gnumonks.org>\n"
-	       "(C) 2018, sysmocom -s.f.m.c. GmbH, Author: Kevin Redon <kredon@sysmocom.de>\n\n");
-}
-
-static void print_help(void)
-{
-	printf( "\t-d\t--bankd-host HOST\n"
-		"\t-p\t--bankd-port PORT\n"
-		"\t-h\t--help\n"
-		"\t-i\t--gsmtap-ip\tA.B.C.D\n"
-		"\t-k\t--keep-running\n"
-		"\t-V\t--usb-vendor\tVENDOR_ID\n"
-		"\t-P\t--usb-product\tPRODUCT_ID\n"
-		"\t-C\t--usb-config\tCONFIG_ID\n"
-		"\t-I\t--usb-interface\tINTERFACE_ID\n"
-		"\t-S\t--usb-altsetting ALTSETTING_ID\n"
-		"\t-A\t--usb-address\tADDRESS\n"
-		"\t-H\t--usb-path\tPATH\n"
-		"\n"
-		);
-}
-
-static const struct option opts[] = {
-	{ "bankd-host", 1, 0, 'b' },
-	{ "bankd-port", 1, 0, 'p' },
-	{ "gsmtap-ip", 1, 0, 'i' },
-	{ "help", 0, 0, 'h' },
-	{ "keep-running", 0, 0, 'k' },
-	{ "usb-vendor", 1, 0, 'V' },
-	{ "usb-product", 1, 0, 'P' },
-	{ "usb-config", 1, 0, 'C' },
-	{ "usb-interface", 1, 0, 'I' },
-	{ "usb-altsetting", 1, 0, 'S' },
-	{ "usb-address", 1, 0, 'A' },
-	{ "usb-path", 1, 0, 'H' },
-	{ NULL, 0, 0, 0 }
-};
-
 static void run_mainloop(struct cardem_inst *ci)
 {
 	struct st_transport *transp = ci->slot->transp;
@@ -644,6 +603,47 @@ static const struct log_info_cat default_categories[] = {
 static const struct log_info log_info = {
 	.cat = default_categories,
 	.num_cat = ARRAY_SIZE(default_categories),
+};
+
+static void print_welcome(void)
+{
+	printf("simtrace2-remsim-client - Remote SIM card client for SIMtrace\n"
+	       "(C) 2010-2017, Harald Welte <laforge@gnumonks.org>\n"
+	       "(C) 2018, sysmocom -s.f.m.c. GmbH, Author: Kevin Redon <kredon@sysmocom.de>\n\n");
+}
+
+static void print_help(void)
+{
+	printf( "\t-d\t--bankd-host HOST\n"
+		"\t-p\t--bankd-port PORT\n"
+		"\t-h\t--help\n"
+		"\t-i\t--gsmtap-ip\tA.B.C.D\n"
+		"\t-k\t--keep-running\n"
+		"\t-V\t--usb-vendor\tVENDOR_ID\n"
+		"\t-P\t--usb-product\tPRODUCT_ID\n"
+		"\t-C\t--usb-config\tCONFIG_ID\n"
+		"\t-I\t--usb-interface\tINTERFACE_ID\n"
+		"\t-S\t--usb-altsetting ALTSETTING_ID\n"
+		"\t-A\t--usb-address\tADDRESS\n"
+		"\t-H\t--usb-path\tPATH\n"
+		"\n"
+		);
+}
+
+static const struct option opts[] = {
+	{ "bankd-host", 1, 0, 'b' },
+	{ "bankd-port", 1, 0, 'p' },
+	{ "gsmtap-ip", 1, 0, 'i' },
+	{ "help", 0, 0, 'h' },
+	{ "keep-running", 0, 0, 'k' },
+	{ "usb-vendor", 1, 0, 'V' },
+	{ "usb-product", 1, 0, 'P' },
+	{ "usb-config", 1, 0, 'C' },
+	{ "usb-interface", 1, 0, 'I' },
+	{ "usb-altsetting", 1, 0, 'S' },
+	{ "usb-address", 1, 0, 'A' },
+	{ "usb-path", 1, 0, 'H' },
+	{ NULL, 0, 0, 0 }
 };
 
 int main(int argc, char **argv)
