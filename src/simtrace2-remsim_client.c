@@ -46,9 +46,6 @@ struct st_transport {
 		uint8_t out;
 		uint8_t irq_in;
 	} usb_ep;
-
-	/* UDP */
-	int udp_fd;
 };
 
 /* a SIMtrace slot; communicates over a transport */
@@ -127,15 +124,11 @@ int st_transp_tx_msg(struct st_transport *transp, struct msgb *msg)
 
 	printf("<- %s\n", msgb_hexdump(msg));
 
-	if (transp->udp_fd < 0) {
-		int xfer_len;
+	int xfer_len;
 
-		rc = libusb_bulk_transfer(transp->usb_devh, transp->usb_ep.out,
-					  msgb_data(msg), msgb_length(msg),
-					  &xfer_len, 100000);
-	} else {
-		rc = write(transp->udp_fd, msgb_data(msg), msgb_length(msg));
-	}
+	rc = libusb_bulk_transfer(transp->usb_devh, transp->usb_ep.out,
+		msgb_data(msg), msgb_length(msg),
+		&xfer_len, 100000);
 
 	msgb_free(msg);
 	return rc;
@@ -722,22 +715,10 @@ int main(int argc, char **argv)
 		goto do_exit;
 	}
 
-	transp->udp_fd = -1;
-
-	if (!remote_udp_host) {
-		rc = libusb_init(NULL);
-		if (rc < 0) {
-			fprintf(stderr, "libusb initialization failed\n");
-			goto do_exit;
-		}
-	} else {
-		transp->udp_fd = osmo_sock_init(AF_INET, SOCK_DGRAM, IPPROTO_UDP,
-						remote_udp_host, remote_udp_port+if_num,
-						OSMO_SOCK_F_CONNECT);
-		if (transp->udp_fd < 0) {
-			fprintf(stderr, "error binding UDP port\n");
-			goto do_exit;
-		}
+	rc = libusb_init(NULL);
+	if (rc < 0) {
+		fprintf(stderr, "libusb initialization failed\n");
+		goto do_exit;
 	}
 
 	g_gti = gsmtap_source_init(gsmtap_host, GSMTAP_UDP_PORT, 0);
@@ -819,8 +800,7 @@ int main(int argc, char **argv)
 		run_mainloop(ci);
 		ret = 0;
 
-		if (transp->udp_fd < 0)
-			libusb_release_interface(transp->usb_devh, 0);
+		libusb_release_interface(transp->usb_devh, 0);
 close_exit:
 		if (transp->usb_devh)
 			libusb_close(transp->usb_devh);
@@ -828,8 +808,7 @@ close_exit:
 			sleep(1);
 	} while (keep_running);
 
-	if (transp->udp_fd < 0)
-		libusb_exit(NULL);
+	libusb_exit(NULL);
 do_exit:
 	return ret;
 }
