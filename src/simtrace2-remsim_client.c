@@ -452,15 +452,15 @@ static int process_usb_msg(struct cardem_inst *ci, uint8_t *buf, int len)
 
 static void print_welcome(void)
 {
-	printf("simtrace2-remsim - Remote SIM card forwarding\n"
+	printf("simtrace2-remsim-client - Remote SIM card client for SIMtrace\n"
 	       "(C) 2010-2017, Harald Welte <laforge@gnumonks.org>\n"
 	       "(C) 2018, sysmocom -s.f.m.c. GmbH, Author: Kevin Redon <kredon@sysmocom.de>\n\n");
 }
 
 static void print_help(void)
 {
-	printf( "\t-r\t--remote-udp-host HOST\n"
-		"\t-p\t--remote-udp-port PORT\n"
+	printf( "\t-d\t--bankd-host HOST\n"
+		"\t-p\t--bankd-port PORT\n"
 		"\t-h\t--help\n"
 		"\t-i\t--gsmtap-ip\tA.B.C.D\n"
 		"\t-k\t--keep-running\n"
@@ -476,8 +476,8 @@ static void print_help(void)
 }
 
 static const struct option opts[] = {
-	{ "remote-udp-host", 1, 0, 'r' },
-	{ "remote-udp-port", 1, 0, 'p' },
+	{ "bankd-host", 1, 0, 'b' },
+	{ "bankd-port", 1, 0, 'p' },
 	{ "gsmtap-ip", 1, 0, 'i' },
 	{ "help", 0, 0, 'h' },
 	{ "keep-running", 0, 0, 'k' },
@@ -661,10 +661,10 @@ int main(int argc, char **argv)
 	int rc;
 	int c, ret = 1;
 	int keep_running = 0;
-	int remote_udp_port = 52342;
+	int bankd_port = 9999;
 	int if_num = 0, vendor_id = -1, product_id = -1;
 	int config_id = -1, altsetting = 0, addr = -1;
-	char *remote_udp_host = NULL;
+	char *bankd_host = "127.0.0.1";
 	char *path = NULL;
 
 	print_welcome();
@@ -672,15 +672,15 @@ int main(int argc, char **argv)
 	while (1) {
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "r:p:hi:V:P:C:I:S:A:H:ak", opts, &option_index);
+		c = getopt_long(argc, argv, "b:p:hi:V:P:C:I:S:A:H:k", opts, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
-		case 'r':
-			remote_udp_host = optarg;
+		case 'b':
+			bankd_host = optarg;
 			break;
 		case 'p':
-			remote_udp_port = atoi(optarg);
+			bankd_port = atoi(optarg);
 			break;
 		case 'h':
 			print_help();
@@ -716,7 +716,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (!remote_udp_host && (vendor_id < 0 || product_id < 0)) {
+	if (vendor_id < 0 || product_id < 0) {
 		fprintf(stderr, "You have to specify the vendor and product ID\n");
 		goto do_exit;
 	}
@@ -755,8 +755,8 @@ int main(int argc, char **argv)
 	osmo_fsm_register(&remsim_client_server_fsm);
 
 	g_client = talloc_zero(g_tall_ctx, struct bankd_client);
-	g_client->bankd_host = "localhost";
-	g_client->bankd_port = 9999;
+	g_client->bankd_host = bankd_host;
+	g_client->bankd_port = bankd_port;
 	g_client->own_comp_id.type = ComponentType_remsimClient;
 	g_client->clslot = &(ClientSlot_t){ .clientId = 23, .slotNr = 1 };
 	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.name, "fixme-name");
