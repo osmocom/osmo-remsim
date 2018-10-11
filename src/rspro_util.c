@@ -182,7 +182,9 @@ RsproPDU_t *rspro_gen_TpduModem2Card(const ClientSlot_t *client, const BankSlot_
 	if (!pdu)
 		return NULL;
 	pdu->msg.present = RsproPDUchoice_PR_tpduModemToCard;
+	OSMO_ASSERT(client);
 	pdu->msg.choice.tpduModemToCard.fromClientSlot = *client;
+	OSMO_ASSERT(bank);
 	pdu->msg.choice.tpduModemToCard.toBankSlot = *bank;
 	/* TODO: flags? */
 	OCTET_STRING_fromBuf(&pdu->msg.choice.tpduModemToCard.data, (const char *)tpdu, tpdu_len);
@@ -197,7 +199,9 @@ RsproPDU_t *rspro_gen_TpduCard2Modem(const BankSlot_t *bank, const ClientSlot_t 
 	if (!pdu)
 		return NULL;
 	pdu->msg.present = RsproPDUchoice_PR_tpduCardToModem;
+	OSMO_ASSERT(bank);
 	pdu->msg.choice.tpduCardToModem.fromBankSlot = *bank;
+	OSMO_ASSERT(client)
 	pdu->msg.choice.tpduCardToModem.toClientSlot = *client;
 	/* TODO: flags? */
 	OCTET_STRING_fromBuf(&pdu->msg.choice.tpduCardToModem.data, (const char *)tpdu, tpdu_len);
