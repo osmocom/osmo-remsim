@@ -12,7 +12,7 @@ libosmo_rspro_la_LIBADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
 			  rspro/libosmo-asn1-rspro.la
 libosmo_rspro_la_SOURCES = rspro_util.c
 
-noinst_HEADERS = bankd.h internal.h rspro_util.h
+noinst_HEADERS = bankd.h client.h internal.h rspro_util.h
 
 bin_PROGRAMS = pcsc_test remsim-bankd remsim-client
 
