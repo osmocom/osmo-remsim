@@ -46,4 +46,5 @@ int main(int argc, char **argv)
 	g_ctx = talloc_named_const(NULL, 0, "main");
 	talloc_asn1_ctx = talloc_named_const(g_ctx, 0, "asn1_context");
 	card_readers_probe(g_ctx);
+	return 0;
 }
