@@ -2,6 +2,7 @@
 
 #include <osmocom/core/fsm.h>
 #include <osmocom/abis/ipa.h>
+#include <osmocom/rspro/RsproPDU.h>
 
 #include "rspro_util.h"
 #include "debug.h"
@@ -23,11 +24,14 @@ enum server_conn_fsm_event {
 	SRVC_E_CLIENT_CONN_RES,
 };
 
+struct rspro_server_conn;
+
 /* representing a client-side connection to a RSPRO server */
 struct rspro_server_conn {
 	/* state */
 	struct ipa_client_conn *conn;
 	struct osmo_fsm_inst *fi;
+	int (*handle_rx)(struct rspro_server_conn *conn, RsproPDU_t *pdu);
 
 	/* our own component ID */
 	struct app_comp_id own_comp_id;

@@ -269,6 +269,7 @@ static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 	struct ipaccess_head *hh = (struct ipaccess_head *) msg->data;
 	struct ipaccess_head_ext *he = (struct ipaccess_head_ext *) msgb_l2(msg);
 	struct rspro_server_conn *srvc = conn->data;
+	RsproPDU_t *pdu;
 	int rc;
 
 	if (msgb_length(msg) < sizeof(*hh))
@@ -284,12 +285,12 @@ static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 		goto invalid;
 
 	printf("Received RSPRO %s\n", msgb_hexdump(msg));
-#if 0
-	rc = bankd_handle_msg(srvc, msg);
-	msgb_free(msg);
+	pdu = rspro_dec_msg(msg);
+	if (!pdu)
+		goto invalid;
 
+	rc = srvc->handle_rx(srvc, pdu);
 	return rc;
-#endif
 
 invalid:
 	msgb_free(msg);
