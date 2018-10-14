@@ -118,7 +118,8 @@ RsproPDU_t *rspro_gen_ConnectClientReq(const struct app_comp_id *a_cid, const Cl
 		return NULL;
 	pdu->msg.present = RsproPDUchoice_PR_connectClientReq;
 	fill_comp_id(&pdu->msg.choice.connectClientReq.identity, a_cid);
-	ASN_ALLOC_COPY(pdu->msg.choice.connectClientReq.clientSlot, client);
+	if (client)
+		ASN_ALLOC_COPY(pdu->msg.choice.connectClientReq.clientSlot, client);
 
 	return pdu;
 }
