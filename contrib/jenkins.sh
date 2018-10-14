@@ -20,8 +20,8 @@ mkdir "$deps" || true
 verify_value_string_arrays_are_terminated.py $(find . -name "*.[hc]")
 
 osmo-build-dep.sh libosmocore "" --disable-doxygen
-osmo-build-dep.sh libosmo-abis "" --disable-doxygen
-osmo-build-dep.sh libosmo-netif "" --disable-doxygen
+osmo-build-dep.sh libosmo-abis
+osmo-build-dep.sh libosmo-netif
 
 export PKG_CONFIG_PATH="$inst/lib/pkgconfig:$PKG_CONFIG_PATH"
 export LD_LIBRARY_PATH="$inst/lib"
