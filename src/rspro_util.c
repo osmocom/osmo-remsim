@@ -153,6 +153,43 @@ RsproPDU_t *rspro_gen_CreateMappingReq(const ClientSlot_t *client, const BankSlo
 	return pdu;
 }
 
+RsproPDU_t *rspro_gen_CreateMappingRes(e_ResultCode res)
+{
+	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
+	if (!pdu)
+		return NULL;
+	pdu->version = 2;
+	pdu->msg.present = RsproPDUchoice_PR_createMappingRes;
+	pdu->msg.choice.createMappingRes.result = res;
+
+	return pdu;
+}
+
+RsproPDU_t *rspro_gen_RemoveMappingReq(const ClientSlot_t *client, const BankSlot_t *bank)
+{
+	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
+	if (!pdu)
+		return NULL;
+	pdu->version = 2;
+	pdu->msg.present = RsproPDUchoice_PR_removeMappingReq;
+	pdu->msg.choice.removeMappingReq.client = *client;
+	pdu->msg.choice.removeMappingReq.bank = *bank;
+
+	return pdu;
+}
+
+RsproPDU_t *rspro_gen_RemoveMappingRes(e_ResultCode res)
+{
+	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
+	if (!pdu)
+		return NULL;
+	pdu->version = 2;
+	pdu->msg.present = RsproPDUchoice_PR_removeMappingRes;
+	pdu->msg.choice.removeMappingRes.result = res;
+
+	return pdu;
+}
+
 RsproPDU_t *rspro_gen_ConfigClientReq(const ClientSlot_t *client, uint32_t ip, uint16_t port)
 {
 	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
