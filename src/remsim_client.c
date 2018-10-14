@@ -16,21 +16,6 @@
 #include "rspro_util.h"
 #include "client.h"
 
-static void push_and_send(struct ipa_client_conn *ipa, struct msgb *msg_tx)
-{
-	ipa_prepend_header_ext(msg_tx, IPAC_PROTO_EXT_RSPRO);
-	ipa_msg_push_header(msg_tx, IPAC_PROTO_OSMO);
-	ipa_client_conn_send(ipa, msg_tx);
-	/* msg_tx is now queued and will be freed. */
-}
-
-void ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *rspro)
-{
-	struct msgb *msg = rspro_enc_msg(rspro);
-	OSMO_ASSERT(msg);
-	push_and_send(ipa, msg);
-}
-
 static int bankd_handle_msg(struct bankd_client *bc, struct msgb *msg)
 {
 	RsproPDU_t *pdu = rspro_dec_msg(msg);
