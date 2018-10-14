@@ -103,6 +103,7 @@ RsproPDU_t *rspro_gen_ConnectBankReq(const struct app_comp_id *a_cid,
 	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
 	if (!pdu)
 		return NULL;
+	pdu->version = 2;
 	pdu->msg.present = RsproPDUchoice_PR_connectBankReq;
 	fill_comp_id(&pdu->msg.choice.connectBankReq.identity, a_cid);
 	pdu->msg.choice.connectBankReq.bankId = bank_id;
@@ -116,6 +117,7 @@ RsproPDU_t *rspro_gen_ConnectClientReq(const struct app_comp_id *a_cid, const Cl
 	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
 	if (!pdu)
 		return NULL;
+	pdu->version = 2;
 	pdu->msg.present = RsproPDUchoice_PR_connectClientReq;
 	fill_comp_id(&pdu->msg.choice.connectClientReq.identity, a_cid);
 	if (client)
@@ -143,6 +145,7 @@ RsproPDU_t *rspro_gen_CreateMappingReq(const ClientSlot_t *client, const BankSlo
 	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
 	if (!pdu)
 		return NULL;
+	pdu->version = 2;
 	pdu->msg.present = RsproPDUchoice_PR_createMappingReq;
 	pdu->msg.choice.createMappingReq.client = *client;
 	pdu->msg.choice.createMappingReq.bank = *bank;
@@ -155,6 +158,7 @@ RsproPDU_t *rspro_gen_ConfigClientReq(const ClientSlot_t *client, uint32_t ip, u
 	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
 	if (!pdu)
 		return NULL;
+	pdu->version = 2;
 	pdu->msg.present = RsproPDUchoice_PR_configClientReq;
 	pdu->msg.choice.configClientReq.clientSlot = *client;
 	fill_ip4_port(&pdu->msg.choice.configClientReq.bankd, ip, port);
@@ -168,6 +172,7 @@ RsproPDU_t *rspro_gen_SetAtrReq(uint16_t client_id, uint16_t slot_nr, const uint
 	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
 	if (!pdu)
 		return NULL;
+	pdu->version = 2;
 	pdu->msg.present = RsproPDUchoice_PR_setAtrReq;
 	pdu->msg.choice.setAtrReq.slot.clientId = client_id;
 	pdu->msg.choice.setAtrReq.slot.slotNr = slot_nr;
@@ -182,6 +187,7 @@ RsproPDU_t *rspro_gen_TpduModem2Card(const ClientSlot_t *client, const BankSlot_
 	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
 	if (!pdu)
 		return NULL;
+	pdu->version = 2;
 	pdu->msg.present = RsproPDUchoice_PR_tpduModemToCard;
 	OSMO_ASSERT(client);
 	pdu->msg.choice.tpduModemToCard.fromClientSlot = *client;
@@ -199,6 +205,7 @@ RsproPDU_t *rspro_gen_TpduCard2Modem(const BankSlot_t *bank, const ClientSlot_t 
 	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
 	if (!pdu)
 		return NULL;
+	pdu->version = 2;
 	pdu->msg.present = RsproPDUchoice_PR_tpduCardToModem;
 	OSMO_ASSERT(bank);
 	pdu->msg.choice.tpduCardToModem.fromBankSlot = *bank;
