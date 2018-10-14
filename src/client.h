@@ -14,6 +14,8 @@ enum bankd_conn_fsm_event {
 	BDC_E_CLIENT_CONN_RES,
 };
 
+extern struct osmo_fsm remsim_client_bankd_fsm;
+
 
 enum server_conn_fsm_event {
 	SRVC_E_TCP_UP,
@@ -21,7 +23,20 @@ enum server_conn_fsm_event {
 	SRVC_E_CLIENT_CONN_RES,
 };
 
-extern struct osmo_fsm remsim_client_bankd_fsm;
+/* representing a client-side connection to a RSPRO server */
+struct rspro_server_conn {
+	/* state */
+	struct ipa_client_conn *conn;
+	struct osmo_fsm_inst *fi;
+
+	/* our own component ID */
+	struct app_comp_id own_comp_id;
+
+	/* configuration */
+	char *server_host;
+	uint16_t server_port;
+};
+
 extern struct osmo_fsm remsim_client_server_fsm;
 
 /* main.c */

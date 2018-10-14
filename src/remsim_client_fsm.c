@@ -240,20 +240,6 @@ static const struct value_string server_conn_fsm_event_names[] = {
 	{ 0, NULL }
 };
 
-/* representing a client-side connection to a RSPRO server */
-struct rspro_server_conn {
-	/* state */
-	struct ipa_client_conn *conn;
-	struct osmo_fsm_inst *fi;
-
-	/* our own component ID */
-	struct app_comp_id own_comp_id;
-
-	/* configuration */
-	char *server_host;
-	uint16_t server_port;
-};
-
 static void srvc_updown_cb(struct ipa_client_conn *conn, int up)
 {
 	struct rspro_server_conn *srvc = conn->data;
