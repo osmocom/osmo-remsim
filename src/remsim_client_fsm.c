@@ -302,7 +302,7 @@ static void srvc_st_init_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
 	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
 	int rc;
 
-	srvc->conn = ipa_client_conn_create(srvc, NULL, 0, srvc->server_host, srvc->server_port,
+	srvc->conn = ipa_client_conn_create(fi, NULL, 0, srvc->server_host, srvc->server_port,
 						srvc_updown_cb, srvc_read_cb, NULL, srvc);
 	if (!srvc->conn) {
 		fprintf(stderr, "Unable to create socket: %s\n", strerror(errno));
@@ -450,11 +450,11 @@ struct osmo_fsm remsim_client_server_fsm = {
 	.event_names = server_conn_fsm_event_names,
 };
 
-int server_conn_fsm_alloc(struct rspro_server_conn *srvc)
+int server_conn_fsm_alloc(void *ctx, struct rspro_server_conn *srvc)
 {
 	struct osmo_fsm_inst *fi;
 
-	fi = osmo_fsm_inst_alloc(&remsim_client_server_fsm, srvc, srvc, LOGL_DEBUG, "server");
+	fi = osmo_fsm_inst_alloc(&remsim_client_server_fsm, ctx, srvc, LOGL_DEBUG, "server");
 	if (!fi)
 		return -1;
 

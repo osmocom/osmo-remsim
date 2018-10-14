@@ -37,6 +37,7 @@ struct rspro_server_conn {
 	uint16_t server_port;
 };
 
+int server_conn_fsm_alloc(void *ctx, struct rspro_server_conn *srvc);
 extern struct osmo_fsm remsim_client_server_fsm;
 
 /* main.c */
