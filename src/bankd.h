@@ -13,10 +13,7 @@
 #include <osmocom/core/linuxlist.h>
 
 #include "rspro_util.h"
-
-enum {
-	DMAIN,
-};
+#include "debug.h"
 
 struct bankd;
 

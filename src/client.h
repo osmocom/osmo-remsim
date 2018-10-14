@@ -4,10 +4,7 @@
 #include <osmocom/abis/ipa.h>
 
 #include "rspro_util.h"
-
-enum {
-	DMAIN,
-};
+#include "debug.h"
 
 /* fsm.c */
 
