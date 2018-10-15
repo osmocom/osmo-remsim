@@ -32,6 +32,9 @@ if test "x$PKG_CONFIG_INSTALLED" = "xno"; then
 fi
 PKG_PROG_PKG_CONFIG([0.20])
 
+AC_CHECK_LIB(csv, csv_init, LIBS="$LIBS -lcsv", [AC_MSG_ERROR([*** libcsv library not found!])])
+AC_CHECK_HEADERS([csv.h])
+
 PKG_CHECK_MODULES(OSMOCORE, libosmocore >= 0.11.0)
 PKG_CHECK_MODULES(OSMOGSM, libosmogsm >= 0.11.0)
 PKG_CHECK_MODULES(OSMOABIS, libosmoabis)
