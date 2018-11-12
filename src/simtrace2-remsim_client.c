@@ -245,6 +245,7 @@ static int cardem_request_sw_tx(struct cardem_inst *ci, const uint8_t *sw)
 	return st_slot_tx_msg(ci->slot, msg, SIMTRACE_MSGC_CARDEM, SIMTRACE_MSGT_DT_CEMU_TX_DATA);
 }
 
+// FIXME check if the ATR actually includes a checksum
 static void atr_update_csum(uint8_t *atr, unsigned int atr_len)
 {
 	uint8_t csum = 0;
@@ -617,6 +618,7 @@ static void print_help(void)
 		"\t-S\t--usb-altsetting ALTSETTING_ID\n"
 		"\t-A\t--usb-address\tADDRESS\n"
 		"\t-H\t--usb-path\tPATH\n"
+		"\t-a\t--atr\tATR\n"
 		"\n"
 		);
 }
@@ -636,6 +638,7 @@ static const struct option opts[] = {
 	{ "usb-altsetting", 1, 0, 'S' },
 	{ "usb-address", 1, 0, 'A' },
 	{ "usb-path", 1, 0, 'H' },
+	{ "atr", 1, 0, 'a' },
 	{ NULL, 0, 0, 0 }
 };
 
@@ -652,13 +655,15 @@ int main(int argc, char **argv)
 	int config_id = -1, altsetting = 0, addr = -1;
 	char *bankd_host = "127.0.0.1";
 	char *path = NULL;
+	uint8_t atr_data[33] = { 0x3B, 0x00 }; // the shortest simplest ATR possible
+	uint8_t atr_len = 2;
 
 	print_welcome();
 
 	while (1) {
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "b:p:c:s:hi:V:P:C:I:S:A:H:k", opts, &option_index);
+		c = getopt_long(argc, argv, "b:p:c:s:hi:V:P:C:I:S:A:H:a:k", opts, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -704,6 +709,14 @@ int main(int argc, char **argv)
 			break;
 		case 'H':
 			path = optarg;
+			break;
+		case 'a':
+			rc = osmo_hexparse(optarg, atr_data, ARRAY_SIZE(atr_data));
+			if (rc < 2 || rc > ARRAY_SIZE(atr_data)) {
+				fprintf(stderr, "ATR matlformed\n");
+				goto do_exit;
+			}
+			atr_len = rc;
 			break;
 		}
 	}
@@ -839,9 +852,8 @@ int main(int argc, char **argv)
 		st_modem_sim_select_remote(ci->slot);
 
 		/* set the ATR */
-		uint8_t real_atr[] = { 0x3B, 0x00 }; // the shortest simplest ATR possible
-		atr_update_csum(real_atr, sizeof(real_atr));
-		cardem_request_set_atr(ci, real_atr, sizeof(real_atr));
+		//atr_update_csum(real_atr, sizeof(real_atr));
+		cardem_request_set_atr(ci, atr_data, atr_len);
 
 		/* select remote (forwarded) SIM */
 		st_modem_reset_pulse(ci->slot, 300);
