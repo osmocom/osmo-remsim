@@ -465,7 +465,7 @@ static void run_mainloop(struct cardem_inst *ci)
 		if (rc < 0 && rc != LIBUSB_ERROR_TIMEOUT &&
 			rc != LIBUSB_ERROR_INTERRUPTED &&
 			rc != LIBUSB_ERROR_IO) {
-			fprintf(stderr, "BULK IN transfer error; rc=%d\n", rc);
+			fprintf(stderr, "BULK IN transfer error: %s\n", libusb_error_name(rc));
 			return;
 		}
 		/* dispatch any incoming data */
