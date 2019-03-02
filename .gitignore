@@ -6,6 +6,7 @@
 *~
 .*.swp
 .deps
+.libs
 .version
 .tarball-version
 autom4te.cache
@@ -27,3 +28,8 @@ Makefile.am.sample
 tags
 m4
 gen_rspro.stamp
+
+src/pcsc_test
+src/remsim-bankd
+src/remsim-client
+src/simtrace2-remsim-client
