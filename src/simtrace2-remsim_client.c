@@ -539,6 +539,8 @@ static int bankd_handle_msg(struct bankd_client *bc, struct msgb *msg)
 
 	switch (pdu->msg.present) {
 	case RsproPDUchoice_PR_connectClientRes:
+		/* Store 'identity' of bankd to in peer_comp_id */
+		rspro_comp_id_retrieve(&bc->peer_comp_id, &pdu->msg.choice.connectClientRes.identity);
 		osmo_fsm_inst_dispatch(bc->bankd_fi, BDC_E_CLIENT_CONN_RES, pdu);
 		break;
 	case RsproPDUchoice_PR_tpduCardToModem: // APDU response from card received
@@ -582,6 +584,41 @@ invalid:
 	return -1;
 }
 
+/* handle incoming messages from server */
+static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
+{
+	RsproPDU_t  *resp;
+
+	switch (pdu->msg.present) {
+	case RsproPDUchoice_PR_connectClientRes:
+		/* Store 'identity' of server in srvc->peer_comp_id */
+		rspro_comp_id_retrieve(&srvc->peer_comp_id, &pdu->msg.choice.connectClientRes.identity);
+		osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_CLIENT_CONN_RES, (void *) pdu);
+		break;
+	case RsproPDUchoice_PR_configClientReq:
+		/* store/set the clientID as instructed by the server */
+		if (!g_client->clslot)
+			g_client->clslot = talloc_zero(g_client, ClientSlot_t);
+		*g_client->clslot = pdu->msg.choice.configClientReq.clientSlot;
+		/* store/set the bankd ip/port as instructed by the server */
+		osmo_talloc_replace_string(g_client, &g_client->bankd_host,
+					   rspro_IpAddr2str(&pdu->msg.choice.configClientReq.bankd.ip));
+		g_client->bankd_port = ntohs(pdu->msg.choice.configClientReq.bankd.port);
+		/* instruct bankd FSM to connect */
+		osmo_fsm_inst_dispatch(g_client->bankd_fi, BDC_E_ESTABLISH, NULL);
+		/* send response to server */
+		resp = rspro_gen_ConfigClientRes(ResultCode_ok);
+		ipa_client_conn_send_rspro(srvc->conn, resp);
+		break;
+	default:
+		fprintf(stderr, "Unknown/Unsupported RSPRO PDU type: %u\n", pdu->msg.present);
+		return -1;
+	}
+
+	return 0;
+}
+
+
 static const struct log_info_cat default_categories[] = {
 	[DMAIN] = {
 		.name = "DMAIN",
@@ -604,10 +641,8 @@ static void print_welcome(void)
 
 static void print_help(void)
 {
-	printf( "\t-d\t--bankd-host HOST\n"
+	printf( "\t-s\t--server-host HOST\n"
 		"\t-p\t--bankd-port PORT\n"
-		"\t-c\t--client-id REMSIM_CLIENT_ID\n"
-		"\t-s\t--slot-nr REMSIM_SLOT_NUMBER\n"
 		"\t-h\t--help\n"
 		"\t-i\t--gsmtap-ip\tA.B.C.D\n"
 		"\t-k\t--keep-running\n"
@@ -624,10 +659,8 @@ static void print_help(void)
 }
 
 static const struct option opts[] = {
-	{ "bankd-host", 1, 0, 'b' },
-	{ "bankd-port", 1, 0, 'p' },
-	{ "client-id", 1, 0, 'c' },
-	{ "slot-nr", 1, 0, 's' },
+	{ "server-host", 1, 0, 's' },
+	{ "server-port", 1, 0, 'p' },
 	{ "gsmtap-ip", 1, 0, 'i' },
 	{ "help", 0, 0, 'h' },
 	{ "keep-running", 0, 0, 'k' },
@@ -644,16 +677,16 @@ static const struct option opts[] = {
 
 int main(int argc, char **argv)
 {
+	struct rspro_server_conn *srvc;
 	struct st_transport *transp = ci->slot->transp;
 	char *gsmtap_host = "127.0.0.1";
 	int rc;
 	int c, ret = 1;
 	int keep_running = 0;
-	int bankd_port = 9999;
-	int client_id = -1, slot_nr = -1;
+	int server_port = 9999;
 	int if_num = 0, vendor_id = -1, product_id = -1;
 	int config_id = -1, altsetting = 0, addr = -1;
-	char *bankd_host = "127.0.0.1";
+	char *server_host = "127.0.0.1";
 	char *path = NULL;
 	uint8_t atr_data[33] = { 0x3B, 0x00 }; // the shortest simplest ATR possible
 	uint8_t atr_len = 2;
@@ -663,21 +696,15 @@ int main(int argc, char **argv)
 	while (1) {
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "b:p:c:s:hi:V:P:C:I:S:A:H:a:k", opts, &option_index);
+		c = getopt_long(argc, argv, "s:p:hi:V:P:C:I:S:A:H:a:k", opts, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
-		case 'b':
-			bankd_host = optarg;
+		case 's':
+			server_host = optarg;
 			break;
 		case 'p':
-			bankd_port = atoi(optarg);
-			break;
-		case 'c':
-			client_id = atoi(optarg);
-			break;
-		case 's':
-			slot_nr = atoi(optarg);
+			server_port = atoi(optarg);
 			break;
 		case 'h':
 			print_help();
@@ -726,11 +753,6 @@ int main(int argc, char **argv)
 		goto do_exit;
 	}
 
-	if (client_id < 0 || slot_nr < 0) {
-		fprintf(stderr, "You have to specify the remote SIM client ID and slot number\n");
-		goto do_exit;
-	}
-
 	rc = libusb_init(NULL);
 	if (rc < 0) {
 		fprintf(stderr, "libusb initialization failed\n");
@@ -750,13 +772,20 @@ int main(int argc, char **argv)
 	g_tall_ctx = talloc_named_const(NULL, 0, "global");
 
 	g_client = talloc_zero(g_tall_ctx, struct bankd_client);
-	g_client->bankd_host = bankd_host;
-	g_client->bankd_port = bankd_port;
-	g_client->own_comp_id.type = ComponentType_remsimClient;
-	g_client->clslot = &(ClientSlot_t){ .clientId = client_id, .slotNr = slot_nr };
-	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.name, "simtrace2-remsim-client");
-	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.software, "remsim-client");
-	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.sw_version, PACKAGE_VERSION);
+
+	srvc = &g_client->srv_conn;
+	srvc->server_host = server_host;
+	srvc->server_port = server_port;
+	srvc->handle_rx = srvc_handle_rx;
+	srvc->own_comp_id.type = ComponentType_remsimClient;
+	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.name, "simtrace2-remsim-client");
+	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.software, "remsim-client");
+	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.sw_version, PACKAGE_VERSION);
+	rc = server_conn_fsm_alloc(g_client, srvc);
+	if (rc < 0) {
+		fprintf(stderr, "Unable to create Server conn FSM: %s\n", strerror(errno));
+		exit(1);
+	}
 
 	asn_debug = 0;
 	osmo_init_logging2(g_tall_ctx, &log_info);

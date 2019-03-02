@@ -26,6 +26,8 @@ static int bankd_handle_msg(struct bankd_client *bc, struct msgb *msg)
 
 	switch (pdu->msg.present) {
 	case RsproPDUchoice_PR_connectClientRes:
+		/* Store 'identity' of bankd to in peer_comp_id */
+		rspro_comp_id_retrieve(&bc->peer_comp_id, &pdu->msg.choice.connectClientRes.identity);
 		osmo_fsm_inst_dispatch(bc->bankd_fi, BDC_E_CLIENT_CONN_RES, pdu);
 		break;
 	default:
@@ -84,17 +86,62 @@ static void *g_tall_ctx;
 void __thread *talloc_asn1_ctx;
 int asn_debug;
 
+/* handle incoming messages from server */
+static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
+{
+	RsproPDU_t  *resp;
+
+	switch (pdu->msg.present) {
+	case RsproPDUchoice_PR_connectClientRes:
+		/* Store 'identity' of server in srvc->peer_comp_id */
+		rspro_comp_id_retrieve(&srvc->peer_comp_id, &pdu->msg.choice.connectClientRes.identity);
+		osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_CLIENT_CONN_RES, (void *) pdu);
+		break;
+	case RsproPDUchoice_PR_configClientReq:
+		/* store/set the clientID as instructed by the server */
+		if (!g_client->clslot)
+			g_client->clslot = talloc_zero(g_client, ClientSlot_t);
+		*g_client->clslot = pdu->msg.choice.configClientReq.clientSlot;
+		/* store/set the bankd ip/port as instructed by the server */
+		osmo_talloc_replace_string(g_client, &g_client->bankd_host,
+					   rspro_IpAddr2str(&pdu->msg.choice.configClientReq.bankd.ip));
+		g_client->bankd_port = ntohs(pdu->msg.choice.configClientReq.bankd.port);
+		/* instruct bankd FSM to connect */
+		osmo_fsm_inst_dispatch(g_client->bankd_fi, BDC_E_ESTABLISH, NULL);
+		/* send response to server */
+		resp = rspro_gen_ConfigClientRes(ResultCode_ok);
+		ipa_client_conn_send_rspro(srvc->conn, resp);
+		break;
+	default:
+		fprintf(stderr, "Unknown/Unsupported RSPRO PDU type: %u\n", pdu->msg.present);
+		return -1;
+	}
+
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
+	struct rspro_server_conn *srvc;
+	int rc;
+
 	g_tall_ctx = talloc_named_const(NULL, 0, "global");
 
 	g_client = talloc_zero(g_tall_ctx, struct bankd_client);
-	g_client->bankd_host = "localhost";
-	g_client->bankd_port = 9999;
-	g_client->own_comp_id.type = ComponentType_remsimClient;
-	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.name, "fixme-name");
-	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.software, "remsim-client");
-	OSMO_STRLCPY_ARRAY(g_client->own_comp_id.sw_version, PACKAGE_VERSION);
+
+	srvc = &g_client->srv_conn;
+	srvc->server_host = "localhost";
+	srvc->server_port = 9998;
+	srvc->handle_rx = srvc_handle_rx;
+	srvc->own_comp_id.type = ComponentType_remsimClient;
+	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.name, "fixme-name");
+	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.software, "remsim-client");
+	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.sw_version, PACKAGE_VERSION);
+	rc = server_conn_fsm_alloc(g_client, srvc);
+	if (rc < 0) {
+		fprintf(stderr, "Unable to create Server conn FSM: %s\n", strerror(errno));
+		exit(1);
+	}
 
 	asn_debug = 0;
 	osmo_init_logging2(g_tall_ctx, &log_info);

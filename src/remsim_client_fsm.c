@@ -57,6 +57,7 @@ enum bankd_conn_fsm_state {
 };
 
 static const struct value_string remsim_client_bankd_fsm_event_names[] = {
+	OSMO_VALUE_STRING(BDC_E_ESTABLISH),
 	OSMO_VALUE_STRING(BDC_E_TCP_UP),
 	OSMO_VALUE_STRING(BDC_E_TCP_DOWN),
 	OSMO_VALUE_STRING(BDC_E_CLIENT_CONN_RES),
@@ -67,33 +68,10 @@ static const struct value_string remsim_client_bankd_fsm_event_names[] = {
 #define T2_RECONNECT			10
 
 
-static void bdc_st_init_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
-{
-	struct bankd_client *bc = (struct bankd_client *) fi->priv;
-	int rc;
-
-	printf("onenter\n");
-	bc->bankd_conn = ipa_client_conn_create(bc, NULL, 0, bc->bankd_host, bc->bankd_port,
-						bankd_updown_cb, bankd_read_cb, NULL, bc);
-	if (!bc->bankd_conn) {
-		fprintf(stderr, "Unable to create socket: %s\n", strerror(errno));
-		exit(1);
-	}
-	/* Attempt to connect TCP socket */
-	rc = ipa_client_conn_open(bc->bankd_conn);
-	if (rc < 0) {
-		fprintf(stderr, "Unable to connect: %s\n", strerror(errno));
-		exit(1);
-	}
-}
-
 static void bdc_st_init(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
 	switch (event) {
-	case BDC_E_TCP_UP:
-		osmo_fsm_inst_state_chg(fi, BDC_ST_ESTABLISHED, T1_WAIT_CLIENT_CONN_RES, 1);
-		break;
-	case BDC_E_TCP_DOWN:
+	case BDC_E_ESTABLISH:
 		osmo_fsm_inst_state_chg(fi, BDC_ST_REESTABLISH, T2_RECONNECT, 2);
 		break;
 	default:
@@ -107,7 +85,7 @@ static void bdc_st_established_onenter(struct osmo_fsm_inst *fi, uint32_t prev_s
 	RsproPDU_t *pdu;
 
 	/* FIXME: Send ClientConnReq */
-	pdu = rspro_gen_ConnectClientReq(&bc->own_comp_id, bc->clslot);
+	pdu = rspro_gen_ConnectClientReq(&bc->srv_conn.own_comp_id, bc->clslot);
 	ipa_client_conn_send_rspro(bc->bankd_conn, pdu);
 }
 
@@ -142,6 +120,21 @@ static void bdc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_s
 	struct bankd_client *bc = (struct bankd_client *) fi->priv;
 	int rc;
 
+	/* re-create bankd_conn */
+	if (bc->bankd_conn) {
+		LOGPFSML(fi, LOGL_INFO, "Destroying existing connection to bankd\n");
+		ipa_client_conn_destroy(bc->bankd_conn);
+		bc->bankd_conn = NULL;
+	}
+	LOGPFSML(fi, LOGL_INFO, "Creating TCP connection to bankd at %s:%u\n",
+		 bc->bankd_host, bc->bankd_port);
+	bc->bankd_conn = ipa_client_conn_create(bc, NULL, 0, bc->bankd_host, bc->bankd_port,
+						bankd_updown_cb, bankd_read_cb, NULL, bc);
+	if (!bc->bankd_conn) {
+		fprintf(stderr, "Unable to create socket: %s\n", strerror(errno));
+		exit(1);
+	}
+
 	/* Attempt to connect TCP socket */
 	rc = ipa_client_conn_open(bc->bankd_conn);
 	if (rc < 0) {
@@ -166,14 +159,27 @@ static void bdc_st_reestablish(struct osmo_fsm_inst *fi, uint32_t event, void *d
 	}
 }
 
+static void bdc_allstate_action(struct osmo_fsm_inst *fi, uint32_t event, void *data)
+{
+	switch (event) {
+	case BDC_ST_REESTABLISH:
+		osmo_fsm_inst_state_chg(fi, BDC_ST_REESTABLISH, T2_RECONNECT, 2);
+		break;
+	default:
+		OSMO_ASSERT(0);
+	}
+}
+
 static int remsim_client_bankd_fsm_timer_cb(struct osmo_fsm_inst *fi)
 {
 	switch (fi->T) {
 	case 2:
+		/* TCP reconnect failed: retry */
 		osmo_fsm_inst_state_chg(fi, BDC_ST_REESTABLISH, T2_RECONNECT, 2);
 		break;
 	case 1:
-		/* FIXME: close connection and re-start */
+		/* no ClientConnectRes received: disconnect + reconnect */
+		osmo_fsm_inst_state_chg(fi, BDC_ST_REESTABLISH, T2_RECONNECT, 2);
 		break;
 	default:
 		OSMO_ASSERT(0);
@@ -184,8 +190,8 @@ static int remsim_client_bankd_fsm_timer_cb(struct osmo_fsm_inst *fi)
 static const struct osmo_fsm_state bankd_conn_fsm_states[] = {
 	[BDC_ST_INIT] = {
 		.name = "INIT",
-		.in_event_mask = S(BDC_E_TCP_UP) | S(BDC_E_TCP_DOWN),
-		.out_state_mask = S(BDC_ST_ESTABLISHED) | S(BDC_ST_REESTABLISH),
+		.in_event_mask = 0, /* S(BDC_E_ESTABLISH) via allstate */
+		.out_state_mask = S(BDC_ST_REESTABLISH),
 		.action = bdc_st_init,
 	},
 	[BDC_ST_ESTABLISHED] = {
@@ -214,6 +220,8 @@ struct osmo_fsm remsim_client_bankd_fsm = {
 	.name = "BANKD_CONN",
 	.states = bankd_conn_fsm_states,
 	.num_states = ARRAY_SIZE(bankd_conn_fsm_states),
+	.allstate_event_mask = S(BDC_E_ESTABLISH),
+	.allstate_action = bdc_allstate_action,
 	.timer_cb = remsim_client_bankd_fsm_timer_cb,
 	.log_subsys = DMAIN,
 	.event_names = remsim_client_bankd_fsm_event_names,
@@ -228,8 +236,6 @@ int bankd_conn_fsm_alloc(struct bankd_client *bc)
 		return -1;
 
 	bc->bankd_fi = fi;
-	/* onenter of the initial state is not automatically executed by osmo_fsm :( */
-	bdc_st_init_onenter(fi, 0);
 	return 0;
 }
 

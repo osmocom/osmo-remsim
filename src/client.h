@@ -10,9 +10,10 @@
 /* fsm.c */
 
 enum bankd_conn_fsm_event {
-	BDC_E_TCP_UP,
-	BDC_E_TCP_DOWN,
-	BDC_E_CLIENT_CONN_RES,
+	BDC_E_ESTABLISH,	/* instruct BDC to (re)etablish TCP connection to bankd */
+	BDC_E_TCP_UP,		/* notify BDC that TCP connection is up/connected */
+	BDC_E_TCP_DOWN,		/* notify BDC that TCP connection is down/disconnected */
+	BDC_E_CLIENT_CONN_RES,	/* notify BDC that ClientConnectRes has been received */
 };
 
 extern struct osmo_fsm remsim_client_bankd_fsm;
@@ -31,10 +32,12 @@ struct rspro_server_conn {
 	/* state */
 	struct ipa_client_conn *conn;
 	struct osmo_fsm_inst *fi;
-	int (*handle_rx)(struct rspro_server_conn *conn, RsproPDU_t *pdu);
+	int (*handle_rx)(struct rspro_server_conn *conn, const RsproPDU_t *pdu);
 
 	/* our own component ID */
 	struct app_comp_id own_comp_id;
+	/* remote component ID */
+	struct app_comp_id peer_comp_id;
 
 	/* configuration */
 	char *server_host;
@@ -48,11 +51,10 @@ extern struct osmo_fsm remsim_client_server_fsm;
 
 struct bankd_client {
 	/* connection to the remsim-server (control) */
-	struct ipa_client_conn *srv_conn;
-	struct osmo_fsm_inst *srv_fi;
+	struct rspro_server_conn srv_conn;
 
-	/* our own component ID */
-	struct app_comp_id own_comp_id;
+	/* remote component ID */
+	struct app_comp_id peer_comp_id;
 
 	/* connection to the remsim-bankd */
 	char *bankd_host;
