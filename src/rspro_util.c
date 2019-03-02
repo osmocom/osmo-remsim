@@ -203,6 +203,18 @@ RsproPDU_t *rspro_gen_ConfigClientReq(const ClientSlot_t *client, uint32_t ip, u
 	return pdu;
 }
 
+RsproPDU_t *rspro_gen_ConfigClientRes(e_ResultCode res)
+{
+	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
+	if (!pdu)
+		return NULL;
+	pdu->version = 2;
+	pdu->msg.present = RsproPDUchoice_PR_configClientRes;
+	pdu->msg.choice.configClientRes.result = res;
+
+	return pdu;
+}
+
 RsproPDU_t *rspro_gen_SetAtrReq(uint16_t client_id, uint16_t slot_nr, const uint8_t *atr,
 				unsigned int atr_len)
 {
