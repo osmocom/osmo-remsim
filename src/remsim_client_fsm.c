@@ -464,3 +464,9 @@ int server_conn_fsm_alloc(void *ctx, struct rspro_server_conn *srvc)
 	srvc_st_init_onenter(fi, 0);
 	return 0;
 }
+
+static __attribute__((constructor)) void on_dso_load(void)
+{
+	osmo_fsm_register(&remsim_client_bankd_fsm);
+	osmo_fsm_register(&remsim_client_server_fsm);
+}

@@ -749,9 +749,6 @@ int main(int argc, char **argv)
 	// initialize remote SIM client
 	g_tall_ctx = talloc_named_const(NULL, 0, "global");
 
-	osmo_fsm_register(&remsim_client_bankd_fsm);
-	osmo_fsm_register(&remsim_client_server_fsm);
-
 	g_client = talloc_zero(g_tall_ctx, struct bankd_client);
 	g_client->bankd_host = bankd_host;
 	g_client->bankd_port = bankd_port;
