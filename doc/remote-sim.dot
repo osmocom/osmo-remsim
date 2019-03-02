@@ -1,0 +1,15 @@
+digraph {
+	rankdir=LR;
+	SIM [shape=rect];
+	Reader [shape=rect];
+	Computer [shape=rect];
+	ComputerB [shape=rect];
+	SIMtrace [shape=rect];
+	Phone [shape=rect];
+
+	SIM -> Reader [label="ISO-7816-2/3",dir=both];
+	Reader -> Computer [label="USB CCID",dir=both];
+	Computer -> ComputerB [label="IP based transport",dir=both];
+	ComputerB -> SIMtrace [label="USB",dir=both];
+	SIMtrace -> Phone [label="ISO-7816-2/3",dir=both];
+}

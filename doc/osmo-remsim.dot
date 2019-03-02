@@ -1,0 +1,58 @@
+digraph {
+	rankdir=LR;
+
+	subgraph cluster_0 {
+		label="Data Center";
+		SIM0 [shape=rect];
+		SIM1 [shape=rect];
+		SIM2 [shape=rect];
+		SIM3 [shape=rect];
+		SIM4 [shape=rect];
+		SIM5 [shape=rect];
+		SIM6 [shape=rect];
+		SIM7 [shape=rect];
+		sysmoOCTSIM [shape=rect];
+		{
+			rank=same;
+			bankd [label="remsim-bankd"];
+			server [label="remsim-server"];
+		}
+
+		SIM0 -> sysmoOCTSIM [label="ISO-7816-2/3",dir=both];
+		SIM1 -> sysmoOCTSIM [label="ISO-7816-2/3",dir=both];
+		SIM2 -> sysmoOCTSIM [label="ISO-7816-2/3",dir=both];
+		SIM3 -> sysmoOCTSIM [label="ISO-7816-2/3",dir=both];
+		SIM4 -> sysmoOCTSIM [label="ISO-7816-2/3",dir=both];
+		SIM5 -> sysmoOCTSIM [label="ISO-7816-2/3",dir=both];
+		SIM6 -> sysmoOCTSIM [label="ISO-7816-2/3",dir=both];
+		SIM7 -> sysmoOCTSIM [label="ISO-7816-2/3",dir=both];
+
+		sysmoOCTSIM -> bankd [label="USB CCID",dir=both];
+
+		bankd -> server [label="RSPRO/IPA/TCP"];
+	}
+
+	subgraph cluster_1 {
+		label="Remote Site A";
+		client1 [label="remsim-client"];
+		SIMtrace1 [label="SIMtrace2\nAPP=cardem",shape=rect];
+		Phone1 [label="Phone/Modem",shape=rect];
+		client1 -> SIMtrace1 [label="USB",dir=both];
+		SIMtrace1 -> Phone1 [label="ISO-7816-2/3",dir=both];
+		bankd -> client1 [label="RSPRO/IPA/TCP/IP",dir=both];
+		client1 -> server [label="RSPRO/IPA/TCP"];
+	}
+
+	subgraph cluster_2 {
+		label="Remote Site B";
+		client2 [label="remsim-client"];
+		SIMtrace2 [label="SIMtrace2\nAPP=cardem",shape=rect];
+		Phone2 [label="Phone/Modem",shape=rect];
+		client2 -> SIMtrace2 [label="USB",dir=both];
+		SIMtrace2 -> Phone2 [label="ISO-7816-2/3",dir=both];
+		bankd -> client2 [label="RSPRO/IPA/TCP/IP",dir=both];
+		client2 -> server [label="RSPRO/IPA/TCP"];
+	}
+
+
+}

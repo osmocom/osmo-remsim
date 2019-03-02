@@ -1,0 +1,23 @@
+digraph {
+	rankdir=LR;
+
+	subgraph cluster_0 {
+		label="Data Center";
+		SIM [shape=rect];
+		Reader [shape=rect];
+		bankd [label="remsim-bankd"];
+	}
+
+	subgraph cluster_1 {
+		label="Remote Site";
+		client [label="remsim-client"];
+		SIMtrace [label="SIMtrace2\nAPP=cardem",shape=rect];
+		Phone [label="Phone/Modem",shape=rect];
+	}
+
+	SIM -> Reader [label="ISO-7816-2/3",dir=both];
+	Reader -> bankd [label="USB CCID",dir=both];
+	bankd -> client [label="RSPRO/IPA/TCP/IP",dir=both];
+	client -> SIMtrace [label="USB",dir=both];
+	SIMtrace -> Phone [label="ISO-7816-2/3",dir=both];
+}
