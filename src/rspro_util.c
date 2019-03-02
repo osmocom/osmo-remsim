@@ -1,5 +1,8 @@
 
 
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #include <asn_application.h>
 #include <der_encoder.h>
 
@@ -112,6 +115,20 @@ void rspro_comp_id_retrieve(struct app_comp_id *out, const ComponentIdentity_t *
 	string_fromOCTET_STRING_ARRAY(out->hw_serial_nr, in->hwSerialNr);
 	string_fromOCTET_STRING_ARRAY(out->hw_version, in->hwVersion);
 	string_fromOCTET_STRING_ARRAY(out->fw_version, in->fwVersion);
+}
+
+const char *rspro_IpAddr2str(const IpAddress_t *in)
+{
+	static char buf[128];
+
+	switch (in->present) {
+	case IpAddress_PR_ipv4:
+		return inet_ntop(AF_INET, in->choice.ipv4.buf, buf, sizeof(buf));
+	case IpAddress_PR_ipv6:
+		return inet_ntop(AF_INET6, in->choice.ipv6.buf, buf, sizeof(buf));
+	default:
+		return NULL;
+	}
 }
 
 static void fill_ip4_port(IpPort_t *out, uint32_t ip, uint16_t port)

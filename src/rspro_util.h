@@ -38,3 +38,4 @@ RsproPDU_t *rspro_gen_TpduCard2Modem(const BankSlot_t *bank, const ClientSlot_t 
 				     const uint8_t *tpdu, unsigned int tpdu_len);
 
 void rspro_comp_id_retrieve(struct app_comp_id *out, const ComponentIdentity_t *in);
+const char *rspro_IpAddr2str(const IpAddress_t *in);
