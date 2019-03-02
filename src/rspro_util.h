@@ -36,3 +36,5 @@ RsproPDU_t *rspro_gen_TpduModem2Card(const ClientSlot_t *client, const BankSlot_
 				     const uint8_t *tpdu, unsigned int tpdu_len);
 RsproPDU_t *rspro_gen_TpduCard2Modem(const BankSlot_t *bank, const ClientSlot_t *client,
 				     const uint8_t *tpdu, unsigned int tpdu_len);
+
+void rspro_comp_id_retrieve(struct app_comp_id *out, const ComponentIdentity_t *in);

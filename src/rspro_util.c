@@ -88,6 +88,32 @@ static void fill_comp_id(ComponentIdentity_t *out, const struct app_comp_id *in)
 		out->fwVersion = OCTET_STRING_new_fromBuf(&asn_DEF_ComponentName, in->fw_version, -1);
 }
 
+void string_fromOCTET_STRING(char *out, size_t out_size, const OCTET_STRING_t *in)
+{
+	if (!in)
+		out[0] = '\0';
+	memcpy(out, in->buf, out_size < in->size ? out_size : in->size);
+	if (in->size < out_size)
+		out[in->size] = '\0';
+	else
+		out[out_size-1] = '\0';
+}
+#define string_fromOCTET_STRING_ARRAY(out, in) string_fromOCTET_STRING(out, ARRAY_SIZE(out), in)
+
+
+void rspro_comp_id_retrieve(struct app_comp_id *out, const ComponentIdentity_t *in)
+{
+	memset(out, 0, sizeof(*out));
+	out->type = in->type;
+	string_fromOCTET_STRING_ARRAY(out->name, &in->name);
+	string_fromOCTET_STRING_ARRAY(out->software, &in->software);
+	string_fromOCTET_STRING_ARRAY(out->sw_version, &in->swVersion);
+	string_fromOCTET_STRING_ARRAY(out->hw_manufacturer, in->hwManufacturer);
+	string_fromOCTET_STRING_ARRAY(out->hw_serial_nr, in->hwSerialNr);
+	string_fromOCTET_STRING_ARRAY(out->hw_version, in->hwVersion);
+	string_fromOCTET_STRING_ARRAY(out->fw_version, in->fwVersion);
+}
+
 static void fill_ip4_port(IpPort_t *out, uint32_t ip, uint16_t port)
 {
 	uint32_t ip_n = htonl(ip);
