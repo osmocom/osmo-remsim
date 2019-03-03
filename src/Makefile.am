@@ -1,4 +1,4 @@
-SUBDIRS = rspro
+SUBDIRS = rspro server
 
 AM_CFLAGS = -Wall -I$(top_srcdir)/include -I$(top_builddir)/include \
 	    $(OSMOCORE_CFLAGS) $(OSMOGSM_CFLAGS) $(OSMOABIS_CFLAGS) \

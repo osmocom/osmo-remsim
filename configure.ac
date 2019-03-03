@@ -41,6 +41,8 @@ PKG_CHECK_MODULES(OSMOABIS, libosmoabis)
 PKG_CHECK_MODULES(OSMOSIM, libosmosim)
 PKG_CHECK_MODULES(PCSC, libpcsclite)
 PKG_CHECK_MODULES(USB, libusb-1.0)
+PKG_CHECK_MODULES(ULFIUS, libulfius)
+PKG_CHECK_MODULES(JANSSON, jansson)
 
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -87,6 +89,7 @@ AC_OUTPUT(
 	Makefile
 	src/Makefile
 	src/rspro/Makefile
+	src/server/Makefile
 	include/Makefile
 	include/osmocom/Makefile
 	include/osmocom/rspro/Makefile

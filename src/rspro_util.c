@@ -93,8 +93,10 @@ static void fill_comp_id(ComponentIdentity_t *out, const struct app_comp_id *in)
 
 void string_fromOCTET_STRING(char *out, size_t out_size, const OCTET_STRING_t *in)
 {
-	if (!in)
+	if (!in) {
 		out[0] = '\0';
+		return;
+	}
 	memcpy(out, in->buf, out_size < in->size ? out_size : in->size);
 	if (in->size < out_size)
 		out[in->size] = '\0';
@@ -151,6 +153,19 @@ RsproPDU_t *rspro_gen_ConnectBankReq(const struct app_comp_id *a_cid,
 	fill_comp_id(&pdu->msg.choice.connectBankReq.identity, a_cid);
 	pdu->msg.choice.connectBankReq.bankId = bank_id;
 	pdu->msg.choice.connectBankReq.numberOfSlots = num_slots;
+
+	return pdu;
+}
+
+RsproPDU_t *rspro_gen_ConnectBankRes(const struct app_comp_id *a_cid, e_ResultCode res)
+{
+	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
+	if (!pdu)
+		return NULL;
+	pdu->version = 2;
+	pdu->msg.present = RsproPDUchoice_PR_connectBankRes;
+	fill_comp_id(&pdu->msg.choice.connectBankRes.identity, a_cid);
+	pdu->msg.choice.connectBankRes.result = res;
 
 	return pdu;
 }

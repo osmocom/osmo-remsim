@@ -22,6 +22,7 @@ struct msgb *rspro_enc_msg(RsproPDU_t *pdu);
 RsproPDU_t *rspro_dec_msg(struct msgb *msg);
 RsproPDU_t *rspro_gen_ConnectBankReq(const struct app_comp_id *a_cid,
 					uint16_t bank_id, uint16_t num_slots);
+RsproPDU_t *rspro_gen_ConnectBankRes(const struct app_comp_id *a_cid, e_ResultCode res);
 RsproPDU_t *rspro_gen_ConnectClientReq(const struct app_comp_id *a_cid, const ClientSlot_t *client);
 RsproPDU_t *rspro_gen_ConnectClientRes(const struct app_comp_id *a_cid, e_ResultCode res);
 RsproPDU_t *rspro_gen_CreateMappingReq(const ClientSlot_t *client, const BankSlot_t *bank);
