@@ -47,8 +47,7 @@ static void bankd_init(struct bankd *bankd)
 	asn_debug = 0;
 
 	/* intialize members of 'bankd' */
-	INIT_LLIST_HEAD(&bankd->slot_mappings);
-	pthread_rwlock_init(&bankd->slot_mappings_rwlock, NULL);
+	bankd->slotmaps = slotmap_init(bankd);
 	INIT_LLIST_HEAD(&bankd->workers);
 	pthread_mutex_init(&bankd->workers_mutex, NULL);
 
@@ -71,7 +70,7 @@ static void bankd_init(struct bankd *bankd)
 		int i;
 		for (i = 0; i < 5; i++) {
 			bs.slot_nr = cs.slot_nr = i;
-			bankd_slotmap_add(bankd, &bs, &cs);
+			slotmap_add(bankd->slotmaps, &bs, &cs);
 		}
 	}
 }
@@ -304,9 +303,9 @@ static int worker_send_rspro(struct bankd_worker *worker, RsproPDU_t *pdu)
 /* attempt to obtain slot-map */
 static int worker_try_slotmap(struct bankd_worker *worker)
 {
-	struct bankd_slot_mapping *slmap;
+	struct slot_mapping *slmap;
 
-	slmap = bankd_slotmap_by_client(worker->bankd, &worker->client.clslot);
+	slmap = slotmap_by_client(worker->bankd->slotmaps, &worker->client.clslot);
 	if (!slmap) {
 		LOGW(worker, "No slotmap (yet) for client C(%u:%u)\n",
 			worker->client.clslot.client_id, worker->client.clslot.slot_nr);

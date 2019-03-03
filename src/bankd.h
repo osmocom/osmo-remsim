@@ -13,59 +13,10 @@
 #include <osmocom/core/linuxlist.h>
 
 #include "rspro_util.h"
+#include "slotmap.h"
 #include "debug.h"
 
 struct bankd;
-
-struct bank_slot {
-	uint16_t bank_id;
-	uint16_t slot_nr;
-};
-
-static inline bool bank_slot_equals(const struct bank_slot *a, const struct bank_slot *b)
-{
-	if (a->bank_id == b->bank_id && a->slot_nr == b->slot_nr)
-		return true;
-	else
-		return false;
-}
-
-struct client_slot {
-	uint16_t client_id;
-	uint16_t slot_nr;
-};
-
-static inline bool client_slot_equals(const struct client_slot *a, const struct client_slot *b)
-{
-	if (a->client_id == b->client_id && a->slot_nr == b->slot_nr)
-		return true;
-	else
-		return false;
-}
-
-/* slot mappings are created / removed by the server */
-struct bankd_slot_mapping {
-	/* global lits of bankd slot mappings */
-	struct llist_head list;
-	/* slot on bank side */
-	struct bank_slot bank;
-	/* slot on client side */
-	struct client_slot client;
-};
-
-/* thread-safe lookup of map by client:slot */
-struct bankd_slot_mapping *bankd_slotmap_by_client(struct bankd *bankd,
-						   const struct client_slot *client);
-
-/* thread-safe lookup of map by bank:slot */
-struct bankd_slot_mapping *bankd_slotmap_by_bank(struct bankd *bankd, const struct bank_slot *bank);
-
-/* thread-safe creating of a new bank<->client map */
-int bankd_slotmap_add(struct bankd *bankd, const struct bank_slot *bank,
-		      const struct client_slot *client);
-
-/* thread-safe removal of a bank<->client map */
-void bankd_slotmap_del(struct bankd *bankd, struct bankd_slot_mapping *map);
 
 enum bankd_worker_state {
 	/* just started*/
@@ -138,9 +89,8 @@ struct bankd {
 	/* TCP socket at which we are listening */
 	int accept_fd;
 
-	/* list of slit mappings. only ever modified in main thread! */
-	struct llist_head slot_mappings;
-	pthread_rwlock_t slot_mappings_rwlock;
+	/* list of slot mappings. only ever modified in main thread! */
+	struct slotmaps *slotmaps;
 
 	/* list of bankd_workers. accessed/modified by multiple threads; protected by mutex */
 	struct llist_head workers;
