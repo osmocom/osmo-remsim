@@ -9,8 +9,17 @@
 #include <talloc.h>
 
 #include <osmocom/core/linuxlist.h>
+#include <osmocom/core/utils.h>
 
 #include "slotmap.h"
+
+const struct value_string slot_map_state_name[] = {
+	{ SLMAP_S_NEW,			"NEW" },
+	{ SLMAP_S_UNACKNOWLEDGED,	"UNACKNOWLEDGED" },
+	{ SLMAP_S_ACTIVE,		"ACTIVE" },
+	{ SLMAP_S_DELETING,		"DELETING" },
+	{ 0, NULL }
+};
 
 const char *slotmap_name(char *buf, size_t buf_len, const struct slot_mapping *map)
 {
@@ -82,11 +91,16 @@ int slotmap_add(struct slotmaps *maps, const struct bank_slot *bank, const struc
 	if (!map)
 		return -ENOMEM;
 
+	map->maps = maps;
 	map->bank = *bank;
 	map->client = *client;
 
 	pthread_rwlock_wrlock(&maps->rwlock);
 	llist_add_tail(&map->list, &maps->mappings);
+#ifdef REMSIM_SERVER
+	map->state = SLMAP_S_NEW;
+	INIT_LLIST_HEAD(&map->bank_list); /* to ensure llist_del() always succeeds */
+#endif
 	pthread_rwlock_unlock(&maps->rwlock);
 
 	printf("Slot Map %s added\n", slotmap_name(mapname, sizeof(mapname), map));
@@ -103,6 +117,9 @@ void slotmap_del(struct slotmaps *maps, struct slot_mapping *map)
 
 	pthread_rwlock_wrlock(&maps->rwlock);
 	llist_del(&map->list);
+#ifdef REMSIM_SERVER
+	llist_del(&map->bank_list);
+#endif
 	pthread_rwlock_unlock(&maps->rwlock);
 
 	talloc_free(map);
@@ -117,3 +134,37 @@ struct slotmaps *slotmap_init(void *ctx)
 
 	return sm;
 }
+
+#ifdef REMSIM_SERVER
+
+void _slotmap_state_change(struct slot_mapping *map, enum slot_mapping_state new_state,
+			   struct llist_head *new_bank_list)
+{
+	char mapname[64];
+
+	printf("Slot Map %s state change: %s -> %s\n", slotmap_name(mapname, sizeof(mapname), map),
+		get_value_string(slot_map_state_name, map->state),
+		get_value_string(slot_map_state_name, new_state));
+
+	map->state = new_state;
+#ifdef REMSIM_SERVER
+	llist_del(&map->bank_list);
+#endif
+	if (new_bank_list)
+		llist_add_tail(&map->bank_list, new_bank_list);
+#ifdef REMSIM_SERVER
+	else
+		INIT_LLIST_HEAD(&map->bank_list);
+#endif
+}
+
+
+void slotmap_state_change(struct slot_mapping *map, enum slot_mapping_state new_state,
+			  struct llist_head *new_bank_list)
+{
+	pthread_rwlock_wrlock(&map->maps->rwlock);
+	_slotmap_state_change(map, new_state, new_bank_list);
+	pthread_rwlock_unlock(&map->maps->rwlock);
+}
+
+#endif
