@@ -12,6 +12,14 @@
 
 #include "slotmap.h"
 
+const char *slotmap_name(char *buf, size_t buf_len, const struct slot_mapping *map)
+{
+	snprintf(buf, buf_len, "B(%u:%u) <-> C(%u:%u)",
+		 map->bank.bank_id, map->bank.slot_nr, map->client.client_id, map->client.slot_nr);
+	return buf;
+}
+
+
 /* thread-safe lookup of map by client:slot */
 struct slot_mapping *slotmap_by_client(struct slotmaps *maps, const struct client_slot *client)
 {
@@ -49,6 +57,7 @@ struct slot_mapping *slotmap_by_bank(struct slotmaps *maps, const struct bank_sl
 int slotmap_add(struct slotmaps *maps, const struct bank_slot *bank, const struct client_slot *client)
 {
 	struct slot_mapping *map;
+	char mapname[64];
 
 	/* We assume a single thread (main thread) will ever update the mappings,
 	 * and hence we don't have any races by first grabbing + releasing the read
@@ -80,8 +89,7 @@ int slotmap_add(struct slotmaps *maps, const struct bank_slot *bank, const struc
 	llist_add_tail(&map->list, &maps->mappings);
 	pthread_rwlock_unlock(&maps->rwlock);
 
-	printf("Added Slot Map C(%u:%u) <-> B(%u:%u)\n",
-		map->client.client_id, map->client.slot_nr, map->bank.bank_id, map->bank.slot_nr);
+	printf("Slot Map %s added\n", slotmap_name(mapname, sizeof(mapname), map));
 
 	return 0;
 }
@@ -89,8 +97,9 @@ int slotmap_add(struct slotmaps *maps, const struct bank_slot *bank, const struc
 /* thread-safe removal of a bank<->client map */
 void slotmap_del(struct slotmaps *maps, struct slot_mapping *map)
 {
-	printf("Deleting Slot Map C(%u:%u) <-> B(%u:%u)\n",
-		map->client.client_id, map->client.slot_nr, map->bank.bank_id, map->bank.slot_nr);
+	char mapname[64];
+
+	printf("Slot Map %s deleted\n", slotmap_name(mapname, sizeof(mapname), map));
 
 	pthread_rwlock_wrlock(&maps->rwlock);
 	llist_del(&map->list);
