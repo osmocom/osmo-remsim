@@ -74,7 +74,7 @@ struct slot_mapping *slotmap_by_client(struct slotmaps *maps, const struct clien
 struct slot_mapping *slotmap_by_bank(struct slotmaps *maps, const struct bank_slot *bank);
 
 /* thread-safe creating of a new bank<->client map */
-int slotmap_add(struct slotmaps *maps, const struct bank_slot *bank, const struct client_slot *client);
+struct slot_mapping *slotmap_add(struct slotmaps *maps, const struct bank_slot *bank, const struct client_slot *client);
 
 /* thread-safe removal of a bank<->client map */
 void slotmap_del(struct slotmaps *maps, struct slot_mapping *map);

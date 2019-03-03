@@ -63,7 +63,8 @@ struct slot_mapping *slotmap_by_bank(struct slotmaps *maps, const struct bank_sl
 }
 
 /* thread-safe creating of a new bank<->client map */
-int slotmap_add(struct slotmaps *maps, const struct bank_slot *bank, const struct client_slot *client)
+struct slot_mapping *slotmap_add(struct slotmaps *maps, const struct bank_slot *bank,
+				 const struct client_slot *client)
 {
 	struct slot_mapping *map;
 	char mapname[64];
@@ -76,20 +77,20 @@ int slotmap_add(struct slotmaps *maps, const struct bank_slot *bank, const struc
 	if (map) {
 		fprintf(stderr, "BANKD %u:%u already in use, cannot add new map\n",
 			bank->bank_id, bank->slot_nr);
-		return -EBUSY;
+		return NULL;
 	}
 
 	map = slotmap_by_client(maps, client);
 	if (map) {
 		fprintf(stderr, "CLIENT %u:%u already in use, cannot add new map\n",
 			client->client_id, client->slot_nr);
-		return -EBUSY;
+		return NULL;
 	}
 
 	/* allocate new mapping and add to list of mappings */
 	map = talloc_zero(maps, struct slot_mapping);
 	if (!map)
-		return -ENOMEM;
+		return NULL;
 
 	map->maps = maps;
 	map->bank = *bank;
@@ -105,7 +106,7 @@ int slotmap_add(struct slotmaps *maps, const struct bank_slot *bank, const struc
 
 	printf("Slot Map %s added\n", slotmap_name(mapname, sizeof(mapname), map));
 
-	return 0;
+	return map;
 }
 
 /* thread-safe removal of a bank<->client map */
