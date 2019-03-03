@@ -26,6 +26,7 @@
 #include <osmocom/rspro/RsproPDU.h>
 
 #include "bankd.h"
+#include "debug.h"
 #include "rspro_util.h"
 
 __thread void *talloc_asn1_ctx;
@@ -35,19 +36,6 @@ static void *worker_main(void *arg);
 /***********************************************************************
 * bankd core / main thread
 ***********************************************************************/
-
-static const struct log_info_cat default_categories[] = {
-	[DMAIN] = {
-		.name = "DMAIN",
-		.loglevel = LOGL_DEBUG,
-		.enabled = 1,
-	},
-};
-
-static const struct log_info log_info = {
-	.cat = default_categories,
-	.num_cat = ARRAY_SIZE(default_categories),
-};
 
 int asn_debug;
 

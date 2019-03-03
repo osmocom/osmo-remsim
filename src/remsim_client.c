@@ -15,6 +15,7 @@
 
 #include "rspro_util.h"
 #include "client.h"
+#include "debug.h"
 
 static int bankd_handle_msg(struct bankd_client *bc, struct msgb *msg)
 {
@@ -67,19 +68,6 @@ invalid:
 	msgb_free(msg);
 	return -1;
 }
-
-static const struct log_info_cat default_categories[] = {
-	[DMAIN] = {
-		.name = "DMAIN",
-		.loglevel = LOGL_DEBUG,
-		.enabled = 1,
-	},
-};
-
-static const struct log_info log_info = {
-	.cat = default_categories,
-	.num_cat = ARRAY_SIZE(default_categories),
-};
 
 static struct bankd_client *g_client;
 static void *g_tall_ctx;

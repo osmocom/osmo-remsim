@@ -15,6 +15,7 @@
 
 #include "rspro_util.h"
 #include "client.h"
+#include "debug.h"
 
 #include <unistd.h>
 #include <stdio.h>
@@ -618,19 +619,6 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 	return 0;
 }
 
-
-static const struct log_info_cat default_categories[] = {
-	[DMAIN] = {
-		.name = "DMAIN",
-		.loglevel = LOGL_DEBUG,
-		.enabled = 1,
-	},
-};
-
-static const struct log_info log_info = {
-	.cat = default_categories,
-	.num_cat = ARRAY_SIZE(default_categories),
-};
 
 static void print_welcome(void)
 {
