@@ -36,7 +36,8 @@ enum slot_mapping_state {
 	SLMAP_S_NEW,		/* created; not yet sent to bankd */
 	SLMAP_S_UNACKNOWLEDGED,	/* created + sent to bankd but not yet acknowledge by bankd */
 	SLMAP_S_ACTIVE,		/* fully active map; acknowledged by bankd */
-	SLMAP_S_DELETING,	/* we were asked to delete it; bankd hasn't confirmed yet */
+	SLMAP_S_DELETE_REQ,	/* fully active map; REST has requested deletion */
+	SLMAP_S_DELETING,	/* RSPRO has issued Remove to bankd, but bankd hasn't confirmed yet */
 };
 extern const struct value_string slot_map_state_name[];
 static inline const char *slotmap_state_name(enum slot_mapping_state st)
