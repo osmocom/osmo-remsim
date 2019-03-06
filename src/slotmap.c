@@ -29,6 +29,10 @@ const char *slotmap_name(char *buf, size_t buf_len, const struct slot_mapping *m
 	return buf;
 }
 
+uint32_t slotmap_get_id(const struct slot_mapping *map)
+{
+	return (map->bank.bank_id << 16) | map->bank.slot_nr;
+}
 
 /* thread-safe lookup of map by client:slot */
 struct slot_mapping *slotmap_by_client(struct slotmaps *maps, const struct client_slot *client)
