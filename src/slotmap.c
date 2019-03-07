@@ -40,14 +40,14 @@ struct slot_mapping *slotmap_by_client(struct slotmaps *maps, const struct clien
 {
 	struct slot_mapping *map;
 
-	pthread_rwlock_rdlock(&maps->rwlock);
+	slotmaps_rdlock(maps);
 	llist_for_each_entry(map, &maps->mappings, list) {
 		if (client_slot_equals(&map->client, client)) {
-			pthread_rwlock_unlock(&maps->rwlock);
+			slotmaps_unlock(maps);
 			return map;
 		}
 	}
-	pthread_rwlock_unlock(&maps->rwlock);
+	slotmaps_unlock(maps);
 	return NULL;
 }
 
@@ -56,14 +56,14 @@ struct slot_mapping *slotmap_by_bank(struct slotmaps *maps, const struct bank_sl
 {
 	struct slot_mapping *map;
 
-	pthread_rwlock_rdlock(&maps->rwlock);
+	slotmaps_rdlock(maps);
 	llist_for_each_entry(map, &maps->mappings, list) {
 		if (bank_slot_equals(&map->bank, bank)) {
-			pthread_rwlock_unlock(&maps->rwlock);
+			slotmaps_unlock(maps);
 			return map;
 		}
 	}
-	pthread_rwlock_unlock(&maps->rwlock);
+	slotmaps_unlock(maps);
 	return NULL;
 
 }
@@ -102,13 +102,13 @@ struct slot_mapping *slotmap_add(struct slotmaps *maps, const struct bank_slot *
 	map->bank = *bank;
 	map->client = *client;
 
-	pthread_rwlock_wrlock(&maps->rwlock);
+	slotmaps_wrlock(maps);
 	llist_add_tail(&map->list, &maps->mappings);
 #ifdef REMSIM_SERVER
 	map->state = SLMAP_S_NEW;
 	INIT_LLIST_HEAD(&map->bank_list); /* to ensure llist_del() always succeeds */
 #endif
-	pthread_rwlock_unlock(&maps->rwlock);
+	slotmaps_unlock(maps);
 
 	printf("Slot Map %s added\n", slotmap_name(mapname, sizeof(mapname), map));
 
@@ -132,9 +132,9 @@ void _slotmap_del(struct slotmaps *maps, struct slot_mapping *map)
 /* thread-safe removal of a bank<->client map */
 void slotmap_del(struct slotmaps *maps, struct slot_mapping *map)
 {
-	pthread_rwlock_wrlock(&maps->rwlock);
+	slotmaps_wrlock(maps);
 	_slotmap_del(maps, map);
-	pthread_rwlock_unlock(&maps->rwlock);
+	slotmaps_unlock(maps);
 }
 
 struct slotmaps *slotmap_init(void *ctx)
@@ -171,9 +171,9 @@ void _Slotmap_state_change(struct slot_mapping *map, enum slot_mapping_state new
 void Slotmap_state_change(struct slot_mapping *map, enum slot_mapping_state new_state,
 			  struct llist_head *new_bank_list, const char *file, int line)
 {
-	pthread_rwlock_wrlock(&map->maps->rwlock);
+	slotmaps_wrlock(map->maps);
 	_Slotmap_state_change(map, new_state, new_bank_list, file, line);
-	pthread_rwlock_unlock(&map->maps->rwlock);
+	slotmaps_unlock(map->maps);
 }
 
 #endif

@@ -86,6 +86,22 @@ void _slotmap_del(struct slotmaps *maps, struct slot_mapping *map);
 /* initialize the entire map collection */
 struct slotmaps *slotmap_init(void *ctx);
 
+#define slotmaps_rdlock(maps) do {		\
+	printf("%s:%u = slotmap_rdlock()\n", __FILE__, __LINE__);		\
+	pthread_rwlock_rdlock(&(maps)->rwlock);	\
+} while (0)
+
+#define slotmaps_wrlock(maps) do {		\
+	printf("%s:%u = slotmap_wrlock()\n", __FILE__, __LINE__);		\
+	pthread_rwlock_wrlock(&(maps)->rwlock);	\
+} while (0)
+
+#define slotmaps_unlock(maps) do {		\
+	printf("%s:%u = slotmap_unlock()\n", __FILE__, __LINE__);		\
+	pthread_rwlock_unlock(&(maps)->rwlock);	\
+} while (0)
+
+
 #ifdef REMSIM_SERVER
 void _Slotmap_state_change(struct slot_mapping *map, enum slot_mapping_state new_state,
 			   struct llist_head *new_bank_list, const char *file, int line);
