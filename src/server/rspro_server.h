@@ -45,6 +45,9 @@ struct rspro_client_conn {
 		uint16_t bank_id;
 		uint16_t num_slots;
 	} bank;
+	struct {
+		struct client_slot slot;
+	} client;
 };
 
 struct rspro_server *rspro_server_create(void *ctx, const char *host, uint16_t port);

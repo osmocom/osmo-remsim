@@ -25,6 +25,12 @@ static void client_slot2rspro(ClientSlot_t *out, const struct client_slot *in)
 	out->slotNr = in->slot_nr;
 }
 
+static void rspro2client_slot(struct client_slot *out, const ClientSlot_t *in)
+{
+	out->client_id = in->clientId;
+	out->slot_nr = in->slotNr;
+}
+
 static void bank_slot2rspro(BankSlot_t *out, const struct bank_slot *in)
 {
 	out->bankId = in->bank_id;
@@ -76,6 +82,7 @@ static void rspro_client_conn_destroy(struct rspro_client_conn *conn);
 enum remsim_server_client_fsm_state {
 	CLNTC_ST_INIT,
 	CLNTC_ST_ESTABLISHED,
+	CLNTC_ST_WAIT_CONF_RES,		/* waiting for ConfigClientRes */
 	CLNTC_ST_CONNECTED,
 };
 
@@ -86,6 +93,7 @@ enum remsim_server_client_event {
 	CLNTC_E_TCP_DOWN,
 	CLNTC_E_CREATE_MAP_RES,	/* CreateMappingRes received */
 	CLNTC_E_REMOVE_MAP_RES,	/* RemoveMappingRes received */
+	CLNTC_E_CONFIG_CL_RES,	/* ConfigClientRes received */
 	CLNTC_E_PUSH,		/* drain maps_new or maps_delreq */
 };
 
@@ -96,6 +104,7 @@ static const struct value_string server_client_event_names[] = {
 	OSMO_VALUE_STRING(CLNTC_E_TCP_DOWN),
 	OSMO_VALUE_STRING(CLNTC_E_CREATE_MAP_RES),
 	OSMO_VALUE_STRING(CLNTC_E_REMOVE_MAP_RES),
+	OSMO_VALUE_STRING(CLNTC_E_CONFIG_CL_RES),
 	OSMO_VALUE_STRING(CLNTC_E_PUSH),
 	{ 0, NULL }
 };
@@ -128,19 +137,34 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 			LOGPFSM(fi, "ConnectClientReq from identity != Client ?!?\n");
 			osmo_fsm_inst_term(fi, OSMO_FSM_TERM_ERROR, NULL);
 		}
-		/* FIXME: determine client ID */
-		//osmo_fsm_inst_update_id_f(fi, "C%u:%u", conn->bank.bank_id);
+		if (!cclreq->clientSlot) {
+#if 0
+			/* FIXME: determine ClientID */
+			resp = rspro_gen_ConnectClientRes(&conn->srv->comp_id, ResultCode_ok);
+			client_conn_send(conn, resp);
+			osmo_fsm_inst_state_chg(fi, CLNTC_ST_WAIT_CL_CONF_RES, 3, 30);
+#else
+			/* FIXME: the original plan was to dynamically assign a ClientID
+			 * from server to client here. Send ConfigReq and transition to
+			 * CLNTC_ST_WAIT_CONF_RES */
+			LOGPFSM(fi, "ConnectClientReq without ClientId not supported yet!\n");
+			osmo_fsm_inst_term(fi, OSMO_FSM_TERM_ERROR, NULL);
+#endif
+		} else {
+			/* FIXME: check for unique-ness */
+			rspro2client_slot(&conn->client.slot, cclreq->clientSlot);
+			osmo_fsm_inst_update_id_f(fi, "C%u:%u", conn->client.slot.client_id,
+						  conn->client.slot.slot_nr);
+			resp = rspro_gen_ConnectClientRes(&conn->srv->comp_id, ResultCode_ok);
+			client_conn_send(conn, resp);
+			osmo_fsm_inst_state_chg(fi, CLNTC_ST_CONNECTED, 0, 0);
+		}
 
 		/* reparent us from srv->connections to srv->clients */
 		pthread_rwlock_wrlock(&conn->srv->rwlock);
 		llist_del(&conn->list);
 		llist_add_tail(&conn->list, &conn->srv->clients);
 		pthread_rwlock_unlock(&conn->srv->rwlock);
-
-		osmo_fsm_inst_state_chg(fi, CLNTC_ST_CONNECTED, 0, 0);
-
-		resp = rspro_gen_ConnectClientRes(&conn->srv->comp_id, ResultCode_ok);
-		client_conn_send(conn, resp);
 		break;
 	case CLNTC_E_BANK_CONN:
 		cbreq = &pdu->msg.choice.connectBankReq;
@@ -150,6 +174,7 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 			LOGPFSM(fi, "ConnectBankReq from identity != Bank ?!?\n");
 			osmo_fsm_inst_term(fi, OSMO_FSM_TERM_ERROR, NULL);
 		}
+		/* FIXME: check for unique-ness */
 		conn->bank.bank_id = cbreq->bankId;
 		conn->bank.num_slots = cbreq->numberOfSlots;
 		osmo_fsm_inst_update_id_f(fi, "B%u", conn->bank.bank_id);
@@ -174,6 +199,16 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 	}
 }
 
+static void clnt_st_wait_cl_conf_res(struct osmo_fsm_inst *fi, uint32_t event, void *data)
+{
+	switch (event) {
+	case CLNTC_E_CONFIG_CL_RES:
+		osmo_fsm_inst_state_chg(fi, CLNTC_ST_CONNECTED, 0, 0);
+		break;
+	default:
+		OSMO_ASSERT(0);
+	}
+}
 
 static void clnt_st_connected_cl_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
 {
@@ -324,8 +359,14 @@ static const struct osmo_fsm_state server_client_fsm_states[] = {
 	[CLNTC_ST_ESTABLISHED] = {
 		.name = "ESTABLISHED",
 		.in_event_mask = S(CLNTC_E_CLIENT_CONN) | S(CLNTC_E_BANK_CONN),
-		.out_state_mask = S(CLNTC_ST_CONNECTED),
+		.out_state_mask = S(CLNTC_ST_CONNECTED) | S(CLNTC_ST_WAIT_CONF_RES),
 		.action = clnt_st_established,
+	},
+	[CLNTC_ST_WAIT_CONF_RES] = {
+		.name = "WAIT_CONFIG_RES",
+		.in_event_mask = S(CLNTC_E_CONFIG_CL_RES),
+		.out_state_mask = S(CLNTC_ST_CONNECTED),
+		.action = clnt_st_wait_cl_conf_res,
 	},
 	[CLNTC_ST_CONNECTED] = {
 		.name = "CONNECTED",
@@ -397,6 +438,9 @@ static int handle_rx_rspro(struct rspro_client_conn *conn, const RsproPDU_t *pdu
 		break;
 	case RsproPDUchoice_PR_removeMappingRes:
 		osmo_fsm_inst_dispatch(conn->fi, CLNTC_E_REMOVE_MAP_RES, (void *)pdu);
+		break;
+	case RsproPDUchoice_PR_configClientRes:
+		osmo_fsm_inst_dispatch(conn->fi, CLNTC_E_CONFIG_CL_RES, (void *)pdu);
 		break;
 	default:
 		LOGPFSML(conn->fi, LOGL_ERROR, "Received unknown/unimplemented RSPRO msg_type %d\n",
