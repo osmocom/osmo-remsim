@@ -87,9 +87,13 @@ void _slotmap_del(struct slotmaps *maps, struct slot_mapping *map);
 struct slotmaps *slotmap_init(void *ctx);
 
 #ifdef REMSIM_SERVER
-void _slotmap_state_change(struct slot_mapping *map, enum slot_mapping_state new_state,
-			   struct llist_head *new_bank_list);
+void _Slotmap_state_change(struct slot_mapping *map, enum slot_mapping_state new_state,
+			   struct llist_head *new_bank_list, const char *file, int line);
 /* thread-safe way to change the state of given slot map */
-void slotmap_state_change(struct slot_mapping *map, enum slot_mapping_state new_state,
-			  struct llist_head *new_bank_list);
+void Slotmap_state_change(struct slot_mapping *map, enum slot_mapping_state new_state,
+			  struct llist_head *new_bank_list, const char *file, int line);
+#define _slotmap_state_change(map, state, list)				\
+	_Slotmap_state_change(map, state, list, __FILE__, __LINE__)
+#define slotmap_state_change(map, state, list)				\
+	Slotmap_state_change(map, state, list, __FILE__, __LINE__)
 #endif

@@ -12,6 +12,7 @@
 #include <osmocom/core/utils.h>
 
 #include "slotmap.h"
+#include "debug.h"
 
 const struct value_string slot_map_state_name[] = {
 	{ SLMAP_S_NEW,			"NEW" },
@@ -148,33 +149,30 @@ struct slotmaps *slotmap_init(void *ctx)
 
 #ifdef REMSIM_SERVER
 
-void _slotmap_state_change(struct slot_mapping *map, enum slot_mapping_state new_state,
-			   struct llist_head *new_bank_list)
+void _Slotmap_state_change(struct slot_mapping *map, enum slot_mapping_state new_state,
+			   struct llist_head *new_bank_list, const char *file, int line)
 {
 	char mapname[64];
 
-	printf("Slot Map %s state change: %s -> %s\n", slotmap_name(mapname, sizeof(mapname), map),
+	LOGPSRC(DMAIN, LOGL_INFO, file, line, "Slot Map %s state change: %s -> %s\n",
+		slotmap_name(mapname, sizeof(mapname), map),
 		get_value_string(slot_map_state_name, map->state),
 		get_value_string(slot_map_state_name, new_state));
 
 	map->state = new_state;
-#ifdef REMSIM_SERVER
 	llist_del(&map->bank_list);
-#endif
 	if (new_bank_list)
 		llist_add_tail(&map->bank_list, new_bank_list);
-#ifdef REMSIM_SERVER
 	else
 		INIT_LLIST_HEAD(&map->bank_list);
-#endif
 }
 
 
-void slotmap_state_change(struct slot_mapping *map, enum slot_mapping_state new_state,
-			  struct llist_head *new_bank_list)
+void Slotmap_state_change(struct slot_mapping *map, enum slot_mapping_state new_state,
+			  struct llist_head *new_bank_list, const char *file, int line)
 {
 	pthread_rwlock_wrlock(&map->maps->rwlock);
-	_slotmap_state_change(map, new_state, new_bank_list);
+	_Slotmap_state_change(map, new_state, new_bank_list, file, line);
 	pthread_rwlock_unlock(&map->maps->rwlock);
 }
 
