@@ -115,20 +115,25 @@ struct slot_mapping *slotmap_add(struct slotmaps *maps, const struct bank_slot *
 }
 
 /* thread-safe removal of a bank<->client map */
-void slotmap_del(struct slotmaps *maps, struct slot_mapping *map)
+void _slotmap_del(struct slotmaps *maps, struct slot_mapping *map)
 {
 	char mapname[64];
 
 	printf("Slot Map %s deleted\n", slotmap_name(mapname, sizeof(mapname), map));
 
-	pthread_rwlock_wrlock(&maps->rwlock);
 	llist_del(&map->list);
 #ifdef REMSIM_SERVER
 	llist_del(&map->bank_list);
 #endif
-	pthread_rwlock_unlock(&maps->rwlock);
 
 	talloc_free(map);
+}
+/* thread-safe removal of a bank<->client map */
+void slotmap_del(struct slotmaps *maps, struct slot_mapping *map)
+{
+	pthread_rwlock_wrlock(&maps->rwlock);
+	_slotmap_del(maps, map);
+	pthread_rwlock_unlock(&maps->rwlock);
 }
 
 struct slotmaps *slotmap_init(void *ctx)
