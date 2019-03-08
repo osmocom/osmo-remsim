@@ -404,7 +404,7 @@ static int process_do_rx_da(struct cardem_inst *ci, uint8_t *buf, int len)
 			memcpy(apdu_command + sizeof(ac.hdr), ac.dc, ac.lc.tot); // copy APDU command data 
 		}
 		// send APDU to card
-		RsproPDU_t *pdu = rspro_gen_TpduModem2Card(g_client->clslot, &(BankSlot_t){ .bankId = 0, .slotNr = 0}, apdu_command, sizeof(ac.hdr) + ac.lc.tot); // create RSPRO packet
+		RsproPDU_t *pdu = rspro_gen_TpduModem2Card(g_client->srv_conn.clslot, &(BankSlot_t){ .bankId = 0, .slotNr = 0}, apdu_command, sizeof(ac.hdr) + ac.lc.tot); // create RSPRO packet
 		ipa_client_conn_send_rspro(g_client->bankd_conn, pdu); // send RSPRO packet
 		// the response will come separately
 		free(apdu_command);
@@ -598,9 +598,9 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 		break;
 	case RsproPDUchoice_PR_configClientReq:
 		/* store/set the clientID as instructed by the server */
-		if (!g_client->clslot)
-			g_client->clslot = talloc_zero(g_client, ClientSlot_t);
-		*g_client->clslot = pdu->msg.choice.configClientReq.clientSlot;
+		if (!g_client->srv_conn.clslot)
+			g_client->srv_conn.clslot = talloc_zero(g_client, ClientSlot_t);
+		*g_client->srv_conn.clslot = pdu->msg.choice.configClientReq.clientSlot;
 		/* store/set the bankd ip/port as instructed by the server */
 		osmo_talloc_replace_string(g_client, &g_client->bankd_host,
 					   rspro_IpAddr2str(&pdu->msg.choice.configClientReq.bankd.ip));

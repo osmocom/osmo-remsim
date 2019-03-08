@@ -85,7 +85,7 @@ static void bdc_st_established_onenter(struct osmo_fsm_inst *fi, uint32_t prev_s
 	RsproPDU_t *pdu;
 
 	/* FIXME: Send ClientConnReq */
-	pdu = rspro_gen_ConnectClientReq(&bc->srv_conn.own_comp_id, bc->clslot);
+	pdu = rspro_gen_ConnectClientReq(&bc->srv_conn.own_comp_id, bc->srv_conn.clslot);
 	ipa_client_conn_send_rspro(bc->bankd_conn, pdu);
 }
 
@@ -387,8 +387,7 @@ static void srvc_st_established_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 
 	ipa_keepalive_fsm_start(srvc->keepalive_fi);
 
-	/* FIXME: Bankd in case of Bankd connection! */
-	pdu = rspro_gen_ConnectClientReq(&srvc->own_comp_id, NULL);
+	pdu = rspro_gen_ConnectClientReq(&srvc->own_comp_id, srvc->clslot);
 	ipa_client_conn_send_rspro(srvc->conn, pdu);
 }
 

@@ -105,9 +105,9 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 		break;
 	case RsproPDUchoice_PR_configClientReq:
 		/* store/set the clientID as instructed by the server */
-		if (!g_client->clslot)
-			g_client->clslot = talloc_zero(g_client, ClientSlot_t);
-		*g_client->clslot = pdu->msg.choice.configClientReq.clientSlot;
+		if (!g_client->srv_conn.clslot)
+			g_client->srv_conn.clslot = talloc_zero(g_client, ClientSlot_t);
+		*g_client->srv_conn.clslot = pdu->msg.choice.configClientReq.clientSlot;
 		/* store/set the bankd ip/port as instructed by the server */
 		osmo_talloc_replace_string(g_client, &g_client->bankd_host,
 					   rspro_IpAddr2str(&pdu->msg.choice.configClientReq.bankd.ip));
