@@ -2,6 +2,9 @@
 #include <errno.h>
 #include <string.h>
 
+#define _GNU_SOURCE
+#include <getopt.h>
+
 #include <talloc.h>
 
 #include <osmocom/core/msgb.h>
@@ -126,6 +129,62 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 	return 0;
 }
 
+static void printf_help()
+{
+	printf(
+		"  -h --help                  Print this help message\n"
+		"  -i --server-ip A.B.C.D     remsim-server IP address\n"
+		"  -p --server-port 13245     remsim-server TCP port\n"
+		"  -i --client-id <0-65535>   RSPRO ClientId of this client\n"
+		"  -s --client-slot <0-65535> RSPRO SlotNr of this client\n"
+	      );
+}
+
+static void handle_options(int argc, char **argv)
+{
+	while (1) {
+		int option_index = 0, c;
+		static const struct option long_options[] = {
+			{ "help", 0, 0, 'h' },
+			{ "server-ip", 1, 0, 'i' },
+			{ "server-port", 1, 0, 'p' },
+			{ "client-id", 1, 0, 'c' },
+			{ "client-slot", 1, 0, 's' },
+			{ 0, 0, 0, 0 }
+		};
+
+		c = getopt_long(argc, argv, "hi:p:c:s:",
+				long_options, &option_index);
+		if (c == -1)
+			break;
+
+		switch (c) {
+		case 'h':
+			printf_help();
+			exit(0);
+			break;
+		case 'i':
+			g_client->srv_conn.server_host = optarg;
+			break;
+		case 'p':
+			g_client->srv_conn.server_port = atoi(optarg);
+			break;
+		case 'c':
+			if (!g_client->srv_conn.clslot)
+				g_client->srv_conn.clslot = talloc_zero(g_client, ClientSlot_t);
+			g_client->srv_conn.clslot->clientId = atoi(optarg);
+			break;
+		case 's':
+			if (!g_client->srv_conn.clslot)
+				g_client->srv_conn.clslot = talloc_zero(g_client, ClientSlot_t);
+			g_client->srv_conn.clslot->slotNr = atoi(optarg);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 int main(int argc, char **argv)
 {
 	struct rspro_server_conn *srvc;
@@ -145,6 +204,9 @@ int main(int argc, char **argv)
 	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.name, "fixme-name");
 	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.software, "remsim-client");
 	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.sw_version, PACKAGE_VERSION);
+
+	handle_options(argc, argv);
+
 	rc = server_conn_fsm_alloc(g_client, srvc);
 	if (rc < 0) {
 		fprintf(stderr, "Unable to create Server conn FSM: %s\n", strerror(errno));
