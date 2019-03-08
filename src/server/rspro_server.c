@@ -462,21 +462,31 @@ static int sock_read_cb(struct ipa_server_conn *peer, struct msgb *msg)
 	if (msgb_length(msg) < sizeof(*hh))
 		goto invalid;
 	msg->l2h = &hh->data[0];
-	if (hh->proto != IPAC_PROTO_OSMO)
-		goto invalid;
-	if (!he || msgb_l2len(msg)< sizeof(*he))
-		goto invalid;
-	msg->l2h = &he->data[0];
+	switch (hh->proto) {
+	case IPAC_PROTO_IPACCESS:
+		rc = ipa_server_conn_ccm(peer, msg);
+		break;
+	case IPAC_PROTO_OSMO:
+		if (!he || msgb_l2len(msg)< sizeof(*he))
+			goto invalid;
+		msg->l2h = &he->data[0];
 
-	if (he->proto!= IPAC_PROTO_EXT_RSPRO)
-		goto invalid;
+		switch (he->proto) {
+		case IPAC_PROTO_EXT_RSPRO:
+			pdu = rspro_dec_msg(msg);
+			if (!pdu)
+				goto invalid;
 
-	pdu = rspro_dec_msg(msg);
-	if (!pdu)
+			rc = handle_rx_rspro(conn, pdu);
+			ASN_STRUCT_FREE(asn_DEF_RsproPDU, pdu);
+			break;
+		default:
+			goto invalid;
+		}
+		break;
+	default:
 		goto invalid;
-
-	rc = handle_rx_rspro(conn, pdu);
-	ASN_STRUCT_FREE(asn_DEF_RsproPDU, pdu);
+	}
 	return rc;
 
 invalid:
