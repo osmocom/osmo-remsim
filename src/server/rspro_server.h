@@ -35,6 +35,8 @@ struct rspro_client_conn {
 	struct osmo_fsm_inst *fi;
 	/* remote component identity (after it has been received) */
 	struct app_comp_id comp_id;
+	/* keep-alive handling FSM */
+	struct osmo_fsm_inst *keepalive_fi;
 
 	struct {
 		struct llist_head maps_new;

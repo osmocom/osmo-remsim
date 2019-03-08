@@ -91,6 +91,7 @@ enum remsim_server_client_event {
 	CLNTC_E_CLIENT_CONN,	/* Connect{Client,Bank}Req received */
 	CLNTC_E_BANK_CONN,
 	CLNTC_E_TCP_DOWN,
+	CLNTC_E_KA_TIMEOUT,
 	CLNTC_E_CREATE_MAP_RES,	/* CreateMappingRes received */
 	CLNTC_E_REMOVE_MAP_RES,	/* RemoveMappingRes received */
 	CLNTC_E_CONFIG_CL_RES,	/* ConfigClientRes received */
@@ -102,6 +103,7 @@ static const struct value_string server_client_event_names[] = {
 	OSMO_VALUE_STRING(CLNTC_E_CLIENT_CONN),
 	OSMO_VALUE_STRING(CLNTC_E_BANK_CONN),
 	OSMO_VALUE_STRING(CLNTC_E_TCP_DOWN),
+	OSMO_VALUE_STRING(CLNTC_E_KA_TIMEOUT),
 	OSMO_VALUE_STRING(CLNTC_E_CREATE_MAP_RES),
 	OSMO_VALUE_STRING(CLNTC_E_REMOVE_MAP_RES),
 	OSMO_VALUE_STRING(CLNTC_E_CONFIG_CL_RES),
@@ -321,6 +323,9 @@ static void clnt_allstate_action(struct osmo_fsm_inst *fi, uint32_t event, void 
 	case CLNTC_E_TCP_DOWN:
 		osmo_fsm_inst_term(fi, OSMO_FSM_TERM_REGULAR, NULL);
 		break;
+	case CLNTC_E_KA_TIMEOUT:
+		osmo_fsm_inst_term(fi, OSMO_FSM_TERM_REGULAR, NULL);
+		break;
 	default:
 		OSMO_ASSERT(0);
 	}
@@ -465,6 +470,16 @@ static int sock_read_cb(struct ipa_server_conn *peer, struct msgb *msg)
 	switch (hh->proto) {
 	case IPAC_PROTO_IPACCESS:
 		rc = ipa_server_conn_ccm(peer, msg);
+		if (rc < 0)
+			break;
+		switch (hh->data[0]) {
+		case IPAC_MSGT_PONG:
+			ipa_keepalive_fsm_pong_received(conn->keepalive_fi);
+			rc = 0;
+			break;
+		default:
+			break;
+		}
 		break;
 	case IPAC_PROTO_OSMO:
 		if (!he || msgb_l2len(msg)< sizeof(*he))
@@ -504,6 +519,11 @@ static int sock_closed_cb(struct ipa_server_conn *peer)
 	return 0;
 }
 
+static const struct ipa_keepalive_params ka_params = {
+	.interval = 30,
+	.wait_for_resp = 10,
+};
+
 /* a new TCP connection was accepted on the RSPRO server socket */
 static int accept_cb(struct ipa_server_link *link, int fd)
 {
@@ -525,6 +545,14 @@ static int accept_cb(struct ipa_server_link *link, int fd)
 	if (!conn->fi)
 		goto out_err_conn;
 
+	/* use ipa_keepalive_fsm to periodically send an IPA_PING and expect a PONG in response */
+	conn->keepalive_fi = ipa_server_conn_alloc_keepalive_fsm(conn->peer, &ka_params, NULL);
+	if (!conn->keepalive_fi)
+		goto out_err_fi;
+	/* ensure parent is notified once keepalive FSM instance is dying */
+	osmo_fsm_inst_change_parent(conn->keepalive_fi, conn->fi, CLNTC_E_KA_TIMEOUT);
+	ipa_keepalive_fsm_start(conn->keepalive_fi);
+
 	INIT_LLIST_HEAD(&conn->bank.maps_new);
 	INIT_LLIST_HEAD(&conn->bank.maps_unack);
 	INIT_LLIST_HEAD(&conn->bank.maps_active);
@@ -538,6 +566,8 @@ static int accept_cb(struct ipa_server_link *link, int fd)
 	osmo_fsm_inst_dispatch(conn->fi, CLNTC_E_TCP_UP, NULL);
 	return 0;
 
+out_err_fi:
+	osmo_fsm_inst_term(conn->fi, OSMO_FSM_TERM_ERROR, NULL);
 out_err_conn:
 	ipa_server_conn_destroy(conn->peer);
 	/* the above will free 'conn' down the chain */
