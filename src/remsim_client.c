@@ -133,6 +133,8 @@ int main(int argc, char **argv)
 
 	g_tall_ctx = talloc_named_const(NULL, 0, "global");
 
+	osmo_init_logging2(g_tall_ctx, &log_info);
+
 	g_client = talloc_zero(g_tall_ctx, struct bankd_client);
 
 	srvc = &g_client->srv_conn;
@@ -150,7 +152,6 @@ int main(int argc, char **argv)
 	}
 
 	asn_debug = 0;
-	osmo_init_logging2(g_tall_ctx, &log_info);
 
 	if (bankd_conn_fsm_alloc(g_client) < 0) {
 		fprintf(stderr, "Unable to connect: %s\n", strerror(errno));
