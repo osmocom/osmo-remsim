@@ -49,18 +49,23 @@ int bankd_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 	if (msgb_length(msg) < sizeof(*hh))
 		goto invalid;
 	msg->l2h = &hh->data[0];
-	if (hh->proto != IPAC_PROTO_OSMO)
+	switch (hh->proto) {
+	case IPAC_PROTO_OSMO:
+		if (!he || msgb_l2len(msg) < sizeof(*he))
+			goto invalid;
+		msg->l2h = &he->data[0];
+		switch (he->proto) {
+		case IPAC_PROTO_EXT_RSPRO:
+			printf("Received RSPRO %s\n", msgb_hexdump(msg));
+			rc = bankd_handle_msg(bc, msg);
+			break;
+		default:
+			goto invalid;
+		}
+		break;
+	default:
 		goto invalid;
-	if (!he || msgb_l2len(msg) < sizeof(*he))
-		goto invalid;
-	msg->l2h = &he->data[0];
-
-	if (he->proto != IPAC_PROTO_EXT_RSPRO)
-		goto invalid;
-
-	printf("Received RSPRO %s\n", msgb_hexdump(msg));
-
-	rc = bankd_handle_msg(bc, msg);
+	}
 
 	return rc;
 
