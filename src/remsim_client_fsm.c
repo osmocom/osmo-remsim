@@ -257,6 +257,7 @@ enum server_conn_fsm_state {
 static const struct value_string server_conn_fsm_event_names[] = {
 	OSMO_VALUE_STRING(SRVC_E_TCP_UP),
 	OSMO_VALUE_STRING(SRVC_E_TCP_DOWN),
+	OSMO_VALUE_STRING(SRVC_E_KA_TIMEOUT),
 	OSMO_VALUE_STRING(SRVC_E_CLIENT_CONN_RES),
 	{ 0, NULL }
 };
@@ -282,6 +283,19 @@ static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 		goto invalid;
 	msg->l2h = &hh->data[0];
 	switch (hh->proto) {
+	case IPAC_PROTO_IPACCESS:
+		rc = ipaccess_bts_handle_ccm(srvc->conn, &srvc->ipa_dev, msg);
+		if (rc < 0)
+			break;
+		switch (hh->data[0]) {
+		case IPAC_MSGT_PONG:
+			ipa_keepalive_fsm_pong_received(srvc->keepalive_fi);
+			rc = 0;
+			break;
+		default:
+			break;
+		}
+		break;
 	case IPAC_PROTO_OSMO:
 		if (!he || msgb_l2len(msg) < sizeof(*he))
 			goto invalid;
@@ -310,6 +324,10 @@ invalid:
 	return -1;
 }
 
+static const struct ipa_keepalive_params ka_params = {
+	.interval = 30,
+	.wait_for_resp = 10,
+};
 
 static void srvc_st_init_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
 {
@@ -319,15 +337,33 @@ static void srvc_st_init_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
 	srvc->conn = ipa_client_conn_create(fi, NULL, 0, srvc->server_host, srvc->server_port,
 						srvc_updown_cb, srvc_read_cb, NULL, srvc);
 	if (!srvc->conn) {
-		fprintf(stderr, "Unable to create socket: %s\n", strerror(errno));
-		/* FIXME */
+		LOGPFSM(fi, "Unable to create socket: %s\n", strerror(errno));
+		goto out_fi;
 	}
+
+	srvc->keepalive_fi = ipa_client_conn_alloc_keepalive_fsm(srvc->conn, &ka_params, fi->id);
+	if (!srvc->keepalive_fi) {
+		LOGPFSM(fi, "Unable to create keepalive FSM\n");
+		goto out_conn;
+	}
+	/* ensure parent is notified once keepalive FSM instance is dying */
+	osmo_fsm_inst_change_parent(srvc->keepalive_fi, srvc->fi, SRVC_E_KA_TIMEOUT);
+
 	/* Attempt to connect TCP socket */
 	rc = ipa_client_conn_open(srvc->conn);
 	if (rc < 0) {
 		fprintf(stderr, "Unable to connect: %s\n", strerror(errno));
-		/* FIXME */
+		goto out_ka;
 	}
+
+	return;
+
+out_ka:
+	osmo_fsm_inst_term(srvc->keepalive_fi, OSMO_FSM_TERM_ERROR, NULL);
+out_conn:
+	ipa_client_conn_destroy(srvc->conn);
+out_fi:
+	osmo_fsm_inst_term(fi, OSMO_FSM_TERM_ERROR, NULL);
 }
 
 static void srvc_st_init(struct osmo_fsm_inst *fi, uint32_t event, void *data)
@@ -349,6 +385,8 @@ static void srvc_st_established_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
 	RsproPDU_t *pdu;
 
+	ipa_keepalive_fsm_start(srvc->keepalive_fi);
+
 	/* FIXME: Bankd in case of Bankd connection! */
 	pdu = rspro_gen_ConnectClientReq(&srvc->own_comp_id, NULL);
 	ipa_client_conn_send_rspro(srvc->conn, pdu);
@@ -358,6 +396,7 @@ static void srvc_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 {
 	switch (event) {
 	case SRVC_E_TCP_DOWN:
+	case SRVC_E_KA_TIMEOUT:
 		osmo_fsm_inst_state_chg(fi, SRVC_ST_REESTABLISH, T2_RECONNECT, 2);
 		break;
 	case SRVC_E_CLIENT_CONN_RES:
@@ -373,6 +412,7 @@ static void srvc_st_connected(struct osmo_fsm_inst *fi, uint32_t event, void *da
 {
 	switch (event) {
 	case SRVC_E_TCP_DOWN:
+	case SRVC_E_KA_TIMEOUT:
 		osmo_fsm_inst_state_chg(fi, SRVC_ST_REESTABLISH, T2_RECONNECT, 2);
 		break;
 	default:
@@ -384,6 +424,8 @@ static void srvc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 {
 	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
 	int rc;
+
+	ipa_keepalive_fsm_stop(srvc->keepalive_fi);
 
 	/* Attempt to connect TCP socket */
 	rc = ipa_client_conn_open(srvc->conn);
@@ -435,14 +477,14 @@ static const struct osmo_fsm_state server_conn_fsm_states[] = {
 	},
 	[SRVC_ST_ESTABLISHED] = {
 		.name = "ESTABLISHED",
-		.in_event_mask = S(SRVC_E_TCP_DOWN) | S(SRVC_E_CLIENT_CONN_RES),
+		.in_event_mask = S(SRVC_E_TCP_DOWN) | S(SRVC_E_KA_TIMEOUT) | S(SRVC_E_CLIENT_CONN_RES),
 		.out_state_mask = S(SRVC_ST_CONNECTED) | S(SRVC_ST_REESTABLISH),
 		.action = srvc_st_established,
 		.onenter = srvc_st_established_onenter,
 	},
 	[SRVC_ST_CONNECTED] = {
 		.name = "CONNECTED",
-		.in_event_mask = S(SRVC_E_TCP_DOWN),
+		.in_event_mask = S(SRVC_E_TCP_DOWN) | S(SRVC_E_KA_TIMEOUT),
 		.out_state_mask = S(SRVC_ST_REESTABLISH),
 		.action = srvc_st_connected,
 	},

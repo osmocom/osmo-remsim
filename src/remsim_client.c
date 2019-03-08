@@ -50,6 +50,19 @@ int bankd_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 		goto invalid;
 	msg->l2h = &hh->data[0];
 	switch (hh->proto) {
+	case IPAC_PROTO_IPACCESS:
+		rc = ipaccess_bts_handle_ccm(conn, &bc->srv_conn.ipa_dev, msg);
+		if (rc < 0)
+			break;
+		switch (hh->data[0]) {
+		case IPAC_MSGT_PONG:
+			ipa_keepalive_fsm_pong_received(bc->srv_conn.keepalive_fi);
+			rc = 0;
+			break;
+		default:
+			break;
+		}
+		break;
 	case IPAC_PROTO_OSMO:
 		if (!he || msgb_l2len(msg) < sizeof(*he))
 			goto invalid;
