@@ -55,11 +55,18 @@ static void push_and_send(struct ipa_client_conn *ipa, struct msgb *msg_tx)
 	/* msg_tx is now queued and will be freed. */
 }
 
-void ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *rspro)
+int ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *rspro)
 {
 	struct msgb *msg = rspro_enc_msg(rspro);
-	OSMO_ASSERT(msg);
+	if (!msg)
+		return -1;
 	push_and_send(ipa, msg);
+	return 0;
+}
+
+int server_conn_send_rspro(struct rspro_server_conn *srvc, RsproPDU_t *rspro)
+{
+	return ipa_client_conn_send_rspro(srvc->conn, rspro);
 }
 
 enum server_conn_fsm_state {
@@ -210,7 +217,7 @@ static void srvc_st_established_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 		pdu = rspro_gen_ConnectClientReq(&srvc->own_comp_id, srvc->clslot);
 	else
 		pdu = rspro_gen_ConnectBankReq(&srvc->own_comp_id, 1, 8 /* FIXME */);
-	ipa_client_conn_send_rspro(srvc->conn, pdu);
+	server_conn_send_rspro(srvc, pdu);
 }
 
 static void srvc_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *data)

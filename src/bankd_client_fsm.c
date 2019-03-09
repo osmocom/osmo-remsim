@@ -47,6 +47,11 @@ static void bankd_updown_cb(struct ipa_client_conn *conn, int up)
 	osmo_fsm_inst_dispatch(bc->bankd_fi, up ? BDC_E_TCP_UP: BDC_E_TCP_DOWN, 0);
 }
 
+int bankd_conn_send_rspro(struct bankd_client *bc, RsproPDU_t *rspro)
+{
+	return ipa_client_conn_send_rspro(bc->bankd_conn, rspro);
+}
+
 /***********************************************************************
  * bankd connection FSM: Remsim Client connection to Bankd
  ***********************************************************************/
@@ -92,7 +97,7 @@ static void bdc_st_established_onenter(struct osmo_fsm_inst *fi, uint32_t prev_s
 
 	/* FIXME: Send ClientConnReq */
 	pdu = rspro_gen_ConnectClientReq(&bc->srv_conn.own_comp_id, bc->srv_conn.clslot);
-	ipa_client_conn_send_rspro(bc->bankd_conn, pdu);
+	bankd_conn_send_rspro(bc, pdu);
 }
 
 static void bdc_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *data)

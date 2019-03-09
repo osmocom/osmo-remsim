@@ -36,4 +36,6 @@ struct rspro_server_conn {
 	uint16_t server_port;
 };
 
+int ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *rspro);
+int server_conn_send_rspro(struct rspro_server_conn *srvc, RsproPDU_t *rspro);
 int server_conn_fsm_alloc(void *ctx, struct rspro_server_conn *srvc);
