@@ -67,6 +67,7 @@ static void client_conn_send(struct rspro_client_conn *conn, RsproPDU_t *pdu)
 		ASN_STRUCT_FREE(asn_DEF_RsproPDU, pdu);
 		return;
 	}
+	LOGPFSM(conn->fi, "Tx RSPRO %s\n", pdu);
 	ipa_prepend_header_ext(msg_tx, IPAC_PROTO_EXT_RSPRO);
 	ipa_msg_push_header(msg_tx, IPAC_PROTO_OSMO);
 	ipa_server_conn_send(conn->peer, msg_tx);
@@ -431,6 +432,8 @@ struct rspro_client_conn *bankd_conn_by_id(struct rspro_server *srv, uint16_t ba
 
 static int handle_rx_rspro(struct rspro_client_conn *conn, const RsproPDU_t *pdu)
 {
+	LOGPFSM(conn->fi, "Rx RSPRO %s\n", rspro_msgt_name(pdu));
+
 	switch (pdu->msg.present) {
 	case RsproPDUchoice_PR_connectClientReq:
 		osmo_fsm_inst_dispatch(conn->fi, CLNTC_E_CLIENT_CONN, (void *)pdu);

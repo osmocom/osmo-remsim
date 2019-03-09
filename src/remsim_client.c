@@ -49,6 +49,8 @@ static int bankd_handle_msg(struct bankd_client *bc, struct msgb *msg)
 		return -1;
 	}
 
+	LOGPFSM(bc->bankd_fi, "Rx RSPRO %s\n", rspro_msgt_name(pdu));
+
 	switch (pdu->msg.present) {
 	case RsproPDUchoice_PR_connectClientRes:
 		/* Store 'identity' of bankd to in peer_comp_id */

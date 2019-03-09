@@ -66,6 +66,7 @@ int ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *rspro)
 
 int server_conn_send_rspro(struct rspro_server_conn *srvc, RsproPDU_t *rspro)
 {
+	LOGPFSM(srvc->fi, "Tx RSPRO %s\n", rspro_msgt_name(rspro));
 	return ipa_client_conn_send_rspro(srvc->conn, rspro);
 }
 

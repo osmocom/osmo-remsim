@@ -17,6 +17,8 @@ struct app_comp_id {
 	char fw_version[MAX_NAME_LEN+1];
 };
 
+const char *rspro_msgt_name(const RsproPDU_t *pdu);
+
 struct msgb *rspro_msgb_alloc(void);
 struct msgb *rspro_enc_msg(RsproPDU_t *pdu);
 RsproPDU_t *rspro_dec_msg(struct msgb *msg);

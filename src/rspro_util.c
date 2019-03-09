@@ -27,6 +27,8 @@
 #include <asn_application.h>
 #include <der_encoder.h>
 
+#include "asn1c_helpers.h"
+
 #include <osmocom/core/msgb.h>
 #include <osmocom/rspro/RsproPDU.h>
 
@@ -41,6 +43,11 @@ do {						\
 	}					\
 } while (0)
 
+
+const char *rspro_msgt_name(const RsproPDU_t *pdu)
+{
+	return asn_choice_name(&asn_DEF_RsproPDUchoice, &pdu->msg);
+}
 
 struct msgb *rspro_msgb_alloc(void)
 {
