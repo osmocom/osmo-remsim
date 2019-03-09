@@ -91,17 +91,6 @@ static void bankd_init(struct bankd *bankd)
 	 * started yet */
 	INIT_LLIST_HEAD(&bankd->pcsc_slot_names);
 	OSMO_ASSERT(bankd_pcsc_read_slotnames(bankd, "bankd_pcsc_slots.csv") == 0);
-
-	/* HACK HACK HACK */
-	{
-		struct bank_slot bs = { .bank_id = 1, };
-		struct client_slot cs = { .client_id = 23, };
-		int i;
-		for (i = 0; i < 5; i++) {
-			bs.slot_nr = cs.slot_nr = i;
-			slotmap_add(bankd->slotmaps, &bs, &cs);
-		}
-	}
 }
 
 /* create + start a new bankd_worker thread */
@@ -134,16 +123,72 @@ static struct bankd_worker *bankd_create_worker(struct bankd *bankd, unsigned in
 
 static bool terminate = false;
 
+static void rspro2bank_slot(struct bank_slot *out, const BankSlot_t *in)
+{
+	out->bank_id = in->bankId;
+	out->slot_nr = in->slotNr;
+}
+
+static void rspro2client_slot(struct client_slot *out, const ClientSlot_t *in)
+{
+	out->client_id = in->clientId;
+	out->slot_nr = in->slotNr;
+}
+
 /* handle incoming messages from server */
 static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 {
-	struct RsproPDU_t *resp;
+	const CreateMappingReq_t *creq = NULL;
+	const RemoveMappingReq_t *rreq = NULL;
+	struct slot_mapping *map;
+	struct bank_slot bs;
+	struct client_slot cs;
+	RsproPDU_t *resp;
+
+	LOGPFSM(srvc->fi, "Rx RSPRO %s\n", rspro_msgt_name(pdu));
 
 	switch (pdu->msg.present) {
 	case RsproPDUchoice_PR_connectBankRes:
 		/* Store 'identity' of server in srvc->peer_comp_id */
 		rspro_comp_id_retrieve(&srvc->peer_comp_id, &pdu->msg.choice.connectBankRes.identity);
 		osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_CLIENT_CONN_RES, (void *) pdu);
+		break;
+	case RsproPDUchoice_PR_createMappingReq:
+		creq = &pdu->msg.choice.createMappingReq;
+		if (creq->bank.bankId != g_bankd->cfg.bank_id)
+			resp = rspro_gen_CreateMappingRes(ResultCode_illegalBankId);
+		else if (creq->bank.slotNr >= g_bankd->cfg.num_slots)
+			resp = rspro_gen_CreateMappingRes(ResultCode_illegalSlotId);
+		else {
+			rspro2bank_slot(&bs, &creq->bank);
+			rspro2client_slot(&cs, &creq->client);
+			/* Add a new mapping */
+			map = slotmap_add(g_bankd->slotmaps, &bs, &cs);
+			if (!map)
+				resp = rspro_gen_CreateMappingRes(ResultCode_illegalSlotId);
+			else
+				resp = rspro_gen_CreateMappingRes(ResultCode_ok);
+		}
+		server_conn_send_rspro(srvc, resp);
+		break;
+	case RsproPDUchoice_PR_removeMappingReq:
+		rreq = &pdu->msg.choice.removeMappingReq;
+		if (rreq->bank.bankId != g_bankd->cfg.bank_id)
+			resp = rspro_gen_RemoveMappingRes(ResultCode_illegalBankId);
+		else if (rreq->bank.slotNr >= g_bankd->cfg.num_slots)
+			resp = rspro_gen_RemoveMappingRes(ResultCode_illegalSlotId);
+		else {
+			rspro2bank_slot(&bs, &rreq->bank);
+			/* Remove a mapping */
+			map = slotmap_by_bank(g_bankd->slotmaps, &bs);
+			if (!map)
+				resp = rspro_gen_RemoveMappingRes(ResultCode_unknownSlotmap);
+			else {
+				/* FIXME: kill/reset the respective worker, if any! */
+				slotmap_del(g_bankd->slotmaps, map);
+				resp = rspro_gen_RemoveMappingRes(ResultCode_ok);
+			}
+		}
 		break;
 	default:
 		fprintf(stderr, "Unknown/Unsupported RSPRO PDU type: %u\n", pdu->msg.present);
