@@ -282,12 +282,16 @@ static void srvc_st_reestablish(struct osmo_fsm_inst *fi, uint32_t event, void *
 
 static int server_conn_fsm_timer_cb(struct osmo_fsm_inst *fi)
 {
+	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
+
 	switch (fi->T) {
 	case 2:
 		osmo_fsm_inst_state_chg(fi, SRVC_ST_REESTABLISH, T2_RECONNECT, 2);
 		break;
 	case 1:
 		/* FIXME: close connection and re-start connection attempt */
+		ipa_client_conn_close(srvc->conn);
+		osmo_fsm_inst_dispatch(fi, SRVC_E_TCP_DOWN, NULL);
 		break;
 	default:
 		OSMO_ASSERT(0);
