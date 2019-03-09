@@ -54,6 +54,7 @@
 #include "rspro_util.h"
 
 __thread void *talloc_asn1_ctx;
+struct bankd *g_bankd;
 
 static void *worker_main(void *arg);
 
@@ -154,13 +155,15 @@ void handle_options(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-	struct bankd *bankd = talloc_zero(NULL, struct bankd);
-	struct rspro_server_conn *srvc = &bankd->srvc;
+	struct rspro_server_conn *srvc;
 	int i, rc;
 
-	OSMO_ASSERT(bankd);
-	bankd_init(bankd);
+	g_bankd = talloc_zero(NULL, struct bankd);
+	OSMO_ASSERT(g_bankd);
 
+	bankd_init(g_bankd);
+
+	srvc = &g_bankd->srvc;
 	srvc->server_host = "localhost";
 	srvc->server_port = 9998;
 	srvc->handle_rx = bankd_srvc_handle_rx;
@@ -172,7 +175,7 @@ int main(int argc, char **argv)
 	handle_options(argc, argv);
 
 	/* Connection towards remsim-server */
-	rc = server_conn_fsm_alloc(bankd, srvc);
+	rc = server_conn_fsm_alloc(g_bankd, srvc);
 	if (rc < 0) {
 		fprintf(stderr, "Unable to create Server conn FSM: %s\n", strerror(errno));
 		exit(1);
@@ -182,12 +185,12 @@ int main(int argc, char **argv)
 	rc = osmo_sock_init(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 9999, OSMO_SOCK_F_BIND);
 	if (rc < 0)
 		exit(1);
-	bankd->accept_fd = rc;
+	g_bankd->accept_fd = rc;
 
 	/* create worker threads.  FIXME: one per reader/slot! */
 	for (i = 0; i < 10; i++) {
 		struct bankd_worker *w;
-		w = bankd_create_worker(bankd, i);
+		w = bankd_create_worker(g_bankd, i);
 		if (!w)
 			exit(21);
 	}
@@ -202,7 +205,7 @@ int main(int argc, char **argv)
 		osmo_select_main(0);
 	}
 
-	talloc_free(bankd);
+	talloc_free(g_bankd);
 	exit(0);
 }
 
