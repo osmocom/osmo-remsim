@@ -101,6 +101,24 @@ ResultCode ::= ENUMERATED {
 	...
 }
 
+ErrorCode ::= ENUMERATED {
+	-- Bankd or Server has received connection form unknown client (no mapping)
+	unknownClientConnected		(1),
+	-- unexpected disconnect (typically bankd reports client disconnect)
+	unexpectedDisconnect		(2),
+	unexpectedProtocolVersion	(3),
+	...
+}
+
+ErrorString ::= IA5String (SIZE (1..255))
+
+ErrorSeverity ::= ENUMERATED {
+	minor				(1),
+	major				(2),
+	fatal				(3),
+	...
+}
+
 -- Slot number within a SIM bank or a client.
 SlotNumber ::= INTEGER(0..1023)
 
@@ -263,6 +281,22 @@ BankSlotStatusInd ::= SEQUENCE {
 	...
 }
 
+-- *->SERVER: indication about some kind of error
+ErrorInd ::= SEQUENCE {
+	-- whoever is detecting + sending us the error
+	sender		ComponentType,
+	severity	ErrorSeverity,
+	code		ErrorCode,
+	-- any bank-side slot that's affected
+	bankSlot	[0] BankSlot OPTIONAL,
+	-- any client-side slot that's affected
+	clientSlot	[1] ClientSlot OPTIONAL,
+	-- any additional textual information
+	errorString	[2] ErrorString OPTIONAL,
+	...
+}
+
+
 ----------------------------------------------------------------------
 -- PDU
 ----------------------------------------------------------------------
@@ -279,6 +313,7 @@ RsproPDUchoice ::= CHOICE {
 	removeMappingRes	[7]	RemoveMappingRes,
 	configClientReq		[8]	ConfigClientReq,
 	configClientRes		[9]	ConfigClientRes,
+	errorInd		[16]	ErrorInd,
 	-- APDUs etc.
 	setAtrReq		[10]	SetAtrReq,
 	setAtrRes		[11]	SetAtrRes,

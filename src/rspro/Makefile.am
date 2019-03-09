@@ -17,6 +17,10 @@ ASN_MODULE_SOURCES =	\
 	ConnectClientRes.c \
 	CreateMappingReq.c \
 	CreateMappingRes.c \
+	ErrorCode.c \
+	ErrorInd.c \
+	ErrorSeverity.c \
+	ErrorString.c \
 	IpAddress.c \
 	IpPort.c \
 	Ipv4Address.c \
@@ -56,6 +60,10 @@ ASN_MODULE_INC = \
 	ConnectClientRes.h \
 	CreateMappingReq.h \
 	CreateMappingRes.h \
+	ErrorCode.h \
+	ErrorInd.h \
+	ErrorSeverity.h \
+	ErrorString.h \
 	IpAddress.h \
 	IpPort.h \
 	Ipv4Address.h \

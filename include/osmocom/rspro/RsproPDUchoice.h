@@ -21,6 +21,7 @@
 #include <osmocom/rspro/RemoveMappingRes.h>
 #include <osmocom/rspro/ConfigClientReq.h>
 #include <osmocom/rspro/ConfigClientRes.h>
+#include "ErrorInd.h"
 #include <osmocom/rspro/SetAtrReq.h>
 #include <osmocom/rspro/SetAtrRes.h>
 #include <osmocom/rspro/TpduModemToCard.h>
@@ -46,6 +47,7 @@ typedef enum RsproPDUchoice_PR {
 	RsproPDUchoice_PR_removeMappingRes,
 	RsproPDUchoice_PR_configClientReq,
 	RsproPDUchoice_PR_configClientRes,
+	RsproPDUchoice_PR_errorInd,
 	RsproPDUchoice_PR_setAtrReq,
 	RsproPDUchoice_PR_setAtrRes,
 	RsproPDUchoice_PR_tpduModemToCard,
@@ -70,6 +72,7 @@ typedef struct RsproPDUchoice {
 		RemoveMappingRes_t	 removeMappingRes;
 		ConfigClientReq_t	 configClientReq;
 		ConfigClientRes_t	 configClientRes;
+		ErrorInd_t	 errorInd;
 		SetAtrReq_t	 setAtrReq;
 		SetAtrRes_t	 setAtrRes;
 		TpduModemToCard_t	 tpduModemToCard;

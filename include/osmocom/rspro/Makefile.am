@@ -17,6 +17,10 @@ noinst_HEADERS = \
 	ConnectClientRes.h \
 	CreateMappingReq.h \
 	CreateMappingRes.h \
+	ErrorCode.h \
+	ErrorInd.h \
+	ErrorSeverity.h \
+	ErrorString.h \
 	IpAddress.h \
 	IpPort.h \
 	Ipv4Address.h \
