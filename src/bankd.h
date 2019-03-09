@@ -83,6 +83,7 @@ struct bankd_worker {
 struct bankd {
 	struct {
 		uint16_t bank_id;
+		uint16_t num_slots;
 	} cfg;
 
 	struct app_comp_id comp_id;

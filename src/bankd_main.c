@@ -76,6 +76,10 @@ static void bankd_init(struct bankd *bankd)
 	INIT_LLIST_HEAD(&bankd->workers);
 	pthread_mutex_init(&bankd->workers_mutex, NULL);
 
+	/* set some defaults, overridden by commandline/config */
+	bankd->cfg.bank_id = 1;
+	bankd->cfg.num_slots = 8;
+
 	bankd->comp_id.type = ComponentType_remsimBankd;
 	OSMO_STRLCPY_ARRAY(bankd->comp_id.name, "fixme-name");
 	OSMO_STRLCPY_ARRAY(bankd->comp_id.software, "remsim-bankd");
@@ -187,8 +191,8 @@ int main(int argc, char **argv)
 		exit(1);
 	g_bankd->accept_fd = rc;
 
-	/* create worker threads.  FIXME: one per reader/slot! */
-	for (i = 0; i < 10; i++) {
+	/* create worker threads: One per reader/slot! */
+	for (i = 0; i < g_bankd->cfg.num_slots; i++) {
 		struct bankd_worker *w;
 		w = bankd_create_worker(g_bankd, i);
 		if (!w)
