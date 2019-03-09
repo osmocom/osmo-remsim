@@ -295,8 +295,8 @@ static const struct osmo_fsm_state server_conn_fsm_states[] = {
 	},
 };
 
-struct osmo_fsm remsim_client_server_fsm = {
-	.name = "SERVER_CONN",
+struct osmo_fsm rspro_client_server_fsm = {
+	.name = "RSPRO_CLIENT",
 	.states = server_conn_fsm_states,
 	.num_states = ARRAY_SIZE(server_conn_fsm_states),
 	.timer_cb = server_conn_fsm_timer_cb,
@@ -308,7 +308,7 @@ int server_conn_fsm_alloc(void *ctx, struct rspro_server_conn *srvc)
 {
 	struct osmo_fsm_inst *fi;
 
-	fi = osmo_fsm_inst_alloc(&remsim_client_server_fsm, ctx, srvc, LOGL_DEBUG, "server");
+	fi = osmo_fsm_inst_alloc(&rspro_client_server_fsm, ctx, srvc, LOGL_DEBUG, "server");
 	if (!fi)
 		return -1;
 
@@ -320,5 +320,5 @@ int server_conn_fsm_alloc(void *ctx, struct rspro_server_conn *srvc)
 
 static __attribute__((constructor)) void on_dso_load(void)
 {
-	osmo_fsm_register(&remsim_client_server_fsm);
+	osmo_fsm_register(&rspro_client_server_fsm);
 }

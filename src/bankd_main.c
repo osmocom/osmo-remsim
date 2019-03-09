@@ -27,7 +27,7 @@
 #include <osmocom/rspro/RsproPDU.h>
 
 #include "bankd.h"
-#include "remsim_client_fsm.h"
+#include "rspro_client_fsm.h"
 #include "debug.h"
 #include "rspro_util.h"
 
