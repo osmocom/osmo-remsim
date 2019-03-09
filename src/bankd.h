@@ -14,6 +14,7 @@
 
 #include "rspro_util.h"
 #include "slotmap.h"
+#include "client.h"
 #include "debug.h"
 
 struct bankd;
@@ -85,6 +86,8 @@ struct bankd {
 	} cfg;
 
 	struct app_comp_id comp_id;
+	/* RSPRO connection to the remsim-server */
+	struct rspro_server_conn srvc;
 
 	/* TCP socket at which we are listening */
 	int accept_fd;

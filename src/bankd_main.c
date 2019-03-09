@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <pthread.h>
 
@@ -26,6 +27,7 @@
 #include <osmocom/rspro/RsproPDU.h>
 
 #include "bankd.h"
+#include "remsim_client_fsm.h"
 #include "debug.h"
 #include "rspro_util.h"
 
@@ -105,15 +107,56 @@ static struct bankd_worker *bankd_create_worker(struct bankd *bankd, unsigned in
 
 static bool terminate = false;
 
+/* handle incoming messages from server */
+static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
+{
+	struct RsproPDU_t *resp;
+
+	switch (pdu->msg.present) {
+	case RsproPDUchoice_PR_connectBankRes:
+		/* Store 'identity' of server in srvc->peer_comp_id */
+		rspro_comp_id_retrieve(&srvc->peer_comp_id, &pdu->msg.choice.connectBankRes.identity);
+		osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_CLIENT_CONN_RES, (void *) pdu);
+		break;
+	default:
+		fprintf(stderr, "Unknown/Unsupported RSPRO PDU type: %u\n", pdu->msg.present);
+		return -1;
+	}
+
+	return 0;
+}
+
+void handle_options(int argc, char **argv)
+{
+}
+
 int main(int argc, char **argv)
 {
 	struct bankd *bankd = talloc_zero(NULL, struct bankd);
+	struct rspro_server_conn *srvc = &bankd->srvc;
 	int i, rc;
 
 	OSMO_ASSERT(bankd);
 	bankd_init(bankd);
 
-	/* create listening socket */
+	srvc->server_host = "localhost";
+	srvc->server_port = 9998;
+	srvc->handle_rx = bankd_srvc_handle_rx;
+	srvc->own_comp_id.type = ComponentType_remsimBankd;
+	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.name, "fixme-name");
+	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.software, "remsim-bankd");
+	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.sw_version, PACKAGE_VERSION);
+
+	handle_options(argc, argv);
+
+	/* Connection towards remsim-server */
+	rc = server_conn_fsm_alloc(bankd, srvc);
+	if (rc < 0) {
+		fprintf(stderr, "Unable to create Server conn FSM: %s\n", strerror(errno));
+		exit(1);
+	}
+
+	/* create listening socket for inbound client connections */
 	rc = osmo_sock_init(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 9999, OSMO_SOCK_F_BIND);
 	if (rc < 0)
 		exit(1);
@@ -133,11 +176,8 @@ int main(int argc, char **argv)
 		/* FIXME: Connect to remsim-server from the main thread, register with
 		 * it and await + process any slot mapping or other configuration commands.
 		 * Ensure to re-connect as needed. */
-
-		/* we should generalize the SRVC (server connection) FSM from remsim-client
-		 * and use it here.  As long as only the main thread is using osmo_fsm, things
-		 * are safe with regard to other threads */
 		sleep(1);
+		osmo_select_main(0);
 	}
 
 	talloc_free(bankd);
