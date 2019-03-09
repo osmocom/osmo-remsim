@@ -23,6 +23,8 @@ typedef enum ResultCode {
 	ResultCode_illegalClientId	= 1,
 	ResultCode_illegalBankId	= 2,
 	ResultCode_illegalSlotId	= 3,
+	ResultCode_unsupportedProtocolVersion	= 4,
+	ResultCode_unknownSlotmap	= 5,
 	ResultCode_cardNotPresent	= 100,
 	ResultCode_cardUnresponsive	= 101,
 	ResultCode_cardTransmissionError	= 102
