@@ -441,8 +441,9 @@ static int worker_try_slotmap(struct bankd_worker *worker)
 static int worker_handle_connectClientReq(struct bankd_worker *worker, const RsproPDU_t *pdu)
 {
 	const struct ComponentIdentity *cid = &pdu->msg.choice.connectClientReq.identity;
+	RsproPDU_t *resp = NULL;
 	e_ResultCode res;
-	RsproPDU_t *resp;
+	int rc;
 
 	OSMO_ASSERT(pdu->msg.present == RsproPDUchoice_PR_connectClientReq);
 
@@ -452,12 +453,15 @@ static int worker_handle_connectClientReq(struct bankd_worker *worker, const Rsp
 
 	if (worker->state != BW_ST_CONN_WAIT_ID) {
 		LOGW(worker, "Unexpected connectClientReq\n");
-		return -102;
+		rc = -102;
+		goto respond_and_err;
 	}
 
 	if (!pdu->msg.choice.connectClientReq.clientSlot) {
 		LOGW(worker, "missing clientID, aborting\n");
-		return -103;
+		res = ResultCode_illegalClientId;
+		rc = -103;
+		goto respond_and_err;
 	}
 	worker->client.clslot.client_id = pdu->msg.choice.connectClientReq.clientSlot->clientId;
 	worker->client.clslot.slot_nr = pdu->msg.choice.connectClientReq.clientSlot->slotNr;
@@ -470,6 +474,13 @@ static int worker_handle_connectClientReq(struct bankd_worker *worker, const Rsp
 
 	resp = rspro_gen_ConnectClientRes(&worker->bankd->comp_id, res);
 	return worker_send_rspro(worker, resp);
+
+respond_and_err:
+	if (res) {
+		resp = rspro_gen_ConnectClientRes(&worker->bankd->comp_id, res);
+		worker_send_rspro(worker, resp);
+	}
+	return rc;
 }
 
 static int worker_handle_tpduModemToCard(struct bankd_worker *worker, const RsproPDU_t *pdu)
