@@ -61,6 +61,8 @@ struct bankd_worker {
 
 	/* thread of this worker. */
 	pthread_t thread;
+	/* top talloc context for this worker/thread */
+	void *tall_ctx;
 
 	/* File descriptor of the TCP connection to the remsim-client (modem) */
 	struct {
@@ -100,6 +102,9 @@ struct bankd {
 
 	/* list of slot mappings. only ever modified in main thread! */
 	struct slotmaps *slotmaps;
+
+	/* pthread ID of main thread */
+	pthread_t main;
 
 	/* list of bankd_workers. accessed/modified by multiple threads; protected by mutex */
 	struct llist_head workers;

@@ -56,10 +56,13 @@
 
 /* signal indicates to worker thread that its map has been deleted */
 #define SIGMAPDEL	SIGRTMIN+1
+
+static void handle_sig_usr1(int sig);
 static void handle_sig_mapdel(int sig);
 
 __thread void *talloc_asn1_ctx;
 struct bankd *g_bankd;
+static void *g_tall_ctx;
 
 static void *worker_main(void *arg);
 
@@ -71,7 +74,7 @@ int asn_debug;
 
 static void bankd_init(struct bankd *bankd)
 {
-	void *g_tall_ctx = talloc_named_const(NULL, 0, "global");
+	g_tall_ctx = talloc_named_const(NULL, 0, "global");
 	osmo_init_logging2(g_tall_ctx, &log_info);
 
 	asn_debug = 0;
@@ -241,7 +244,9 @@ int main(int argc, char **argv)
 
 	handle_options(argc, argv);
 
+	g_bankd->main = pthread_self();
 	signal(SIGMAPDEL, handle_sig_mapdel);
+	signal(SIGUSR1, handle_sig_usr1);
 
 	/* Connection towards remsim-server */
 	rc = server_conn_fsm_alloc(g_bankd, srvc);
@@ -328,6 +333,29 @@ static void handle_sig_mapdel(int sig)
 	LOGW(g_worker, "SIGMAPDEL received: Main thread informs us our map is gone\n");
 	OSMO_ASSERT(sig == SIGMAPDEL);
 	worker_set_state(g_worker, BW_ST_CONN_CLIENT_UNMAPPED);
+}
+
+static void handle_sig_usr1(int sig)
+{
+	OSMO_ASSERT(sig == SIGUSR1);
+
+	if (pthread_equal(g_bankd->main, pthread_self())) {
+		struct bankd_worker *worker;
+		/* main thread */
+		fprintf(stderr, "=== Talloc Report of main thread:\n");
+		talloc_report(g_tall_ctx, stderr);
+
+		/* iterate over worker threads and ask them to dump their talloc state */
+		pthread_mutex_lock(&g_bankd->workers_mutex);
+		llist_for_each_entry(worker, &g_bankd->workers, list) {
+			pthread_kill(worker->thread, SIGUSR1);
+		}
+		pthread_mutex_unlock(&g_bankd->workers_mutex);
+	} else {
+		/* worker thread */
+		fprintf(stderr, "=== Talloc Report of %s\n", g_worker->name);
+		talloc_report(g_worker->tall_ctx, stderr);
+	}
 }
 
 static void worker_cleanup(void *arg)
@@ -705,8 +733,8 @@ static void *worker_main(void *arg)
 
 	/* not permitted in multithreaded environment */
 	talloc_disable_null_tracking();
-	top_ctx = talloc_named_const(NULL, 0, "top");
-	talloc_asn1_ctx = talloc_named_const(top_ctx, 0, "asn1");
+	g_worker->tall_ctx = talloc_named_const(NULL, 0, "top");
+	talloc_asn1_ctx = talloc_named_const(g_worker->tall_ctx, 0, "asn1");
 
 	/* set the thread name */
 	g_worker->name = talloc_asprintf(g_worker->tall_ctx, "bankd-worker(%u)", g_worker->num);
