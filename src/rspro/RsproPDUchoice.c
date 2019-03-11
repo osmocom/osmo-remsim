@@ -79,23 +79,41 @@ static asn_TYPE_member_t asn_MBR_RsproPDUchoice_1[] = {
 		0,
 		"removeMappingRes"
 		},
-	{ ATF_NOFLAGS, 0, offsetof(struct RsproPDUchoice, choice.configClientReq),
+	{ ATF_NOFLAGS, 0, offsetof(struct RsproPDUchoice, choice.configClientIdReq),
 		(ASN_TAG_CLASS_CONTEXT | (8 << 2)),
 		-1,	/* IMPLICIT tag at current level */
-		&asn_DEF_ConfigClientReq,
+		&asn_DEF_ConfigClientIdReq,
 		0,	/* Defer constraints checking to the member type */
 		0,	/* PER is not compiled, use -gen-PER */
 		0,
-		"configClientReq"
+		"configClientIdReq"
 		},
-	{ ATF_NOFLAGS, 0, offsetof(struct RsproPDUchoice, choice.configClientRes),
+	{ ATF_NOFLAGS, 0, offsetof(struct RsproPDUchoice, choice.configClientIdRes),
 		(ASN_TAG_CLASS_CONTEXT | (9 << 2)),
 		-1,	/* IMPLICIT tag at current level */
-		&asn_DEF_ConfigClientRes,
+		&asn_DEF_ConfigClientIdRes,
 		0,	/* Defer constraints checking to the member type */
 		0,	/* PER is not compiled, use -gen-PER */
 		0,
-		"configClientRes"
+		"configClientIdRes"
+		},
+	{ ATF_NOFLAGS, 0, offsetof(struct RsproPDUchoice, choice.configClientBankReq),
+		(ASN_TAG_CLASS_CONTEXT | (17 << 2)),
+		-1,	/* IMPLICIT tag at current level */
+		&asn_DEF_ConfigClientBankReq,
+		0,	/* Defer constraints checking to the member type */
+		0,	/* PER is not compiled, use -gen-PER */
+		0,
+		"configClientBankReq"
+		},
+	{ ATF_NOFLAGS, 0, offsetof(struct RsproPDUchoice, choice.configClientBankRes),
+		(ASN_TAG_CLASS_CONTEXT | (18 << 2)),
+		-1,	/* IMPLICIT tag at current level */
+		&asn_DEF_ConfigClientBankRes,
+		0,	/* Defer constraints checking to the member type */
+		0,	/* PER is not compiled, use -gen-PER */
+		0,
+		"configClientBankRes"
 		},
 	{ ATF_NOFLAGS, 0, offsetof(struct RsproPDUchoice, choice.errorInd),
 		(ASN_TAG_CLASS_CONTEXT | (16 << 2)),
@@ -170,15 +188,17 @@ static const asn_TYPE_tag2member_t asn_MAP_RsproPDUchoice_tag2el_1[] = {
     { (ASN_TAG_CLASS_CONTEXT | (5 << 2)), 5, 0, 0 }, /* createMappingRes */
     { (ASN_TAG_CLASS_CONTEXT | (6 << 2)), 6, 0, 0 }, /* removeMappingReq */
     { (ASN_TAG_CLASS_CONTEXT | (7 << 2)), 7, 0, 0 }, /* removeMappingRes */
-    { (ASN_TAG_CLASS_CONTEXT | (8 << 2)), 8, 0, 0 }, /* configClientReq */
-    { (ASN_TAG_CLASS_CONTEXT | (9 << 2)), 9, 0, 0 }, /* configClientRes */
-    { (ASN_TAG_CLASS_CONTEXT | (10 << 2)), 11, 0, 0 }, /* setAtrReq */
-    { (ASN_TAG_CLASS_CONTEXT | (11 << 2)), 12, 0, 0 }, /* setAtrRes */
-    { (ASN_TAG_CLASS_CONTEXT | (12 << 2)), 13, 0, 0 }, /* tpduModemToCard */
-    { (ASN_TAG_CLASS_CONTEXT | (13 << 2)), 14, 0, 0 }, /* tpduCardToModem */
-    { (ASN_TAG_CLASS_CONTEXT | (14 << 2)), 15, 0, 0 }, /* clientSlotStatusInd */
-    { (ASN_TAG_CLASS_CONTEXT | (15 << 2)), 16, 0, 0 }, /* bankSlotStatusInd */
-    { (ASN_TAG_CLASS_CONTEXT | (16 << 2)), 10, 0, 0 } /* errorInd */
+    { (ASN_TAG_CLASS_CONTEXT | (8 << 2)), 8, 0, 0 }, /* configClientIdReq */
+    { (ASN_TAG_CLASS_CONTEXT | (9 << 2)), 9, 0, 0 }, /* configClientIdRes */
+    { (ASN_TAG_CLASS_CONTEXT | (10 << 2)), 13, 0, 0 }, /* setAtrReq */
+    { (ASN_TAG_CLASS_CONTEXT | (11 << 2)), 14, 0, 0 }, /* setAtrRes */
+    { (ASN_TAG_CLASS_CONTEXT | (12 << 2)), 15, 0, 0 }, /* tpduModemToCard */
+    { (ASN_TAG_CLASS_CONTEXT | (13 << 2)), 16, 0, 0 }, /* tpduCardToModem */
+    { (ASN_TAG_CLASS_CONTEXT | (14 << 2)), 17, 0, 0 }, /* clientSlotStatusInd */
+    { (ASN_TAG_CLASS_CONTEXT | (15 << 2)), 18, 0, 0 }, /* bankSlotStatusInd */
+    { (ASN_TAG_CLASS_CONTEXT | (16 << 2)), 12, 0, 0 }, /* errorInd */
+    { (ASN_TAG_CLASS_CONTEXT | (17 << 2)), 10, 0, 0 }, /* configClientBankReq */
+    { (ASN_TAG_CLASS_CONTEXT | (18 << 2)), 11, 0, 0 } /* configClientBankRes */
 };
 static asn_CHOICE_specifics_t asn_SPC_RsproPDUchoice_specs_1 = {
 	sizeof(struct RsproPDUchoice),
@@ -186,9 +206,9 @@ static asn_CHOICE_specifics_t asn_SPC_RsproPDUchoice_specs_1 = {
 	offsetof(struct RsproPDUchoice, present),
 	sizeof(((struct RsproPDUchoice *)0)->present),
 	asn_MAP_RsproPDUchoice_tag2el_1,
-	17,	/* Count of tags in the map */
+	19,	/* Count of tags in the map */
 	0,
-	17	/* Extensions start */
+	19	/* Extensions start */
 };
 asn_TYPE_descriptor_t asn_DEF_RsproPDUchoice = {
 	"RsproPDUchoice",
@@ -209,7 +229,7 @@ asn_TYPE_descriptor_t asn_DEF_RsproPDUchoice = {
 	0,	/* No tags (count) */
 	0,	/* No PER visible constraints */
 	asn_MBR_RsproPDUchoice_1,
-	17,	/* Elements count */
+	19,	/* Elements count */
 	&asn_SPC_RsproPDUchoice_specs_1	/* Additional specs */
 };
 

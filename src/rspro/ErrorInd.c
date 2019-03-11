@@ -4,7 +4,7 @@
  * 	found in "../../asn1/RSPRO.asn"
  */
 
-#include "ErrorInd.h"
+#include <osmocom/rspro/ErrorInd.h>
 
 static asn_TYPE_member_t asn_MBR_ErrorInd_1[] = {
 	{ ATF_NOFLAGS, 0, offsetof(struct ErrorInd, sender),

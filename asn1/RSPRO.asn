@@ -221,18 +221,30 @@ RemoveMappingRes ::= SEQUENCE {
 	...
 }
 
--- SERVER->CLIENT: set configuration (client ID and BANK IP/Port)
-ConfigClientReq ::= SEQUENCE {
+-- SERVER->CLIENT: set Client ID
+ConfigClientIdReq ::= SEQUENCE {
 	-- server-allocated assignment of a client ID
 	clientSlot	ClientSlot,
+	...
+}
+ConfigClientIdRes ::= SEQUENCE {
+	result		ResultCode,
+	...
+}
+
+-- SERVER->CLIENT: set BankId/Slot and IP/Port
+ConfigClientBankReq ::= SEQUENCE {
+	-- server-allocated assignment of a client ID
+	bankSlot	BankSlot,
 	-- bank to which the client shall connect
 	bankd		IpPort,
 	...
 }
-ConfigClientRes ::= SEQUENCE {
+ConfigClientBankRes ::= SEQUENCE {
 	result		ResultCode,
 	...
 }
+
 
 -- BANKD->CLIENT: configure the ATR which the card emulator (client) shall send to the modem
 SetAtrReq ::= SEQUENCE {
@@ -311,8 +323,10 @@ RsproPDUchoice ::= CHOICE {
 	createMappingRes	[5]	CreateMappingRes,
 	removeMappingReq	[6]	RemoveMappingReq,
 	removeMappingRes	[7]	RemoveMappingRes,
-	configClientReq		[8]	ConfigClientReq,
-	configClientRes		[9]	ConfigClientRes,
+	configClientIdReq	[8]	ConfigClientIdReq,
+	configClientIdRes	[9]	ConfigClientIdRes,
+	configClientBankReq	[17]	ConfigClientBankReq,
+	configClientBankRes	[18]	ConfigClientBankRes,
 	errorInd		[16]	ErrorInd,
 	-- APDUs etc.
 	setAtrReq		[10]	SetAtrReq,

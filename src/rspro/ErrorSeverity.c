@@ -4,7 +4,7 @@
  * 	found in "../../asn1/RSPRO.asn"
  */
 
-#include "ErrorSeverity.h"
+#include <osmocom/rspro/ErrorSeverity.h>
 
 int
 ErrorSeverity_constraint(asn_TYPE_descriptor_t *td, const void *sptr,

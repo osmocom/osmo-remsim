@@ -4,25 +4,23 @@
  * 	found in "../../asn1/RSPRO.asn"
  */
 
-#ifndef	_ConfigClientReq_H_
-#define	_ConfigClientReq_H_
+#ifndef	_ConfigClientIdRes_H_
+#define	_ConfigClientIdRes_H_
 
 
 #include <asn_application.h>
 
 /* Including external dependencies */
-#include <osmocom/rspro/ClientSlot.h>
-#include <osmocom/rspro/IpPort.h>
+#include <osmocom/rspro/ResultCode.h>
 #include <constr_SEQUENCE.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* ConfigClientReq */
-typedef struct ConfigClientReq {
-	ClientSlot_t	 clientSlot;
-	IpPort_t	 bankd;
+/* ConfigClientIdRes */
+typedef struct ConfigClientIdRes {
+	ResultCode_t	 result;
 	/*
 	 * This type is extensible,
 	 * possible extensions are below.
@@ -30,14 +28,14 @@ typedef struct ConfigClientReq {
 	
 	/* Context for parsing across buffer boundaries */
 	asn_struct_ctx_t _asn_ctx;
-} ConfigClientReq_t;
+} ConfigClientIdRes_t;
 
 /* Implementation */
-extern asn_TYPE_descriptor_t asn_DEF_ConfigClientReq;
+extern asn_TYPE_descriptor_t asn_DEF_ConfigClientIdRes;
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif	/* _ConfigClientReq_H_ */
+#endif	/* _ConfigClientIdRes_H_ */
 #include <asn_internal.h>

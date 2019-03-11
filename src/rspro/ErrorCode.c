@@ -4,7 +4,7 @@
  * 	found in "../../asn1/RSPRO.asn"
  */
 
-#include "ErrorCode.h"
+#include <osmocom/rspro/ErrorCode.h>
 
 int
 ErrorCode_constraint(asn_TYPE_descriptor_t *td, const void *sptr,

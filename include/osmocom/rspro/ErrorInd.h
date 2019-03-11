@@ -12,9 +12,9 @@
 
 /* Including external dependencies */
 #include <osmocom/rspro/ComponentType.h>
-#include "ErrorSeverity.h"
-#include "ErrorCode.h"
-#include "ErrorString.h"
+#include <osmocom/rspro/ErrorSeverity.h>
+#include <osmocom/rspro/ErrorCode.h>
+#include <osmocom/rspro/ErrorString.h>
 #include <constr_SEQUENCE.h>
 
 #ifdef __cplusplus

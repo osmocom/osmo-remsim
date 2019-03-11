@@ -619,19 +619,26 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 		rspro_comp_id_retrieve(&srvc->peer_comp_id, &pdu->msg.choice.connectClientRes.identity);
 		osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_CLIENT_CONN_RES, (void *) pdu);
 		break;
-	case RsproPDUchoice_PR_configClientReq:
+	case RsproPDUchoice_PR_configClientIdReq:
 		/* store/set the clientID as instructed by the server */
 		if (!g_client->srv_conn.clslot)
 			g_client->srv_conn.clslot = talloc_zero(g_client, ClientSlot_t);
-		*g_client->srv_conn.clslot = pdu->msg.choice.configClientReq.clientSlot;
+		*g_client->srv_conn.clslot = pdu->msg.choice.configClientIdReq.clientSlot;
+		/* send response to server */
+		resp = rspro_gen_ConfigClientIdRes(ResultCode_ok);
+		server_conn_send_rspro(srvc, resp);
+		break;
+	case RsproPDUchoice_PR_configClientBankReq:
 		/* store/set the bankd ip/port as instructed by the server */
 		osmo_talloc_replace_string(g_client, &g_client->bankd_host,
-					   rspro_IpAddr2str(&pdu->msg.choice.configClientReq.bankd.ip));
-		g_client->bankd_port = ntohs(pdu->msg.choice.configClientReq.bankd.port);
+					   rspro_IpAddr2str(&pdu->msg.choice.configClientBankReq.bankd.ip));
+		/* FIXME: Store bankslot */
+		//g_client->bankd_slot = pdu->msg.choice.configClientBankReq.bankSlot;
+		g_client->bankd_port = ntohs(pdu->msg.choice.configClientBankReq.bankd.port);
 		/* instruct bankd FSM to connect */
 		osmo_fsm_inst_dispatch(g_client->bankd_fi, BDC_E_ESTABLISH, NULL);
 		/* send response to server */
-		resp = rspro_gen_ConfigClientRes(ResultCode_ok);
+		resp = rspro_gen_ConfigClientBankRes(ResultCode_ok);
 		server_conn_send_rspro(srvc, resp);
 		break;
 	default:

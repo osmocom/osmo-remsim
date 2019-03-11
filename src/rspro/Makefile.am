@@ -9,8 +9,10 @@ ASN_MODULE_SOURCES =	\
 	ComponentIdentity.c \
 	ComponentName.c \
 	ComponentType.c \
-	ConfigClientReq.c \
-	ConfigClientRes.c \
+	ConfigClientIdReq.c \
+	ConfigClientIdRes.c \
+	ConfigClientBankReq.c \
+	ConfigClientBankRes.c \
 	ConnectBankReq.c \
 	ConnectBankRes.c \
 	ConnectClientReq.c \
@@ -52,8 +54,10 @@ ASN_MODULE_INC = \
 	ComponentIdentity.h \
 	ComponentName.h \
 	ComponentType.h \
-	ConfigClientReq.h \
-	ConfigClientRes.h \
+	ConfigClientIdReq.h \
+	ConfigClientIdRes.h \
+	ConfigClientBankReq.h \
+	ConfigClientBankRes.h \
 	ConnectBankReq.h \
 	ConnectBankRes.h \
 	ConnectClientReq.h \

@@ -276,27 +276,51 @@ RsproPDU_t *rspro_gen_RemoveMappingRes(e_ResultCode res)
 	return pdu;
 }
 
-RsproPDU_t *rspro_gen_ConfigClientReq(const ClientSlot_t *client, uint32_t ip, uint16_t port)
+RsproPDU_t *rspro_gen_ConfigClientIReq(const ClientSlot_t *client)
 {
 	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
 	if (!pdu)
 		return NULL;
 	pdu->version = 2;
-	pdu->msg.present = RsproPDUchoice_PR_configClientReq;
-	pdu->msg.choice.configClientReq.clientSlot = *client;
-	fill_ip4_port(&pdu->msg.choice.configClientReq.bankd, ip, port);
+	pdu->msg.present = RsproPDUchoice_PR_configClientIdReq;
+	pdu->msg.choice.configClientIdReq.clientSlot = *client;
 
 	return pdu;
 }
 
-RsproPDU_t *rspro_gen_ConfigClientRes(e_ResultCode res)
+RsproPDU_t *rspro_gen_ConfigClientIdRes(e_ResultCode res)
 {
 	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
 	if (!pdu)
 		return NULL;
 	pdu->version = 2;
-	pdu->msg.present = RsproPDUchoice_PR_configClientRes;
-	pdu->msg.choice.configClientRes.result = res;
+	pdu->msg.present = RsproPDUchoice_PR_configClientIdRes;
+	pdu->msg.choice.configClientIdRes.result = res;
+
+	return pdu;
+}
+
+RsproPDU_t *rspro_gen_ConfigClientBankReq(const BankSlot_t *bank, uint32_t ip, uint16_t port)
+{
+	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
+	if (!pdu)
+		return NULL;
+	pdu->version = 2;
+	pdu->msg.present = RsproPDUchoice_PR_configClientBankReq;
+	pdu->msg.choice.configClientBankReq.bankSlot = *bank;
+	fill_ip4_port(&pdu->msg.choice.configClientBankReq.bankd, ip, port);
+
+	return pdu;
+}
+
+RsproPDU_t *rspro_gen_ConfigClientBankRes(e_ResultCode res)
+{
+	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
+	if (!pdu)
+		return NULL;
+	pdu->version = 2;
+	pdu->msg.present = RsproPDUchoice_PR_configClientBankRes;
+	pdu->msg.choice.configClientBankRes.result = res;
 
 	return pdu;
 }

@@ -9,8 +9,10 @@ noinst_HEADERS = \
 	ComponentIdentity.h \
 	ComponentName.h \
 	ComponentType.h \
-	ConfigClientReq.h \
-	ConfigClientRes.h \
+	ConfigClientIdReq.h \
+	ConfigClientIdRes.h \
+	ConfigClientBankReq.h \
+	ConfigClientBankRes.h \
 	ConnectBankReq.h \
 	ConnectBankRes.h \
 	ConnectClientReq.h \

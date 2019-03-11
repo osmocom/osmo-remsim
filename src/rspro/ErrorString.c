@@ -4,7 +4,7 @@
  * 	found in "../../asn1/RSPRO.asn"
  */
 
-#include "ErrorString.h"
+#include <osmocom/rspro/ErrorString.h>
 
 static int check_permitted_alphabet_1(const void *sptr) {
 	/* The underlying type is IA5String */

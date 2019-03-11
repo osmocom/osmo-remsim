@@ -447,7 +447,7 @@ static int handle_rx_rspro(struct rspro_client_conn *conn, const RsproPDU_t *pdu
 	case RsproPDUchoice_PR_removeMappingRes:
 		osmo_fsm_inst_dispatch(conn->fi, CLNTC_E_REMOVE_MAP_RES, (void *)pdu);
 		break;
-	case RsproPDUchoice_PR_configClientRes:
+	case RsproPDUchoice_PR_configClientIdRes:
 		osmo_fsm_inst_dispatch(conn->fi, CLNTC_E_CONFIG_CL_RES, (void *)pdu);
 		break;
 	default:
