@@ -6,6 +6,7 @@
 
 #include "rspro_util.h"
 #include "rspro_client_fsm.h"
+#include "slotmap.h"
 #include "debug.h"
 
 /* fsm.c */
@@ -32,6 +33,7 @@ struct bankd_client {
 	/* connection to the remsim-bankd */
 	char *bankd_host;
 	uint16_t bankd_port;
+	struct bank_slot bankd_slot;
 	struct ipa_client_conn *bankd_conn;
 	struct osmo_fsm_inst *bankd_fi;
 };
