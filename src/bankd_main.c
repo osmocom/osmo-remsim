@@ -670,7 +670,13 @@ restart_wait:
 	}
 
 	if (hh->proto == IPAC_PROTO_IPACCESS) {
-		LOGW(worker, "IPA CCM not implemented yet\n");
+		switch (hh->data[0]) {
+		case IPAC_MSGT_PING:
+			return ipa_ccm_send_pong(worker->client.fd);
+		default:
+			LOGW(worker, "IPA CCM 0x%02x not implemented yet\n", hh->data[0]);
+			break;
+		}
 		return 0;
 	}
 
