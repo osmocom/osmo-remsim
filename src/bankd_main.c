@@ -131,18 +131,6 @@ static struct bankd_worker *bankd_create_worker(struct bankd *bankd, unsigned in
 
 static bool terminate = false;
 
-static void rspro2bank_slot(struct bank_slot *out, const BankSlot_t *in)
-{
-	out->bank_id = in->bankId;
-	out->slot_nr = in->slotNr;
-}
-
-static void rspro2client_slot(struct client_slot *out, const ClientSlot_t *in)
-{
-	out->client_id = in->clientId;
-	out->slot_nr = in->slotNr;
-}
-
 /* handle incoming messages from server */
 static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 {

@@ -375,3 +375,27 @@ RsproPDU_t *rspro_gen_TpduCard2Modem(const BankSlot_t *bank, const ClientSlot_t 
 
 	return pdu;
 }
+
+void rspro2bank_slot(struct bank_slot *out, const BankSlot_t *in)
+{
+	out->bank_id = in->bankId;
+	out->slot_nr = in->slotNr;
+}
+
+void bank_slot2rspro(BankSlot_t *out, const struct bank_slot *in)
+{
+	out->bankId = in->bank_id;
+	out->slotNr = in->slot_nr;
+}
+
+void rspro2client_slot(struct client_slot *out, const ClientSlot_t *in)
+{
+	out->client_id = in->clientId;
+	out->slot_nr = in->slotNr;
+}
+
+void client_slot2rspro(ClientSlot_t *out, const struct client_slot *in)
+{
+	out->clientId = in->client_id;
+	out->slotNr = in->slot_nr;
+}
