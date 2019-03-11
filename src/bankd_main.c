@@ -698,13 +698,8 @@ static void *worker_main(void *arg)
 {
 	void *top_ctx;
 	int rc;
-	char worker_name[32];
 
 	g_worker = (struct bankd_worker *) arg;
-
-	/* set the thread name */
-	snprintf(worker_name, sizeof(worker_name), "bankd-worker(%u)", g_worker->num);
-	pthread_setname_np(pthread_self(), worker_name);
 
 	worker_set_state(g_worker, BW_ST_INIT);
 
@@ -712,6 +707,10 @@ static void *worker_main(void *arg)
 	talloc_disable_null_tracking();
 	top_ctx = talloc_named_const(NULL, 0, "top");
 	talloc_asn1_ctx = talloc_named_const(top_ctx, 0, "asn1");
+
+	/* set the thread name */
+	g_worker->name = talloc_asprintf(g_worker->tall_ctx, "bankd-worker(%u)", g_worker->num);
+	pthread_setname_np(pthread_self(), g_worker->name);
 
 	/* push cleanup helper */
 	pthread_cleanup_push(&worker_cleanup, g_worker);

@@ -46,6 +46,9 @@ struct bankd_worker {
 	/* back-pointer to bankd */
 	struct bankd *bankd;
 
+	/* name of the worker */
+	char *name;
+
 	/* thread number */
 	unsigned int num;
 	/* worker thread state */
