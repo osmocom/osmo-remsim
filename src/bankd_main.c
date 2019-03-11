@@ -767,6 +767,8 @@ static void *worker_main(void *arg)
 			rc = worker_transceive_loop(g_worker);
 			if (rc < 0)
 				break;
+			if (g_worker->state == BW_ST_CONN_CLIENT_UNMAPPED)
+				break;
 		}
 
 		LOGW(g_worker, "Error %d occurred: Cleaning up state\n", rc);
