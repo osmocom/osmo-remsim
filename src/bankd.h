@@ -34,6 +34,8 @@ enum bankd_worker_state {
 	BW_ST_CONN_CLIENT_MAPPED,
 	/* TCP established, client identified, mapping exists, card opened */
 	BW_ST_CONN_CLIENT_MAPPED_CARD,
+	/* TCP established, client identified, but mapping [meanwhile] removed */
+	BW_ST_CONN_CLIENT_UNMAPPED
 };
 
 
