@@ -22,6 +22,7 @@
 
 #include <errno.h>
 #include <string.h>
+#include <signal.h>
 
 #define _GNU_SOURCE
 #include <getopt.h>
@@ -158,6 +159,12 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 	return 0;
 }
 
+static void handle_sig_usr1(int signal)
+{
+	OSMO_ASSERT(signal == SIGUSR1);
+	talloc_report(g_tall_ctx, stderr);
+}
+
 static void printf_help()
 {
 	printf(
@@ -235,6 +242,8 @@ int main(int argc, char **argv)
 	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.sw_version, PACKAGE_VERSION);
 
 	handle_options(argc, argv);
+
+	signal(SIGUSR1, handle_sig_usr1);
 
 	rc = server_conn_fsm_alloc(g_client, srvc);
 	if (rc < 0) {

@@ -650,6 +650,11 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 	return 0;
 }
 
+static void handle_sig_usr1(int signal)
+{
+	OSMO_ASSERT(signal == SIGUSR1);
+	talloc_report(g_tall_ctx, stderr);
+}
 
 static void print_welcome(void)
 {
@@ -771,6 +776,8 @@ int main(int argc, char **argv)
 		fprintf(stderr, "You have to specify the vendor and product ID\n");
 		goto do_exit;
 	}
+
+	signal(SIGUSR1, handle_sig_usr1);
 
 	rc = libusb_init(NULL);
 	if (rc < 0) {

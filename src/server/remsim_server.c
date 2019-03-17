@@ -1,4 +1,5 @@
 #include <unistd.h>
+#include <signal.h>
 
 #include <sys/eventfd.h>
 
@@ -15,6 +16,12 @@
 struct rspro_server *g_rps;
 void *g_tall_ctx;
 struct osmo_fd g_event_ofd;
+
+static void handle_sig_usr1(int signal)
+{
+	OSMO_ASSERT(signal == SIGUSR1);
+	talloc_report(g_tall_ctx, stderr);
+}
 
 int main(int argc, char **argv)
 {
@@ -42,6 +49,8 @@ int main(int argc, char **argv)
 		goto out_rps;
 	osmo_fd_setup(&g_event_ofd, rc, BSC_FD_READ, event_fd_cb, g_rps, 0);
 	osmo_fd_register(&g_event_ofd);
+
+	signal(SIGUSR1, handle_sig_usr1);
 
 	rc = rest_api_init(9997);
 	if (rc < 0)
