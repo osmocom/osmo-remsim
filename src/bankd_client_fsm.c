@@ -173,7 +173,7 @@ static void bdc_st_reestablish(struct osmo_fsm_inst *fi, uint32_t event, void *d
 static void bdc_allstate_action(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
 	switch (event) {
-	case BDC_ST_REESTABLISH:
+	case BDC_E_ESTABLISH:
 		osmo_fsm_inst_state_chg(fi, BDC_ST_REESTABLISH, T2_RECONNECT, 2);
 		break;
 	default:
