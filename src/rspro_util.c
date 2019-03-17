@@ -376,6 +376,28 @@ RsproPDU_t *rspro_gen_TpduCard2Modem(const BankSlot_t *bank, const ClientSlot_t 
 	return pdu;
 }
 
+e_ResultCode rspro_get_result(const RsproPDU_t *pdu)
+{
+	switch (pdu->msg.present) {
+	case RsproPDUchoice_PR_connectBankRes:
+		return pdu->msg.choice.connectBankRes.result;
+	case RsproPDUchoice_PR_connectClientRes:
+		return pdu->msg.choice.connectClientRes.result;
+	case RsproPDUchoice_PR_createMappingRes:
+		return pdu->msg.choice.createMappingRes.result;
+	case RsproPDUchoice_PR_removeMappingRes:
+		return pdu->msg.choice.removeMappingRes.result;
+	case RsproPDUchoice_PR_configClientIdRes:
+		return pdu->msg.choice.configClientIdRes.result;
+	case RsproPDUchoice_PR_configClientBankRes:
+		return pdu->msg.choice.configClientBankRes.result;
+	case RsproPDUchoice_PR_setAtrRes:
+		return pdu->msg.choice.setAtrRes.result;
+	default:
+		OSMO_ASSERT(0);
+	}
+}
+
 void rspro2bank_slot(struct bank_slot *out, const BankSlot_t *in)
 {
 	out->bank_id = in->bankId;

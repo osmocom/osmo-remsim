@@ -223,14 +223,25 @@ static void srvc_st_established_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 
 static void srvc_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
+	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
+	RsproPDU_t *pdu = NULL;
+	e_ResultCode res;
+
 	switch (event) {
 	case SRVC_E_TCP_DOWN:
 	case SRVC_E_KA_TIMEOUT:
 		osmo_fsm_inst_state_chg(fi, SRVC_ST_REESTABLISH, T2_RECONNECT, 2);
 		break;
 	case SRVC_E_CLIENT_CONN_RES:
-		/* somehow notify the main code? */
-		osmo_fsm_inst_state_chg(fi, SRVC_ST_CONNECTED, 0, 0);
+		pdu = data;
+		res = rspro_get_result(pdu);
+		if (res != ResultCode_ok) {
+			ipa_client_conn_close(srvc->conn);
+			osmo_fsm_inst_dispatch(fi, SRVC_E_TCP_DOWN, NULL);
+		} else {
+			/* somehow notify the main code? */
+			osmo_fsm_inst_state_chg(fi, SRVC_ST_CONNECTED, 0, 0);
+		}
 		break;
 	default:
 		OSMO_ASSERT(0);
