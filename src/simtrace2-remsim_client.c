@@ -635,7 +635,7 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 		osmo_talloc_replace_string(g_client, &g_client->bankd_host,
 					   rspro_IpAddr2str(&pdu->msg.choice.configClientBankReq.bankd.ip));
 		rspro2bank_slot(&g_client->bankd_slot, &pdu->msg.choice.configClientBankReq.bankSlot);
-		g_client->bankd_port = ntohs(pdu->msg.choice.configClientBankReq.bankd.port);
+		g_client->bankd_port = pdu->msg.choice.configClientBankReq.bankd.port;
 		/* instruct bankd FSM to connect */
 		osmo_fsm_inst_dispatch(g_client->bankd_fi, BDC_E_ESTABLISH, NULL);
 		/* send response to server */
