@@ -93,7 +93,7 @@ static void srvc_updown_cb(struct ipa_client_conn *conn, int up)
 {
 	struct rspro_server_conn *srvc = conn->data;
 
-	printf("RSPRO link to %s:%d %s\n", conn->addr, conn->port, up ? "UP" : "DOWN");
+	LOGPFSM(srvc->fi, "RSPRO link to %s:%d %s\n", conn->addr, conn->port, up ? "UP" : "DOWN");
 
 	osmo_fsm_inst_dispatch(srvc->fi, up ? SRVC_E_TCP_UP: SRVC_E_TCP_DOWN, 0);
 }
@@ -129,7 +129,7 @@ static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 		msg->l2h = &he->data[0];
 		switch (he->proto) {
 		case IPAC_PROTO_EXT_RSPRO:
-			printf("Received RSPRO %s\n", msgb_hexdump(msg));
+			LOGPFSM(srvc->fi, "Received RSPRO %s\n", msgb_hexdump(msg));
 			pdu = rspro_dec_msg(msg);
 			if (!pdu)
 				goto invalid;
@@ -147,6 +147,7 @@ static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 	return rc;
 
 invalid:
+	LOGPFSML(srvc->fi, LOGL_ERROR, "Error decoding PDU\n");
 	msgb_free(msg);
 	return -1;
 }
@@ -179,7 +180,7 @@ static void srvc_st_init_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
 	/* Attempt to connect TCP socket */
 	rc = ipa_client_conn_open(srvc->conn);
 	if (rc < 0) {
-		fprintf(stderr, "Unable to connect: %s\n", strerror(errno));
+		LOGPFSML(fi, LOGL_NOTICE, "Unable to connect: %s\n", strerror(errno));
 		goto out_ka;
 	}
 
@@ -270,7 +271,7 @@ static void srvc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 	/* Attempt to connect TCP socket */
 	rc = ipa_client_conn_open(srvc->conn);
 	if (rc < 0) {
-		fprintf(stderr, "Unable to connect RSPRO to %s:%d - %s\n",
+		LOGPFSM(fi, "Unable to connect RSPRO to %s:%d - %s\n",
 			srvc->server_host, srvc->server_port, strerror(errno));
 		/* FIXME: retry? Timer? Abort? */
 		OSMO_ASSERT(0);
