@@ -559,7 +559,7 @@ static int bankd_handle_msg(struct bankd_client *bc, struct msgb *msg)
 {
 	RsproPDU_t *pdu = rspro_dec_msg(msg);
 	if (!pdu) {
-		fprintf(stderr, "Error decoding PDU\n");
+		LOGPFSML(bc->bankd_fi, LOGL_ERROR, "Error decoding PDU\n");
 		return -1;
 	}
 
@@ -573,7 +573,8 @@ static int bankd_handle_msg(struct bankd_client *bc, struct msgb *msg)
 		bankd_handle_tpduCardToModem(bc, pdu);
 		break;
 	default:
-		fprintf(stderr, "Unknown/Unsuppoerted RSPRO PDU: %s\n", msgb_hexdump(msg));
+		LOGPFSML(bc->bankd_fi, LOGL_ERROR, "Unknown/Unsuppoerted RSPRO PDU %s: %s\n",
+			 rspro_msgt_name(pdu), msgb_hexdump(msg));
 		return -1;
 	}
 
@@ -599,7 +600,7 @@ int bankd_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 	if (he->proto != IPAC_PROTO_EXT_RSPRO)
 		goto invalid;
 
-	printf("Received RSPRO %s\n", msgb_hexdump(msg));
+	LOGPFSML(bc->bankd_fi, LOGL_DEBUG, "Received RSPRO %s\n", msgb_hexdump(msg));
 
 	rc = bankd_handle_msg(bc, msg);
 
@@ -643,7 +644,8 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 		server_conn_send_rspro(srvc, resp);
 		break;
 	default:
-		fprintf(stderr, "Unknown/Unsupported RSPRO PDU type: %u\n", pdu->msg.present);
+		LOGPFSML(srvc->fi, LOGL_ERROR, "Unknown/Unsupported RSPRO PDU type: %s\n",
+			 rspro_msgt_name(pdu));
 		return -1;
 	}
 
