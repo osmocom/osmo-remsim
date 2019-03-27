@@ -199,7 +199,8 @@ static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t
 		server_conn_send_rspro(srvc, resp);
 		break;
 	default:
-		fprintf(stderr, "Unknown/Unsupported RSPRO PDU type: %u\n", pdu->msg.present);
+		LOGPFSML(srvc->fi, LOGL_ERROR, "Unknown/Unsupported RSPRO PDU type: %u\n",
+			 pdu->msg.present);
 		return -1;
 	}
 
