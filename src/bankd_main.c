@@ -151,35 +151,46 @@ static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t
 		break;
 	case RsproPDUchoice_PR_createMappingReq:
 		creq = &pdu->msg.choice.createMappingReq;
-		if (creq->bank.bankId != g_bankd->cfg.bank_id)
+		if (creq->bank.bankId != g_bankd->cfg.bank_id) {
+			LOGPFSML(srvc->fi, LOGL_ERROR, "createMapping specifies invalid Bank ID %lu "
+				 "(we are %u)\n", creq->bank.bankId, g_bankd->cfg.bank_id);
 			resp = rspro_gen_CreateMappingRes(ResultCode_illegalBankId);
-		else if (creq->bank.slotNr >= g_bankd->cfg.num_slots)
+		} else if (creq->bank.slotNr >= g_bankd->cfg.num_slots) {
+			LOGPFSML(srvc->fi, LOGL_ERROR, "createMapping specifies invalid Slot Nr %lu "
+				 "(we have %u)\n", creq->bank.slotNr, g_bankd->cfg.num_slots);
 			resp = rspro_gen_CreateMappingRes(ResultCode_illegalSlotId);
-		else {
+		} else {
 			rspro2bank_slot(&bs, &creq->bank);
 			rspro2client_slot(&cs, &creq->client);
 			/* Add a new mapping */
 			map = slotmap_add(g_bankd->slotmaps, &bs, &cs);
-			if (!map)
+			if (!map) {
+				LOGPFSML(srvc->fi, LOGL_ERROR, "could not create slotmap\n");
 				resp = rspro_gen_CreateMappingRes(ResultCode_illegalSlotId);
-			else
+			} else
 				resp = rspro_gen_CreateMappingRes(ResultCode_ok);
 		}
 		server_conn_send_rspro(srvc, resp);
 		break;
 	case RsproPDUchoice_PR_removeMappingReq:
 		rreq = &pdu->msg.choice.removeMappingReq;
-		if (rreq->bank.bankId != g_bankd->cfg.bank_id)
+		if (rreq->bank.bankId != g_bankd->cfg.bank_id) {
+			LOGPFSML(srvc->fi, LOGL_ERROR, "removeMapping specifies invalid Bank ID %lu "
+				 "(we are %u)\n", creq->bank.bankId, g_bankd->cfg.bank_id);
 			resp = rspro_gen_RemoveMappingRes(ResultCode_illegalBankId);
-		else if (rreq->bank.slotNr >= g_bankd->cfg.num_slots)
+		} else if (rreq->bank.slotNr >= g_bankd->cfg.num_slots) {
+			LOGPFSML(srvc->fi, LOGL_ERROR, "removeMapping specifies invalid Slot Nr %lu "
+				 "(we have %u)\n", creq->bank.slotNr, g_bankd->cfg.num_slots);
 			resp = rspro_gen_RemoveMappingRes(ResultCode_illegalSlotId);
-		else {
+		} else {
 			rspro2bank_slot(&bs, &rreq->bank);
 			/* Remove a mapping */
 			map = slotmap_by_bank(g_bankd->slotmaps, &bs);
-			if (!map)
+			if (!map) {
+				LOGPFSML(srvc->fi, LOGL_ERROR, "could not find to-be-deleted slotmap\n");
 				resp = rspro_gen_RemoveMappingRes(ResultCode_unknownSlotmap);
-			else {
+			} else {
+				LOGPFSM(srvc->fi, "removing slotmap\n");
 				slotmap_del(g_bankd->slotmaps, map);
 				resp = rspro_gen_RemoveMappingRes(ResultCode_ok);
 
