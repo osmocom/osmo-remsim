@@ -550,6 +550,8 @@ static int worker_handle_tpduModemToCard(struct bankd_worker *worker, const Rspr
 	uint8_t rx_buf[1024];
 	DWORD rx_buf_len = sizeof(rx_buf);
 	RsproPDU_t *pdu_resp;
+	struct client_slot clslot;
+	struct bank_slot bslot;
 	long rc;
 
 	LOGW(worker, "tpduModemToCard(%s)\n", osmo_hexdump_nospc(mdm2sim->data.buf, mdm2sim->data.size));
@@ -559,7 +561,19 @@ static int worker_handle_tpduModemToCard(struct bankd_worker *worker, const Rspr
 		return -104;
 	}
 
-	/* FIXME: Validate that toBankSlot / fromClientSlot match our expectations */
+	/* Validate that toBankSlot / fromClientSlot match our expectations */
+	rspro2client_slot(&clslot, &mdm2sim->fromClientSlot);
+	rspro2bank_slot(&bslot, &mdm2sim->toBankSlot);
+	if (!bank_slot_equals(&worker->slot, &bslot)) {
+		LOGW(worker, "Unexpected BankSlot %u:%u in tpduModemToCard\n",
+			bslot.bank_id, bslot.slot_nr);
+		return -105;
+	}
+	if (!client_slot_equals(&worker->client.clslot, &clslot)) {
+		LOGW(worker, "Unexpected ClientSlot %u:%u in tpduModemToCard\n",
+			clslot.client_id, clslot.slot_nr);
+		return -106;
+	}
 
 	rc = SCardTransmit(worker->reader.pcsc.hCard,
 			   pioSendPci, mdm2sim->data.buf, mdm2sim->data.size,
