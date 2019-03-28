@@ -37,6 +37,7 @@ RsproPDU_t *rspro_gen_ConfigClientBankReq(const BankSlot_t *bank, uint32_t ip, u
 RsproPDU_t *rspro_gen_ConfigClientBankRes(e_ResultCode res);
 RsproPDU_t *rspro_gen_SetAtrReq(uint16_t client_id, uint16_t slot_nr, const uint8_t *atr,
 				unsigned int atr_len);
+RsproPDU_t *rspro_gen_SetAtrRes(e_ResultCode res);
 RsproPDU_t *rspro_gen_TpduModem2Card(const ClientSlot_t *client, const BankSlot_t *bank,
 				     const uint8_t *tpdu, unsigned int tpdu_len);
 RsproPDU_t *rspro_gen_TpduCard2Modem(const BankSlot_t *bank, const ClientSlot_t *client,

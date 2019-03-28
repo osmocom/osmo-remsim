@@ -555,6 +555,28 @@ static int bankd_handle_tpduCardToModem(struct bankd_client *bc, RsproPDU_t *pdu
 	return 0;
 }
 
+static int bankd_handle_setAtrReq(struct bankd_client *bc, RsproPDU_t *pdu)
+{
+	RsproPDU_t *resp;
+	int rc;
+
+	OSMO_ASSERT(pdu);
+	OSMO_ASSERT(RsproPDUchoice_PR_setAtrReq == pdu->msg.present);
+
+	/* FIXME: is this permitted at any time by the SIMtrace2 cardemfirmware? */
+	rc = cardem_request_set_atr(ci, pdu->msg.choice.setAtrReq.atr.buf,
+				    pdu->msg.choice.setAtrReq.atr.size);
+	if (rc == 0)
+		resp = rspro_gen_SetAtrRes(ResultCode_ok);
+	else
+		resp = rspro_gen_SetAtrRes(ResultCode_cardTransmissionError);
+	if (!resp)
+		return -ENOMEM;
+	bankd_conn_send_rspro(g_client, resp);
+
+	return 0;
+}
+
 static int bankd_handle_msg(struct bankd_client *bc, struct msgb *msg)
 {
 	RsproPDU_t *pdu = rspro_dec_msg(msg);
@@ -571,6 +593,9 @@ static int bankd_handle_msg(struct bankd_client *bc, struct msgb *msg)
 		break;
 	case RsproPDUchoice_PR_tpduCardToModem: // APDU response from card received
 		bankd_handle_tpduCardToModem(bc, pdu);
+		break;
+	case RsproPDUchoice_PR_setAtrReq:
+		bankd_handle_setAtrReq(bc, pdu);
 		break;
 	default:
 		LOGPFSML(bc->bankd_fi, LOGL_ERROR, "Unknown/Unsuppoerted RSPRO PDU %s: %s\n",

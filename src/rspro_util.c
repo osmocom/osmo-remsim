@@ -340,6 +340,18 @@ RsproPDU_t *rspro_gen_SetAtrReq(uint16_t client_id, uint16_t slot_nr, const uint
 	return pdu;
 }
 
+RsproPDU_t *rspro_gen_SetAtrRes(e_ResultCode res)
+{
+	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
+	if (!pdu)
+		return NULL;
+	pdu->version = 2;
+	pdu->msg.present = RsproPDUchoice_PR_setAtrRes;
+	pdu->msg.choice.setAtrRes.result = res;
+
+	return pdu;
+}
+
 RsproPDU_t *rspro_gen_TpduModem2Card(const ClientSlot_t *client, const BankSlot_t *bank,
 				     const uint8_t *tpdu, unsigned int tpdu_len)
 {
