@@ -430,7 +430,7 @@ static int process_do_rx_da(struct cardem_inst *ci, uint8_t *buf, int len)
 		BankSlot_t bslot;
 		bank_slot2rspro(&bslot, &g_client->bankd_slot);
 		RsproPDU_t *pdu = rspro_gen_TpduModem2Card(g_client->srv_conn.clslot, &bslot, apdu_command, sizeof(ac.hdr) + ac.lc.tot); // create RSPRO packet
-		ipa_client_conn_send_rspro(g_client->bankd_conn, pdu); // send RSPRO packet
+		bankd_conn_send_rspro(g_client, pdu);
 		// the response will come separately
 		free(apdu_command);
 	} else if (ac.lc.tot > ac.lc.cur) { // there is pending data from the modem
