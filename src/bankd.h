@@ -83,6 +83,11 @@ struct bankd_worker {
 			} pcsc;
 		};
 	} reader;
+
+	struct {
+		uint8_t atr[MAX_ATR_SIZE];
+		unsigned int atr_len;
+	} card;
 };
 
 

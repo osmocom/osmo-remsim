@@ -311,6 +311,8 @@ if (rv != SCARD_S_SUCCESS) { \
         LOGW((w), ": OK\n"); \
 }
 
+static int worker_send_rspro(struct bankd_worker *worker, RsproPDU_t *pdu);
+
 static void worker_set_state(struct bankd_worker *worker, enum bankd_worker_state new_state)
 {
 	LOGW(worker, "Changing state to %s\n", get_value_string(worker_state_names, new_state));
@@ -403,6 +405,17 @@ static int worker_open_card(struct bankd_worker *worker)
 				  SCARD_PROTOCOL_T0, &worker->reader.pcsc.hCard, &dwActiveProtocol);
 		PCSC_ERROR(worker, rc, "SCardConnect")
 	}
+
+	/* use DWORD type as this is what the PC/SC API expects */
+	char pbReader[MAX_READERNAME];
+	DWORD dwReaderLen = sizeof(pbReader);
+	DWORD dwAtrLen = worker->card.atr_len = sizeof(worker->card.atr);
+	DWORD dwState, dwProt;
+	rc = SCardStatus(worker->reader.pcsc.hCard, pbReader, &dwReaderLen, &dwState, &dwProt,
+			 worker->card.atr, &dwAtrLen);
+	PCSC_ERROR(worker, rc, "SCardStatus")
+	worker->card.atr_len = dwAtrLen;
+	LOGW(worker, "Card ATR: %s\n", osmo_hexdump_nospc(worker->card.atr, worker->card.atr_len));
 
 	worker_set_state(worker, BW_ST_CONN_CLIENT_MAPPED_CARD);
 	/* FIXME: notify client about this state change */
@@ -508,6 +521,17 @@ static int worker_try_slotmap(struct bankd_worker *worker)
 	}
 }
 
+/* inform the remote end (client) about the (new) ATR */
+static int worker_send_atr(struct bankd_worker *worker)
+{
+	RsproPDU_t *set_atr;
+	set_atr = rspro_gen_SetAtrReq(worker->client.clslot.client_id,
+				      worker->client.clslot.slot_nr,
+				      worker->card.atr, worker->card.atr_len);
+	if (!set_atr)
+		return -1;
+	return worker_send_rspro(worker, set_atr);
+}
 
 static int worker_handle_connectClientReq(struct bankd_worker *worker, const RsproPDU_t *pdu)
 {
@@ -544,7 +568,14 @@ static int worker_handle_connectClientReq(struct bankd_worker *worker, const Rsp
 		res = ResultCode_cardNotPresent;
 
 	resp = rspro_gen_ConnectClientRes(&worker->bankd->comp_id, res);
-	return worker_send_rspro(worker, resp);
+	rc = worker_send_rspro(worker, resp);
+	if (rc < 0)
+		return rc;
+
+	if (res == ResultCode_ok)
+		rc = worker_send_atr(worker);
+
+	return rc;
 
 respond_and_err:
 	if (res) {
@@ -658,15 +689,17 @@ restart_wait:
 		switch (worker->state) {
 		case BW_ST_CONN_CLIENT_WAIT_MAP:
 			/* re-check if mapping exists meanwhile? */
-			worker_try_slotmap(worker);
+			rc = worker_try_slotmap(worker);
 			break;
 		case BW_ST_CONN_CLIENT_MAPPED:
 			/* re-check if reader/card can be opened meanwhile? */
-			worker_open_card(worker);
+			rc = worker_open_card(worker);
 			break;
 		default:
 			OSMO_ASSERT(0);
 		}
+		if (rc == 0)
+			worker_send_atr(worker);
 		/* return early, so we do another select rather than the blocking read below */
 		return 0;
 	};
@@ -794,6 +827,7 @@ static void *worker_main(void *arg)
 		LOGW(g_worker, "Error %d occurred: Cleaning up state\n", rc);
 
 		/* clean-up: reset to sane state */
+		memset(&g_worker->card, 0, sizeof(g_worker->card));
 		if (g_worker->reader.pcsc.hCard) {
 			SCardDisconnect(g_worker->reader.pcsc.hCard, SCARD_UNPOWER_CARD);
 			g_worker->reader.pcsc.hCard = 0;
