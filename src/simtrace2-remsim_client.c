@@ -127,7 +127,7 @@ static int gsmtap_send_sim(const uint8_t *apdu, unsigned int len)
 }
 
 /***********************************************************************
- * SIMTRACE pcore protocol
+ * SIMTRACE core protocol
  ***********************************************************************/
 
 /*! \brief allocate a message buffer for simtrace use */
