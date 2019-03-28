@@ -31,10 +31,6 @@
 
 #include <pthread.h>
 
-#include <wintypes.h>
-#include <winscard.h>
-#include <pcsclite.h>
-
 #include <sys/socket.h>
 #include <netdb.h>
 
@@ -113,6 +109,7 @@ static struct bankd_worker *bankd_create_worker(struct bankd *bankd, unsigned in
 
 	worker->bankd = bankd;
 	worker->num = i;
+	worker->ops = &pcsc_driver_ops;
 
 	/* in the initial state, the worker has no client.fd, bank_slot or pcsc handle yet */
 
@@ -299,18 +296,6 @@ struct value_string worker_state_names[] = {
 	{ 0, NULL }
 };
 
-#define LOGW(w, fmt, args...) \
-	printf("[%03u %s] %s:%u " fmt, (w)->num, get_value_string(worker_state_names, (w)->state), \
-		__FILE__, __LINE__, ## args)
-
-#define PCSC_ERROR(w, rv, text) \
-if (rv != SCARD_S_SUCCESS) { \
-	LOGW((w), text ": %s (0x%lX)\n", pcsc_stringify_error(rv), rv); \
-	goto end; \
-} else { \
-        LOGW((w), ": OK\n"); \
-}
-
 static int worker_send_rspro(struct bankd_worker *worker, RsproPDU_t *pdu);
 
 static void worker_set_state(struct bankd_worker *worker, enum bankd_worker_state new_state)
@@ -372,10 +357,9 @@ static void worker_cleanup(void *arg)
 	pthread_mutex_unlock(&bankd->workers_mutex);
 }
 
-
 static int worker_open_card(struct bankd_worker *worker)
 {
-	long rc;
+	int rc;
 
 	OSMO_ASSERT(worker->state == BW_ST_CONN_CLIENT_MAPPED);
 
@@ -385,44 +369,19 @@ static int worker_open_card(struct bankd_worker *worker)
 		if (!worker->reader.name) {
 			LOGW(worker, "No PC/SC reader name configured for %u/%u, fix your config\n",
 				worker->slot.bank_id, worker->slot.slot_nr);
-			rc = -1;
-			goto end;
+			return -1;
 		}
 	}
 	OSMO_ASSERT(worker->reader.name);
 
-	if (!worker->reader.pcsc.hContext) {
-		LOGW(worker, "Attempting to open PC/SC context\n");
-		/* The PC/SC context must be created inside the thread where we'll later use it */
-		rc = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &worker->reader.pcsc.hContext);
-		PCSC_ERROR(worker, rc, "SCardEstablishContext")
-	}
-
-	if (!worker->reader.pcsc.hCard) {
-		LOGW(worker, "Attempting to open card/slot '%s'\n", worker->reader.name);
-		DWORD dwActiveProtocol;
-		rc = SCardConnect(worker->reader.pcsc.hContext, worker->reader.name, SCARD_SHARE_SHARED,
-				  SCARD_PROTOCOL_T0, &worker->reader.pcsc.hCard, &dwActiveProtocol);
-		PCSC_ERROR(worker, rc, "SCardConnect")
-	}
-
-	/* use DWORD type as this is what the PC/SC API expects */
-	char pbReader[MAX_READERNAME];
-	DWORD dwReaderLen = sizeof(pbReader);
-	DWORD dwAtrLen = worker->card.atr_len = sizeof(worker->card.atr);
-	DWORD dwState, dwProt;
-	rc = SCardStatus(worker->reader.pcsc.hCard, pbReader, &dwReaderLen, &dwState, &dwProt,
-			 worker->card.atr, &dwAtrLen);
-	PCSC_ERROR(worker, rc, "SCardStatus")
-	worker->card.atr_len = dwAtrLen;
-	LOGW(worker, "Card ATR: %s\n", osmo_hexdump_nospc(worker->card.atr, worker->card.atr_len));
+	rc = worker->ops->open_card(worker);
+	if (rc < 0)
+		return rc;
 
 	worker_set_state(worker, BW_ST_CONN_CLIENT_MAPPED_CARD);
 	/* FIXME: notify client about this state change */
 
 	return 0;
-end:
-	return rc;
 }
 
 
@@ -588,14 +547,12 @@ respond_and_err:
 static int worker_handle_tpduModemToCard(struct bankd_worker *worker, const RsproPDU_t *pdu)
 {
 	const struct TpduModemToCard *mdm2sim = &pdu->msg.choice.tpduModemToCard;
-	const SCARD_IO_REQUEST *pioSendPci = SCARD_PCI_T0;
-	SCARD_IO_REQUEST pioRecvPci;
 	uint8_t rx_buf[1024];
 	DWORD rx_buf_len = sizeof(rx_buf);
 	RsproPDU_t *pdu_resp;
 	struct client_slot clslot;
 	struct bank_slot bslot;
-	long rc;
+	int rc;
 
 	LOGW(worker, "tpduModemToCard(%s)\n", osmo_hexdump_nospc(mdm2sim->data.buf, mdm2sim->data.size));
 
@@ -618,10 +575,10 @@ static int worker_handle_tpduModemToCard(struct bankd_worker *worker, const Rspr
 		return -106;
 	}
 
-	rc = SCardTransmit(worker->reader.pcsc.hCard,
-			   pioSendPci, mdm2sim->data.buf, mdm2sim->data.size,
-			   &pioRecvPci, rx_buf, &rx_buf_len);
-	PCSC_ERROR(worker, rc, "SCardTransmit");
+	rc = worker->ops->transceive(worker, mdm2sim->data.buf, mdm2sim->data.size,
+				     rx_buf, &rx_buf_len);
+	if (rc < 0)
+		return rc;
 
 	/* encode response PDU and send it */
 	pdu_resp = rspro_gen_TpduCard2Modem(&mdm2sim->toBankSlot, &mdm2sim->fromClientSlot,
@@ -629,8 +586,6 @@ static int worker_handle_tpduModemToCard(struct bankd_worker *worker, const Rspr
 	worker_send_rspro(worker, pdu_resp);
 
 	return 0;
-end:
-	return rc;
 }
 
 /* handle one incoming RSPRO message from a client inside a worker thread */
@@ -828,14 +783,7 @@ static void *worker_main(void *arg)
 
 		/* clean-up: reset to sane state */
 		memset(&g_worker->card, 0, sizeof(g_worker->card));
-		if (g_worker->reader.pcsc.hCard) {
-			SCardDisconnect(g_worker->reader.pcsc.hCard, SCARD_UNPOWER_CARD);
-			g_worker->reader.pcsc.hCard = 0;
-		}
-		if (g_worker->reader.pcsc.hContext) {
-			SCardReleaseContext(g_worker->reader.pcsc.hContext);
-			g_worker->reader.pcsc.hContext = 0;
-		}
+		g_worker->ops->cleanup(g_worker);
 		if (g_worker->reader.name)
 			g_worker->reader.name = NULL;
 		if (g_worker->client.fd >= 0)

@@ -17,6 +17,12 @@
 #include "client.h"
 #include "debug.h"
 
+extern struct value_string worker_state_names[];
+
+#define LOGW(w, fmt, args...) \
+	printf("[%03u %s] %s:%u " fmt, (w)->num, get_value_string(worker_state_names, (w)->state), \
+		__FILE__, __LINE__, ## args)
+
 struct bankd;
 
 enum bankd_worker_state {
@@ -64,6 +70,8 @@ struct bankd_worker {
 	/* top talloc context for this worker/thread */
 	void *tall_ctx;
 
+	const struct bankd_driver_ops *ops;
+
 	/* File descriptor of the TCP connection to the remsim-client (modem) */
 	struct {
 		int fd;
@@ -90,6 +98,15 @@ struct bankd_worker {
 	} card;
 };
 
+/* bankd card reader driver operations */
+struct bankd_driver_ops {
+	/* open a given card/slot: called once client + mapping exists */
+	int (*open_card)(struct bankd_worker *worker);
+	int (*transceive)(struct bankd_worker *worker, const uint8_t *out, size_t out_len,
+			  uint8_t *in, size_t *in_len);
+	/* called at cleanup time of a worker thread: clear any driver related state */
+	void (*cleanup)(struct bankd_worker *worker);
+};
 
 /* global bank deamon */
 struct bankd {
@@ -120,3 +137,5 @@ struct bankd {
 
 int bankd_pcsc_read_slotnames(struct bankd *bankd, const char *csv_file);
 const char *bankd_pcsc_get_slot_name(struct bankd *bankd, const struct bank_slot *slot);
+
+extern const struct bankd_driver_ops pcsc_driver_ops;

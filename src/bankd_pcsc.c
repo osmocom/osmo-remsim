@@ -138,3 +138,81 @@ const char *bankd_pcsc_get_slot_name(struct bankd *bankd, const struct bank_slot
 	}
 	return NULL;
 }
+
+
+#include <wintypes.h>
+#include <winscard.h>
+#include <pcsclite.h>
+
+#define PCSC_ERROR(w, rv, text) \
+if (rv != SCARD_S_SUCCESS) { \
+	LOGW((w), text ": %s (0x%lX)\n", pcsc_stringify_error(rv), rv); \
+	goto end; \
+} else { \
+        LOGW((w), ": OK\n"); \
+}
+
+static int pcsc_open_card(struct bankd_worker *worker)
+{
+	long rc;
+
+	if (!worker->reader.pcsc.hContext) {
+		LOGW(worker, "Attempting to open PC/SC context\n");
+		/* The PC/SC context must be created inside the thread where we'll later use it */
+		rc = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &worker->reader.pcsc.hContext);
+		PCSC_ERROR(worker, rc, "SCardEstablishContext")
+	}
+
+	if (!worker->reader.pcsc.hCard) {
+		LOGW(worker, "Attempting to open card/slot '%s'\n", worker->reader.name);
+		DWORD dwActiveProtocol;
+		rc = SCardConnect(worker->reader.pcsc.hContext, worker->reader.name, SCARD_SHARE_SHARED,
+				  SCARD_PROTOCOL_T0, &worker->reader.pcsc.hCard, &dwActiveProtocol);
+		PCSC_ERROR(worker, rc, "SCardConnect")
+	}
+
+	/* use DWORD type as this is what the PC/SC API expects */
+	char pbReader[MAX_READERNAME];
+	DWORD dwReaderLen = sizeof(pbReader);
+	DWORD dwAtrLen = worker->card.atr_len = sizeof(worker->card.atr);
+	DWORD dwState, dwProt;
+	rc = SCardStatus(worker->reader.pcsc.hCard, pbReader, &dwReaderLen, &dwState, &dwProt,
+			 worker->card.atr, &dwAtrLen);
+	PCSC_ERROR(worker, rc, "SCardStatus")
+	worker->card.atr_len = dwAtrLen;
+	LOGW(worker, "Card ATR: %s\n", osmo_hexdump_nospc(worker->card.atr, worker->card.atr_len));
+end:
+	return rc;
+}
+
+static int pcsc_transceive(struct bankd_worker *worker, const uint8_t *out, size_t out_len,
+			   uint8_t *in, size_t *in_len)
+{
+	const SCARD_IO_REQUEST *pioSendPci = SCARD_PCI_T0;
+	SCARD_IO_REQUEST pioRecvPci;
+	long rc;
+
+	rc = SCardTransmit(worker->reader.pcsc.hCard, pioSendPci, out, out_len, &pioRecvPci, in, in_len);
+	PCSC_ERROR(worker, rc, "SCardTransmit");
+
+end:
+	return rc;
+}
+
+static void pcsc_cleanup(struct bankd_worker *worker)
+{
+	if (worker->reader.pcsc.hCard) {
+		SCardDisconnect(worker->reader.pcsc.hCard, SCARD_UNPOWER_CARD);
+		worker->reader.pcsc.hCard = 0;
+	}
+	if (worker->reader.pcsc.hContext) {
+		SCardReleaseContext(worker->reader.pcsc.hContext);
+		worker->reader.pcsc.hContext = 0;
+	}
+}
+
+const struct bankd_driver_ops pcsc_driver_ops = {
+	.open_card = pcsc_open_card,
+	.transceive = pcsc_transceive,
+	.cleanup = pcsc_cleanup,
+};
