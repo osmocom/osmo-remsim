@@ -248,7 +248,7 @@ static void clnt_st_connected(struct osmo_fsm_inst *fi, uint32_t event, void *da
 	struct slot_mapping *map, *map2;
 
 	switch (event) {
-	case CLNTC_E_CREATE_MAP_RES:
+	case CLNTC_E_CREATE_MAP_RES: /* Bankd acknowledges mapping was created */
 		rx = data;
 		slotmaps_wrlock(slotmaps);
 		/* FIXME: resolve map by pdu->tag */
@@ -262,7 +262,7 @@ static void clnt_st_connected(struct osmo_fsm_inst *fi, uint32_t event, void *da
 		_slotmap_state_change(map, SLMAP_S_ACTIVE, &conn->bank.maps_active);
 		slotmaps_unlock(slotmaps);
 		break;
-	case CLNTC_E_REMOVE_MAP_RES:
+	case CLNTC_E_REMOVE_MAP_RES: /* Bankd acknowledges mapping was removed */
 		rx = data;
 		slotmaps_wrlock(slotmaps);
 		/* FIXME: resolve map by pdu->tag */
@@ -277,7 +277,7 @@ static void clnt_st_connected(struct osmo_fsm_inst *fi, uint32_t event, void *da
 		/* slotmap_del() will remove it from both global and bank list */
 		slotmap_del(map->maps, map);
 		break;
-	case CLNTC_E_PUSH:
+	case CLNTC_E_PUSH: /* check if any create or delete requests are pending */
 		slotmaps_wrlock(slotmaps);
 		/* send any pending create requests */
 		llist_for_each_entry_safe(map, map2, &conn->bank.maps_new, bank_list) {
