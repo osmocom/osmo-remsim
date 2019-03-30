@@ -421,7 +421,7 @@ static int process_do_rx_da(struct cardem_inst *ci, uint8_t *buf, int len)
 			     data->flags & CEMU_DATA_F_TPDU_HDR); // parse the APDU data in the USB message
 
 	if (rc & APDU_ACT_TX_CAPDU_TO_CARD) { // there is no pending data coming from the modem
-		uint8_t* apdu_command = calloc(1, sizeof(ac.hdr) + ac.lc.tot); // to store the APDU command to send
+		uint8_t apdu_command[sizeof(ac.hdr) + ac.lc.tot]; // to store the APDU command to send
 		memcpy(apdu_command, &ac.hdr, sizeof(ac.hdr)); // copy APDU command header
 		if (ac.lc.tot) {
 			memcpy(apdu_command + sizeof(ac.hdr), ac.dc, ac.lc.tot); // copy APDU command data 
@@ -432,7 +432,6 @@ static int process_do_rx_da(struct cardem_inst *ci, uint8_t *buf, int len)
 		RsproPDU_t *pdu = rspro_gen_TpduModem2Card(g_client->srv_conn.clslot, &bslot, apdu_command, sizeof(ac.hdr) + ac.lc.tot); // create RSPRO packet
 		bankd_conn_send_rspro(g_client, pdu);
 		// the response will come separately
-		free(apdu_command);
 	} else if (ac.lc.tot > ac.lc.cur) { // there is pending data from the modem
 		cardem_request_pb_and_rx(ci, ac.hdr.ins, ac.lc.tot - ac.lc.cur); // send procedure byte to get remaining data
 	}
