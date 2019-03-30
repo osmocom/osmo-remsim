@@ -711,8 +711,8 @@ static void print_help(void)
 static const struct option opts[] = {
 	{ "server-host", 1, 0, 's' },
 	{ "server-port", 1, 0, 'p' },
-	{ "gsmtap-ip", 1, 0, 'i' },
 	{ "help", 0, 0, 'h' },
+	{ "gsmtap-ip", 1, 0, 'i' },
 	{ "keep-running", 0, 0, 'k' },
 	{ "usb-vendor", 1, 0, 'V' },
 	{ "usb-product", 1, 0, 'P' },
@@ -746,7 +746,7 @@ int main(int argc, char **argv)
 	while (1) {
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "s:p:hi:V:P:C:I:S:A:H:a:k", opts, &option_index);
+		c = getopt_long(argc, argv, "s:p:hi:kV:P:C:I:S:A:H:a:", opts, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
