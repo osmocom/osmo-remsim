@@ -276,7 +276,7 @@ RsproPDU_t *rspro_gen_RemoveMappingRes(e_ResultCode res)
 	return pdu;
 }
 
-RsproPDU_t *rspro_gen_ConfigClientIReq(const ClientSlot_t *client)
+RsproPDU_t *rspro_gen_ConfigClientIdReq(const ClientSlot_t *client)
 {
 	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
 	if (!pdu)
