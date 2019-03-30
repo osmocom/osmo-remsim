@@ -66,7 +66,8 @@ enum remsim_server_client_fsm_state {
 	CLNTC_ST_INIT,
 	CLNTC_ST_ESTABLISHED,
 	CLNTC_ST_WAIT_CONF_RES,		/* waiting for ConfigClientRes */
-	CLNTC_ST_CONNECTED,
+	CLNTC_ST_CONNECTED_BANKD,
+	CLNTC_ST_CONNECTED_CLIENT,
 };
 
 enum remsim_server_client_event {
@@ -142,7 +143,7 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 						  conn->client.slot.slot_nr);
 			resp = rspro_gen_ConnectClientRes(&conn->srv->comp_id, ResultCode_ok);
 			client_conn_send(conn, resp);
-			osmo_fsm_inst_state_chg(fi, CLNTC_ST_CONNECTED, 0, 0);
+			osmo_fsm_inst_state_chg(fi, CLNTC_ST_CONNECTED_CLIENT, 0, 0);
 		}
 
 		/* reparent us from srv->connections to srv->clients */
@@ -175,7 +176,7 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 		client_conn_send(conn, resp);
 
 		/* the state change will associate any pre-existing slotmaps */
-		osmo_fsm_inst_state_chg(fi, CLNTC_ST_CONNECTED, 0, 0);
+		osmo_fsm_inst_state_chg(fi, CLNTC_ST_CONNECTED_BANKD, 0, 0);
 
 		osmo_fsm_inst_dispatch(fi, CLNTC_E_PUSH, NULL);
 		break;
@@ -188,14 +189,14 @@ static void clnt_st_wait_cl_conf_res(struct osmo_fsm_inst *fi, uint32_t event, v
 {
 	switch (event) {
 	case CLNTC_E_CONFIG_CL_RES:
-		osmo_fsm_inst_state_chg(fi, CLNTC_ST_CONNECTED, 0, 0);
+		osmo_fsm_inst_state_chg(fi, CLNTC_ST_CONNECTED_CLIENT, 0, 0);
 		break;
 	default:
 		OSMO_ASSERT(0);
 	}
 }
 
-static void clnt_st_connected_cl_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
+static void clnt_st_connected_client_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
 {
 #if 0
 	struct rspro_client_conn *conn = fi->priv;
@@ -209,7 +210,7 @@ static void clnt_st_connected_cl_onenter(struct osmo_fsm_inst *fi, uint32_t prev
 #endif
 }
 
-static void clnt_st_connected_bk_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
+static void clnt_st_connected_bankd_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
 {
 	struct rspro_client_conn *conn = fi->priv;
 	struct slotmaps *slotmaps = conn->srv->slotmaps;
@@ -225,22 +226,19 @@ static void clnt_st_connected_bk_onenter(struct osmo_fsm_inst *fi, uint32_t prev
 	slotmaps_unlock(slotmaps);
 }
 
-static void clnt_st_connected_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
+static void clnt_st_connected_client(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
 	struct rspro_client_conn *conn = fi->priv;
-	switch (conn->comp_id.type) {
-	case ComponentType_remsimClient:
-		clnt_st_connected_cl_onenter(fi, prev_state);
-		break;
-	case ComponentType_remsimBankd:
-		clnt_st_connected_bk_onenter(fi, prev_state);
-		break;
+	struct slotmaps *slotmaps = conn->srv->slotmaps;
+	const struct RsproPDU_t *rx = NULL;
+
+	switch (event) {
 	default:
 		OSMO_ASSERT(0);
 	}
 }
 
-static void clnt_st_connected(struct osmo_fsm_inst *fi, uint32_t event, void *data)
+static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
 	struct rspro_client_conn *conn = fi->priv;
 	struct slotmaps *slotmaps = conn->srv->slotmaps;
@@ -347,22 +345,30 @@ static const struct osmo_fsm_state server_client_fsm_states[] = {
 	[CLNTC_ST_ESTABLISHED] = {
 		.name = "ESTABLISHED",
 		.in_event_mask = S(CLNTC_E_CLIENT_CONN) | S(CLNTC_E_BANK_CONN),
-		.out_state_mask = S(CLNTC_ST_CONNECTED) | S(CLNTC_ST_WAIT_CONF_RES),
+		.out_state_mask = S(CLNTC_ST_CONNECTED_CLIENT) | S(CLNTC_ST_WAIT_CONF_RES) |
+				  S(CLNTC_ST_CONNECTED_BANKD),
 		.action = clnt_st_established,
 	},
 	[CLNTC_ST_WAIT_CONF_RES] = {
 		.name = "WAIT_CONFIG_RES",
 		.in_event_mask = S(CLNTC_E_CONFIG_CL_RES),
-		.out_state_mask = S(CLNTC_ST_CONNECTED),
+		.out_state_mask = S(CLNTC_ST_CONNECTED_CLIENT),
 		.action = clnt_st_wait_cl_conf_res,
 	},
-	[CLNTC_ST_CONNECTED] = {
-		.name = "CONNECTED",
+	[CLNTC_ST_CONNECTED_CLIENT] = {
+		.name = "CONNECTED_CLIENT",
+		.in_event_mask = 0,
+		.action = clnt_st_connected_client,
+		.onenter = clnt_st_connected_client_onenter,
+	},
+	[CLNTC_ST_CONNECTED_BANKD] = {
+		.name = "CONNECTED_BANKD",
 		.in_event_mask = S(CLNTC_E_CREATE_MAP_RES) | S(CLNTC_E_REMOVE_MAP_RES) |
 				 S(CLNTC_E_PUSH),
-		.action = clnt_st_connected,
-		.onenter = clnt_st_connected_onenter,
+		.action = clnt_st_connected_bankd,
+		.onenter = clnt_st_connected_bankd_onenter,
 	},
+
 };
 
 static struct osmo_fsm remsim_server_client_fsm = {
