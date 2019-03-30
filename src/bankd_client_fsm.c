@@ -47,9 +47,19 @@ static void bankd_updown_cb(struct ipa_client_conn *conn, int up)
 	osmo_fsm_inst_dispatch(bc->bankd_fi, up ? BDC_E_TCP_UP: BDC_E_TCP_DOWN, 0);
 }
 
-int bankd_conn_send_rspro(struct bankd_client *bc, RsproPDU_t *rspro)
+/* internal function, bypassing FSM state */
+static int _bankd_conn_send_rspro(struct bankd_client *bc, RsproPDU_t *rspro)
 {
 	return ipa_client_conn_send_rspro(bc->bankd_conn, rspro);
+}
+
+int bankd_conn_send_rspro(struct bankd_client *bc, RsproPDU_t *rspro)
+{
+	if (osmo_fsm_inst_dispatch(bc->bankd_fi, BDC_E_RSPRO_TX, rspro) < 0) {
+		ASN_STRUCT_FREE(asn_DEF_RsproPDU, rspro);
+		return -1;
+	}
+	return 0;
 }
 
 /***********************************************************************
@@ -72,6 +82,7 @@ static const struct value_string remsim_client_bankd_fsm_event_names[] = {
 	OSMO_VALUE_STRING(BDC_E_TCP_UP),
 	OSMO_VALUE_STRING(BDC_E_TCP_DOWN),
 	OSMO_VALUE_STRING(BDC_E_CLIENT_CONN_RES),
+	OSMO_VALUE_STRING(BDC_E_RSPRO_TX),
 	{ 0, NULL }
 };
 
@@ -97,7 +108,7 @@ static void bdc_st_established_onenter(struct osmo_fsm_inst *fi, uint32_t prev_s
 
 	/* FIXME: Send ClientConnReq */
 	pdu = rspro_gen_ConnectClientReq(&bc->srv_conn.own_comp_id, bc->srv_conn.clslot);
-	bankd_conn_send_rspro(bc, pdu);
+	_bankd_conn_send_rspro(bc, pdu);
 }
 
 static void bdc_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *data)
@@ -117,9 +128,16 @@ static void bdc_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *d
 
 static void bdc_st_connected(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
+	struct bankd_client *bc = (struct bankd_client *) fi->priv;
+	RsproPDU_t *pdu = NULL;
+
 	switch (event) {
 	case BDC_E_TCP_DOWN:
 		osmo_fsm_inst_state_chg(fi, BDC_ST_REESTABLISH, T2_RECONNECT, 2);
+		break;
+	case BDC_E_RSPRO_TX:
+		pdu = data;
+		_bankd_conn_send_rspro(bc, pdu);
 		break;
 	default:
 		OSMO_ASSERT(0);
@@ -214,7 +232,7 @@ static const struct osmo_fsm_state bankd_conn_fsm_states[] = {
 	},
 	[BDC_ST_CONNECTED] = {
 		.name = "CONNECTED",
-		.in_event_mask = S(BDC_E_TCP_DOWN),
+		.in_event_mask = S(BDC_E_TCP_DOWN) | S(BDC_E_RSPRO_TX),
 		.out_state_mask = S(BDC_ST_REESTABLISH),
 		.action = bdc_st_connected,
 	},

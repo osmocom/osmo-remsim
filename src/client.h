@@ -16,6 +16,7 @@ enum bankd_conn_fsm_event {
 	BDC_E_TCP_UP,		/* notify BDC that TCP connection is up/connected */
 	BDC_E_TCP_DOWN,		/* notify BDC that TCP connection is down/disconnected */
 	BDC_E_CLIENT_CONN_RES,	/* notify BDC that ClientConnectRes has been received */
+	BDC_E_RSPRO_TX,		/* transmit a RSPRO PDU to the bankd */
 };
 
 extern struct osmo_fsm remsim_client_bankd_fsm;
