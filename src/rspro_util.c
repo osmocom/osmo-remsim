@@ -166,7 +166,7 @@ static void fill_ip4_port(IpPort_t *out, uint32_t ip, uint16_t port)
 	uint32_t ip_n = htonl(ip);
 	out->ip.present = IpAddress_PR_ipv4;
 	OCTET_STRING_fromBuf(&out->ip.choice.ipv4, (const char *) &ip_n, 4);
-	out->port = htons(port);
+	out->port = port;
 }
 
 
