@@ -400,6 +400,24 @@ static __attribute__((constructor)) void on_dso_load(void)
  * IPA RSPRO Server
  ***********************************************************************/
 
+struct rspro_client_conn *_client_conn_by_slot(struct rspro_server *srv, const struct client_slot *cslot)
+{
+	struct rspro_client_conn *conn;
+	llist_for_each_entry(conn, &srv->clients, list) {
+		if (client_slot_equals(&conn->client.slot, cslot))
+			return conn;
+	}
+	return NULL;
+}
+struct rspro_client_conn *client_conn_by_slot(struct rspro_server *srv, const struct client_slot *cslot)
+{
+	struct rspro_client_conn *conn;
+	pthread_rwlock_rdlock(&srv->rwlock);
+	conn = _client_conn_by_slot(srv, cslot);
+	pthread_rwlock_unlock(&srv->rwlock);
+	return conn;
+}
+
 struct rspro_client_conn *_bankd_conn_by_id(struct rspro_server *srv, uint16_t bank_id)
 {
 	struct rspro_client_conn *conn;

@@ -56,5 +56,7 @@ struct rspro_server *rspro_server_create(void *ctx, const char *host, uint16_t p
 void rspro_server_destroy(struct rspro_server *srv);
 int event_fd_cb(struct osmo_fd *ofd, unsigned int what);
 
+struct rspro_client_conn *_client_conn_by_slot(struct rspro_server *srv, const struct client_slot *cslot);
+struct rspro_client_conn *client_conn_by_slot(struct rspro_server *srv, const struct client_slot *cslot);
 struct rspro_client_conn *_bankd_conn_by_id(struct rspro_server *srv, uint16_t bank_id);
 struct rspro_client_conn *bankd_conn_by_id(struct rspro_server *srv, uint16_t bank_id);
