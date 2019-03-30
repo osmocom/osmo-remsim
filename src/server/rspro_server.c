@@ -49,7 +49,7 @@ static void client_conn_send(struct rspro_client_conn *conn, RsproPDU_t *pdu)
 		ASN_STRUCT_FREE(asn_DEF_RsproPDU, pdu);
 		return;
 	}
-	LOGPFSM(conn->fi, "Tx RSPRO %s\n", pdu);
+	LOGPFSM(conn->fi, "Tx RSPRO %s\n", rspro_msgt_name(pdu));
 	ipa_prepend_header_ext(msg_tx, IPAC_PROTO_EXT_RSPRO);
 	ipa_msg_push_header(msg_tx, IPAC_PROTO_OSMO);
 	ipa_server_conn_send(conn->peer, msg_tx);
