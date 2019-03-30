@@ -733,7 +733,7 @@ int main(int argc, char **argv)
 	int rc;
 	int c, ret = 1;
 	int keep_running = 0;
-	int server_port = 9999;
+	int server_port = 9998;
 	int if_num = 0, vendor_id = -1, product_id = -1;
 	int config_id = -1, altsetting = 0, addr = -1;
 	char *server_host = "127.0.0.1";
