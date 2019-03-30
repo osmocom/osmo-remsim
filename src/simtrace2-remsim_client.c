@@ -805,6 +805,9 @@ int main(int argc, char **argv)
 
 	signal(SIGUSR1, handle_sig_usr1);
 
+	g_tall_ctx = talloc_named_const(NULL, 0, "global");
+	osmo_init_logging2(g_tall_ctx, &log_info);
+
 	rc = libusb_init(NULL);
 	if (rc < 0) {
 		fprintf(stderr, "libusb initialization failed\n");
@@ -821,7 +824,6 @@ int main(int argc, char **argv)
 	signal(SIGINT, &signal_handler);
 
 	// initialize remote SIM client
-	g_tall_ctx = talloc_named_const(NULL, 0, "global");
 
 	g_client = talloc_zero(g_tall_ctx, struct bankd_client);
 
@@ -840,7 +842,6 @@ int main(int argc, char **argv)
 	}
 
 	asn_debug = 0;
-	osmo_init_logging2(g_tall_ctx, &log_info);
 
 	if (bankd_conn_fsm_alloc(g_client) < 0) {
 		fprintf(stderr, "Unable to connect: %s\n", strerror(errno));
