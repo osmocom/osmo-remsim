@@ -693,6 +693,8 @@ static void print_help(void)
 {
 	printf( "\t-s\t--server-host HOST\n"
 		"\t-p\t--bankd-port PORT\n"
+		"\t-c\t--client-id <0-65535>\n"
+		"\t-n\t--slot-nr <0-65535>\n"
 		"\t-h\t--help\n"
 		"\t-i\t--gsmtap-ip\tA.B.C.D\n"
 		"\t-k\t--keep-running\n"
@@ -711,6 +713,8 @@ static void print_help(void)
 static const struct option opts[] = {
 	{ "server-host", 1, 0, 's' },
 	{ "server-port", 1, 0, 'p' },
+	{ "client-id", 1, 0, 'c' },
+	{ "client-slot", 1, 0, 'n' },
 	{ "help", 0, 0, 'h' },
 	{ "gsmtap-ip", 1, 0, 'i' },
 	{ "keep-running", 0, 0, 'k' },
@@ -736,6 +740,7 @@ int main(int argc, char **argv)
 	int server_port = 9998;
 	int if_num = 0, vendor_id = -1, product_id = -1;
 	int config_id = -1, altsetting = 0, addr = -1;
+	int client_id = -1, client_slot = -1;
 	char *server_host = "127.0.0.1";
 	char *path = NULL;
 	uint8_t atr_data[33] = { 0x3B, 0x00 }; // the shortest simplest ATR possible
@@ -746,7 +751,7 @@ int main(int argc, char **argv)
 	while (1) {
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "s:p:hi:kV:P:C:I:S:A:H:a:", opts, &option_index);
+		c = getopt_long(argc, argv, "s:p:c:n:hi:kV:P:C:I:S:A:H:a:", opts, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -755,6 +760,12 @@ int main(int argc, char **argv)
 			break;
 		case 'p':
 			server_port = atoi(optarg);
+			break;
+		case 'c':
+			client_id = atoi(optarg);
+			break;
+		case 'n':
+			client_slot = atoi(optarg);
 			break;
 		case 'h':
 			print_help();
@@ -826,6 +837,15 @@ int main(int argc, char **argv)
 	// initialize remote SIM client
 
 	g_client = talloc_zero(g_tall_ctx, struct bankd_client);
+
+	if (client_id != -1) {
+		/* default to client slot 0 */
+		if (client_slot == -1)
+			client_slot = 0;
+		g_client->srv_conn.clslot = talloc_zero(g_client, ClientSlot_t);
+		g_client->srv_conn.clslot->clientId = client_id;
+		g_client->srv_conn.clslot->slotNr = client_slot;
+	}
 
 	srvc = &g_client->srv_conn;
 	srvc->server_host = server_host;

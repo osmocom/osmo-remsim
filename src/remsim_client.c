@@ -174,7 +174,7 @@ static void printf_help()
 		"  -i --server-ip A.B.C.D     remsim-server IP address\n"
 		"  -p --server-port 13245     remsim-server TCP port\n"
 		"  -i --client-id <0-65535>   RSPRO ClientId of this client\n"
-		"  -s --client-slot <0-65535> RSPRO SlotNr of this client\n"
+		"  -n --client-slot <0-65535> RSPRO SlotNr of this client\n"
 	      );
 }
 
@@ -187,11 +187,11 @@ static void handle_options(int argc, char **argv)
 			{ "server-ip", 1, 0, 'i' },
 			{ "server-port", 1, 0, 'p' },
 			{ "client-id", 1, 0, 'c' },
-			{ "client-slot", 1, 0, 's' },
+			{ "client-slot", 1, 0, 'n' },
 			{ 0, 0, 0, 0 }
 		};
 
-		c = getopt_long(argc, argv, "hi:p:c:s:",
+		c = getopt_long(argc, argv, "hi:p:c:n:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
