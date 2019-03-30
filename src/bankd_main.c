@@ -435,6 +435,7 @@ static int worker_send_rspro(struct bankd_worker *worker, RsproPDU_t *pdu)
 	int rc;
 
 	if (!msg) {
+		ASN_STRUCT_FREE(asn_DEF_RsproPDU, pdu);
 		LOGW(worker, "error encoding RSPRO\n");
 		return -1;
 	}

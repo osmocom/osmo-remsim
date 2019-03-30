@@ -58,8 +58,10 @@ static void push_and_send(struct ipa_client_conn *ipa, struct msgb *msg_tx)
 int ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *rspro)
 {
 	struct msgb *msg = rspro_enc_msg(rspro);
-	if (!msg)
+	if (!msg) {
+		ASN_STRUCT_FREE(asn_DEF_RsproPDU, rspro);
 		return -1;
+	}
 	push_and_send(ipa, msg);
 	return 0;
 }
