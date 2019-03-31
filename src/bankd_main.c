@@ -605,6 +605,10 @@ static int worker_handle_rspro(struct bankd_worker *worker, const RsproPDU_t *pd
 		break;
 	case RsproPDUchoice_PR_clientSlotStatusInd:
 		/* FIXME */
+		rc = 0;
+		break;
+	case RsproPDUchoice_PR_setAtrRes:
+		rc = 0;
 		break;
 	default:
 		rc = -101;
