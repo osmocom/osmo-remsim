@@ -594,6 +594,8 @@ static int worker_handle_rspro(struct bankd_worker *worker, const RsproPDU_t *pd
 {
 	int rc = -100;
 
+	LOGW(worker, "Rx RSPRO %s\n", rspro_msgt_name(pdu));
+
 	switch (pdu->msg.present) {
 	case RsproPDUchoice_PR_connectClientReq:
 		rc = worker_handle_connectClientReq(worker, pdu);
