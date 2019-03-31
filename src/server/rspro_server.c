@@ -44,12 +44,20 @@ static RsproPDU_t *slotmap2RemoveMappingReq(const struct slot_mapping *slotmap)
 
 static void client_conn_send(struct rspro_client_conn *conn, RsproPDU_t *pdu)
 {
-	struct msgb *msg_tx = rspro_enc_msg(pdu);
-	if (!msg_tx) {
-		ASN_STRUCT_FREE(asn_DEF_RsproPDU, pdu);
+	if (!pdu) {
+		LOGPFSML(conn->fi, LOGL_ERROR, "Attempt to transmit NULL\n");
+		osmo_log_backtrace(DMAIN, LOGL_ERROR);
 		return;
 	}
 	LOGPFSM(conn->fi, "Tx RSPRO %s\n", rspro_msgt_name(pdu));
+
+	struct msgb *msg_tx = rspro_enc_msg(pdu);
+	if (!msg_tx) {
+		LOGPFSML(conn->fi, LOGL_ERROR, "Error encdoing RSPRO %s\n", rspro_msgt_name(pdu));
+		osmo_log_backtrace(DMAIN, LOGL_ERROR);
+		ASN_STRUCT_FREE(asn_DEF_RsproPDU, pdu);
+		return;
+	}
 	ipa_prepend_header_ext(msg_tx, IPAC_PROTO_EXT_RSPRO);
 	ipa_msg_push_header(msg_tx, IPAC_PROTO_OSMO);
 	ipa_server_conn_send(conn->peer, msg_tx);

@@ -59,6 +59,8 @@ int ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *rspro)
 {
 	struct msgb *msg = rspro_enc_msg(rspro);
 	if (!msg) {
+		LOGP(DMAIN, LOGL_ERROR, "Error encoding RSPRO: %s\n", rspro_msgt_name(rspro));
+		osmo_log_backtrace(DMAIN, LOGL_ERROR);
 		ASN_STRUCT_FREE(asn_DEF_RsproPDU, rspro);
 		return -1;
 	}
@@ -68,6 +70,11 @@ int ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *rspro)
 
 int server_conn_send_rspro(struct rspro_server_conn *srvc, RsproPDU_t *rspro)
 {
+	if (!rspro) {
+		LOGPFSML(srvc->fi, LOGL_ERROR, "Attempt to transmit NULL\n");
+		osmo_log_backtrace(DMAIN, LOGL_ERROR);
+		return -EINVAL;
+	}
 	LOGPFSM(srvc->fi, "Tx RSPRO %s\n", rspro_msgt_name(rspro));
 	return ipa_client_conn_send_rspro(srvc->conn, rspro);
 }
