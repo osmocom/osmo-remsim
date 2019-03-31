@@ -49,6 +49,12 @@ struct rspro_client_conn {
 	} bank;
 	struct {
 		struct client_slot slot;
+		/* bankd configuration for this client (if any) */
+		struct {
+			struct bank_slot slot;
+			uint32_t ip;
+			uint16_t port;
+		} bankd;
 	} client;
 };
 

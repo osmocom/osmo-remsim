@@ -88,6 +88,7 @@ enum remsim_server_client_event {
 	CLNTC_E_REMOVE_MAP_RES,	/* RemoveMappingRes received */
 	CLNTC_E_CONFIG_CL_RES,	/* ConfigClientRes received */
 	CLNTC_E_PUSH,		/* drain maps_new or maps_delreq */
+	CLNTC_E_CL_CFG_BANKD,	/* send [new] ConfigConfigBankReq */
 };
 
 static const struct value_string server_client_event_names[] = {
@@ -100,6 +101,7 @@ static const struct value_string server_client_event_names[] = {
 	OSMO_VALUE_STRING(CLNTC_E_REMOVE_MAP_RES),
 	OSMO_VALUE_STRING(CLNTC_E_CONFIG_CL_RES),
 	OSMO_VALUE_STRING(CLNTC_E_PUSH),
+	OSMO_VALUE_STRING(CLNTC_E_CL_CFG_BANKD),
 	{ 0, NULL }
 };
 
@@ -131,6 +133,13 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 			LOGPFSM(fi, "ConnectClientReq from identity != Client ?!?\n");
 			osmo_fsm_inst_term(fi, OSMO_FSM_TERM_ERROR, NULL);
 		}
+
+		/* reparent us from srv->connections to srv->clients */
+		pthread_rwlock_wrlock(&conn->srv->rwlock);
+		llist_del(&conn->list);
+		llist_add_tail(&conn->list, &conn->srv->clients);
+		pthread_rwlock_unlock(&conn->srv->rwlock);
+
 		if (!cclreq->clientSlot) {
 #if 0
 			/* FIXME: determine ClientID */
@@ -156,12 +165,6 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 			client_conn_send(conn, resp);
 			osmo_fsm_inst_state_chg(fi, CLNTC_ST_CONNECTED_CLIENT, 0, 0);
 		}
-
-		/* reparent us from srv->connections to srv->clients */
-		pthread_rwlock_wrlock(&conn->srv->rwlock);
-		llist_del(&conn->list);
-		llist_add_tail(&conn->list, &conn->srv->clients);
-		pthread_rwlock_unlock(&conn->srv->rwlock);
 		break;
 	case CLNTC_E_BANK_CONN:
 		cbreq = &pdu->msg.choice.connectBankReq;
@@ -208,10 +211,86 @@ static void clnt_st_wait_cl_conf_res(struct osmo_fsm_inst *fi, uint32_t event, v
 	}
 }
 
+/*! find a connected client (if any) for given slotmap and update its Bankd configuration.
+ * \param[in] map slotmap whose client connection shall be updated
+ * \param[in] srv rspro_server on which we operate
+ * \param[in] bankd_conn bankd connection serving the map (may be NULL if not known)
+ */
+static void _update_client_for_slotmap(struct slot_mapping *map, struct rspro_server *srv,
+					struct rspro_client_conn *bankd_conn)
+{
+	struct rspro_client_conn *conn = client_conn_by_slot(srv, &map->client);
+	char ip_str[INET6_ADDRSTRLEN];
+	char port_str[6];
+	uint32_t bankd_ip;
+	int bankd_port;
+	bool changed = false;
+	int rc;
+
+	OSMO_ASSERT(map);
+	OSMO_ASSERT(srv);
+
+	if (!conn)
+		LOGP(DMAIN, LOGL_DEBUG, "%s\n", __func__);
+	else
+		LOGPFSM(conn->fi, "%s\n", __func__);
+
+	if (!conn)
+		return;
+
+	if (!bank_slot_equals(&conn->client.bankd.slot, &map->bank)) {
+		LOGPFSM(conn->fi, "BankSlot has changed B%u:%u -> B%u:%u\n",
+			conn->client.bankd.slot.bank_id, conn->client.bankd.slot.slot_nr,
+			map->bank.bank_id, map->bank.slot_nr);
+		conn->client.bankd.slot = map->bank;
+		changed = true;
+	}
+
+	/* if caller didn't provide bankd_conn, resolve it from map */
+	if (!bankd_conn)
+		bankd_conn = bankd_conn_by_id(srv, map->bank.bank_id);
+	if (!bankd_conn)
+		return;
+
+	/* obtain IP and port of bankd */
+	rc = osmo_sock_get_ip_and_port(bankd_conn->peer->ofd.fd, ip_str, sizeof(ip_str),
+					port_str, sizeof(port_str), false);
+	if (rc < 0) {
+		LOGPFSM(bankd_conn->fi, "Error during getpeername\n");
+		return;
+	}
+	bankd_ip = ntohl(inet_addr(ip_str));
+	bankd_port = 9999; /* TODO: configurable */
+	if (conn->client.bankd.port != bankd_port || conn->client.bankd.ip != bankd_ip) {
+		LOGPFSM(conn->fi, "Bankd IP/Port changed to %s:%s\n", ip_str, port_str);
+		conn->client.bankd.ip = bankd_ip;
+		conn->client.bankd.port = bankd_port;
+		changed = true;
+	}
+
+	/* update the client with new bankd information, if any changes were made */
+	if (changed)
+		osmo_fsm_inst_dispatch(conn->fi, CLNTC_E_CL_CFG_BANKD, NULL);
+}
+
 static void clnt_st_connected_client_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
 {
-#if 0
 	struct rspro_client_conn *conn = fi->priv;
+	struct slotmaps *slotmaps = conn->srv->slotmaps;
+	struct slot_mapping *map;
+
+	LOGPFSM(fi, "%s\n", __func__);
+
+	/* check for an existing slotmap for this client/slot */
+	slotmaps_rdlock(slotmaps);
+	llist_for_each_entry(map, &slotmaps->mappings, list) {
+		if (client_slot_equals(&map->client, &conn->client.slot)) {
+			_update_client_for_slotmap(map, conn->srv, NULL);
+			break;
+		}
+	}
+	slotmaps_unlock(slotmaps);
+#if 0
 	ClientSlot_t clslot;
 	RsproPDU_t *pdu;
 
@@ -241,10 +320,16 @@ static void clnt_st_connected_bankd_onenter(struct osmo_fsm_inst *fi, uint32_t p
 static void clnt_st_connected_client(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
 	struct rspro_client_conn *conn = fi->priv;
-	struct slotmaps *slotmaps = conn->srv->slotmaps;
-	const struct RsproPDU_t *rx = NULL;
+	BankSlot_t bslot;
+	RsproPDU_t *tx;
 
 	switch (event) {
+	case CLNTC_E_CL_CFG_BANKD: /* Send [new] Bankd information to client */
+		bank_slot2rspro(&bslot, &conn->client.bankd.slot);
+		tx = rspro_gen_ConfigClientBankReq(&bslot, conn->client.bankd.ip,
+						   conn->client.bankd.port);
+		client_conn_send(conn, tx);
+		break;
 	default:
 		OSMO_ASSERT(0);
 	}
@@ -254,7 +339,7 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 {
 	struct rspro_client_conn *conn = fi->priv;
 	struct slotmaps *slotmaps = conn->srv->slotmaps;
-	const struct RsproPDU_t *rx = NULL;
+	const RsproPDU_t *rx = NULL;
 	struct slot_mapping *map, *map2;
 
 	switch (event) {
@@ -271,6 +356,7 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 		}
 		_slotmap_state_change(map, SLMAP_S_ACTIVE, &conn->bank.maps_active);
 		slotmaps_unlock(slotmaps);
+		_update_client_for_slotmap(map, conn->srv, conn);
 		break;
 	case CLNTC_E_REMOVE_MAP_RES: /* Bankd acknowledges mapping was removed */
 		rx = data;
@@ -286,6 +372,7 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 		slotmaps_unlock(slotmaps);
 		/* slotmap_del() will remove it from both global and bank list */
 		slotmap_del(map->maps, map);
+		/* FIXME: update client! */
 		break;
 	case CLNTC_E_PUSH: /* check if any create or delete requests are pending */
 		slotmaps_wrlock(slotmaps);
@@ -369,7 +456,7 @@ static const struct osmo_fsm_state server_client_fsm_states[] = {
 	},
 	[CLNTC_ST_CONNECTED_CLIENT] = {
 		.name = "CONNECTED_CLIENT",
-		.in_event_mask = 0,
+		.in_event_mask = S(CLNTC_E_CL_CFG_BANKD),
 		.action = clnt_st_connected_client,
 		.onenter = clnt_st_connected_client_onenter,
 	},
