@@ -679,7 +679,7 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 static void handle_sig_usr1(int signal)
 {
 	OSMO_ASSERT(signal == SIGUSR1);
-	talloc_report(g_tall_ctx, stderr);
+	talloc_report_full(g_tall_ctx, stderr);
 }
 
 static void print_welcome(void)
@@ -817,6 +817,7 @@ int main(int argc, char **argv)
 	signal(SIGUSR1, handle_sig_usr1);
 
 	g_tall_ctx = talloc_named_const(NULL, 0, "global");
+	talloc_asn1_ctx = talloc_named_const(g_tall_ctx, 0, "asn1");
 	osmo_init_logging2(g_tall_ctx, &log_info);
 
 	rc = libusb_init(NULL);

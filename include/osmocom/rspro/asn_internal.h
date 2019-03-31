@@ -23,10 +23,12 @@ extern "C" {
 #define	ASN1C_ENVIRONMENT_VERSION	924	/* Compile-time version */
 int get_asn1c_environment_version(void);	/* Run-time version */
 
-#define	CALLOC(nmemb, size)	calloc(nmemb, size)
-#define	MALLOC(size)		malloc(size)
-#define	REALLOC(oldptr, size)	realloc(oldptr, size)
-#define	FREEMEM(ptr)		free(ptr)
+#include <osmocom/core/talloc.h>
+extern __thread void *talloc_asn1_ctx;
+#define CALLOC(nmemb, size)     talloc_zero_size(talloc_asn1_ctx, (nmemb) * (size))
+#define MALLOC(size)            talloc_size(talloc_asn1_ctx, size)
+#define REALLOC(oldptr, size)   talloc_realloc_size(talloc_asn1_ctx, oldptr, size)
+#define FREEMEM(ptr)            talloc_free(ptr)
 
 #define	asn_debug_indent	0
 #define ASN_DEBUG_INDENT_ADD(i) do{}while(0)

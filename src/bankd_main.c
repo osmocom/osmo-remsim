@@ -330,7 +330,7 @@ static void handle_sig_usr1(int sig)
 		struct bankd_worker *worker;
 		/* main thread */
 		fprintf(stderr, "=== Talloc Report of main thread:\n");
-		talloc_report(g_tall_ctx, stderr);
+		talloc_report_full(g_tall_ctx, stderr);
 
 		/* iterate over worker threads and ask them to dump their talloc state */
 		pthread_mutex_lock(&g_bankd->workers_mutex);
@@ -341,7 +341,7 @@ static void handle_sig_usr1(int sig)
 	} else {
 		/* worker thread */
 		fprintf(stderr, "=== Talloc Report of %s\n", g_worker->name);
-		talloc_report(g_worker->tall_ctx, stderr);
+		talloc_report_full(g_worker->tall_ctx, stderr);
 	}
 }
 
