@@ -141,6 +141,9 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 			rspro2client_slot(&conn->client.slot, cclreq->clientSlot);
 			osmo_fsm_inst_update_id_f(fi, "C%u:%u", conn->client.slot.client_id,
 						  conn->client.slot.slot_nr);
+			osmo_fsm_inst_update_id_f(conn->keepalive_fi, "C%u:%u",
+						  conn->client.slot.client_id,
+						  conn->client.slot.slot_nr);
 			resp = rspro_gen_ConnectClientRes(&conn->srv->comp_id, ResultCode_ok);
 			client_conn_send(conn, resp);
 			osmo_fsm_inst_state_chg(fi, CLNTC_ST_CONNECTED_CLIENT, 0, 0);
@@ -164,6 +167,7 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 		conn->bank.bank_id = cbreq->bankId;
 		conn->bank.num_slots = cbreq->numberOfSlots;
 		osmo_fsm_inst_update_id_f(fi, "B%u", conn->bank.bank_id);
+		osmo_fsm_inst_update_id_f(conn->keepalive_fi, "B%u", conn->bank.bank_id);
 
 		/* reparent us from srv->connections to srv->banks */
 		pthread_rwlock_wrlock(&conn->srv->rwlock);
