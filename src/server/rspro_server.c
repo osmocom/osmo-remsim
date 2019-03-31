@@ -339,7 +339,7 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 {
 	struct rspro_client_conn *conn = fi->priv;
 	struct slotmaps *slotmaps = conn->srv->slotmaps;
-	const RsproPDU_t *rx = NULL;
+	const __attribute__((unused)) RsproPDU_t *rx = NULL;
 	struct slot_mapping *map, *map2;
 
 	switch (event) {
@@ -397,7 +397,7 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 
 static void clnt_allstate_action(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
-	struct rspro_client_conn *conn = fi->priv;
+	//struct rspro_client_conn *conn = fi->priv;
 
 	switch (event) {
 	case CLNTC_E_TCP_DOWN:
@@ -413,7 +413,7 @@ static void clnt_allstate_action(struct osmo_fsm_inst *fi, uint32_t event, void 
 
 static int server_client_fsm_timer_cb(struct osmo_fsm_inst *fi)
 {
-	struct rspro_client_conn *conn = fi->priv;
+	//struct rspro_client_conn *conn = fi->priv;
 
 	switch (fi->T) {
 	case 1:
