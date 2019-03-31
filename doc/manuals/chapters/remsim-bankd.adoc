@@ -12,8 +12,8 @@ remsim-bankd currently has the following command-line options:
 
 *-h, --help*::
   Print a short help message about the supported options
-*-i, --server-ip A.B.C.D*::
-  Specify the remote IP address of the remsim-server to which this bankd
+*-i, --server-host A.B.C.D*::
+  Specify the remote IP address/hostname of the remsim-server to which this bankd
   shall establish its <<RSPRO>> control connection
 *-p, --server-port <1-65535>*::
   Specify the remote TCP port number of the remsim-server to whihc this bankd

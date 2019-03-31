@@ -1,0 +1,31 @@
+:gfdl-enabled:
+
+osmo-remsim User Manual
+=======================
+Harald Welte <hwelte@sysmocom.de>
+
+//include::./common/chapters/preface.adoc[]
+
+include::{srcdir}/chapters/overview.adoc[]
+
+include::{srcdir}/chapters/remsim-server.adoc[]
+
+include::{srcdir}/chapters/remsim-client.adoc[]
+
+include::{srcdir}/chapters/remsim-bankd.adoc[]
+
+include::{srcdir}/chapters/rspro.adoc[]
+
+//include::./common/chapters/vty.adoc[]
+
+//include::./common/chapters/logging.adoc[]
+
+include::{srcdir}/chapters/architecture.adoc[]
+
+//include::./common/chapters/port_numbers.adoc[]
+
+include::./common/chapters/bibliography.adoc[]
+
+include::./common/chapters/glossary.adoc[]
+
+include::./common/chapters/gfdl.adoc[]

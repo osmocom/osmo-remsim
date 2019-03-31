@@ -1,0 +1,98 @@
+== RSPRO
+
+*RSPRO*, the *Remote SIM Protocol*, is an osmo-remsim specific,
+non-standard communications protocol used between the elements of the
+osmo-remsim system.
+
+It is specified in ASN.1 syntax (see `asn1/RSPRO.asn` in the
+`osmo-remsim` source code) and uses BER (Basic Encoding Rules) on the
+transport level.
+
+=== Underlying Transport Layer
+
+RSPRO uses TCP as an underlying transport protocol.  As TCP doesn't
+preserve message boundaries, the IPA multiplex is used as intermediate
+layer between TCP and the BER-encoded RSPRO PDU.
+
+For more information about the IPA multiplex, see the related chapter
+in http://ftp.osmocom.org/docs/latest/osmobts-abis.pdf
+
+RSPRO uses the IPA CCM PING/PONG messages for keep-alive and detection
+of dead/stale connections.  The compiled-in defaults transmits one IPA
+PING every 30s and waits 10s for a response from the peer before
+declaring the connection as dead.
+
+=== RSPRO PDU
+
+An RsproPDU consists of:
+
+* *version* of the protocol (v2 is current)
+* *tag* specified by the sender, echoed back by the receiver in
+  its response so the server can map responses back to a specific
+  request
+* *msg* the actual RSPRO Message (union/choice)
+
+=== RSPRO Operations
+
+Each RSPRO Operation typically (unless specified othewise) consists of a
+Request and Response pair.
+
+==== ConnectBank
+
+This is used by `remsim-bankd` to identify itself to `remsim-server` and
+to establish a logical connection between the two elements.
+
+==== ConnectClient
+
+This is used by `remsim-client` to identify itself to `remsim-server`
+and to establish a logical connection between the two elements.
+
+==== CreateMapping
+
+This is used by `remsim-server` to install a slot mapping in a
+`remsim-bankd`.
+
+==== RemoveMapping
+
+This is used by `remsim-server` to remove a slot mapping from a
+`remsim-bankd`.
+
+==== ConfigClientId
+
+This is used by `remsim-server` to dynamically configure a ClientID in a
+`remsim-client`.  This mode is currently not supported yet, each client
+must have a locally-configured ClientID.
+
+==== ConfigClientBank
+
+This is used by `remsim-server` to inform a `remsim-client` about the
+details (bankd ID, slot number, IP address, TCP port) of a the
+`remsim-bankd` to which it shall connect.
+
+==== ErrorInd
+
+This is a generic error indication that can be sent by any RSRPO entity.
+
+==== SetAtr
+
+This is used by `remsim-bankd` to inform the `remsim-client` about the
+ATR of the card, so that `remsim-client` can replicate that ATR when
+answering to the reset of the SIM card interface of the phone/modem.
+
+==== TpduModemToCard
+
+This is used by `remsim-client` to transfer a command TPDU/APDU from the
+phone/modem to the SIM card in `remsim-bankd`
+
+==== TpduCardToModem
+
+This is used by `remsim-bankd` to transfer a response TPDU/APDU from the
+SIM card back to the phone/modem at `remsim-client`.
+
+==== ClientSlotStatusInd
+
+This is used by `remsim-client` to report the status of a given slot.
+
+==== BankSlotStatusInd
+
+This is used by `remsim-bankd` to report the status of a given slot.

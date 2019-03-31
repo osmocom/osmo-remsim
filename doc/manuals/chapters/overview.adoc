@@ -1,0 +1,86 @@
+== Overview
+
+=== About this manual
+
+This manual should help you getting started with the osmo-remsim software.
+
+It will cover aspects of configuration and running osmo-remsim as well as some
+introduction about its internal architecture and external interfaces.
+
+=== About osmo-remsim
+
+osmo-remsim is a suite of software programs enabling physical/geographic
+separation of a cellular phone (or modem) on the one hand side and the
+SIM/USIM/ISIM card on the other side.
+
+Using osmo-remsim, you can operate an entire fleet of modems/phones, as
+well as banks of SIM cards and dynamically establish or remove the
+connections between modems/phones and cards.
+
+So in technical terms, it behaves like a proxy for the ISO 7816 smart
+card interface between the MS/UE and the UICC/SIM/USIM/ISIM.
+
+While originally designed to be used in context of cellular networks,
+there is nothing cellular specific in the system.  It can therefore also
+be used with other systems that use contact based smart cards according
+to ISO 7816.  Currently only the T=0 protocol with standard
+(non-extended) APDUs is supported. Both T=1 and extended APDU support
+can easily be added as a pure software update, should it be required at
+some future point.
+
+=== Credits
+
+osmo-remsim was originally developed by Harald Welte with contributions
+by Kevin Redon.  It builds on top of pre-existing infrastructure of
+the Osmocom project, including the Osmocom SIMtrace project.
+
+Development of osmo-remsim software was funded by GSMK and sysmocom.
+
+=== remsim-server
+
+The remsim-server is the central element of the osmo-remsim
+architecture.  All other elements connect to it.  It maintains the
+inventory of other network elements, as well as the list of
+slot-mappings, i.e. the relationship between each given physical card
+in a bank and each card emulator attached to a phone/modem.
+
+The tasks of remsim-server include:
+
+* accepting incoming TCP control connections from remsim-client and
+  remsim-bankd instances
+* providing a RESTful JSON interface for external application logic to
+
+=== remsim-client
+
+The remsim-client software is co-located next to a cellular phone/modem.
+It typically runs on an [embedded] computer next to the phone/modem.
+
+The tasks of remsim-client include:
+
+* interaction over USB with a device supported by the 'SIMtrace2 cardem'
+  firmware, which provides the physical interface to the phone/modem SIM
+  interface
+* establishing a TCP connection with the remsim-server, in order to
+  enable the server to issue control commands
+* under control of remsim-server, establishing a TCP connection to a
+  remsim-bankd in order to connect a card physically located at the
+  bankd.
+
+remsim-client supports at this point only one phone/modem.  If you have
+multiple phones/modems at one location, you can simply run multiple
+instances of remsim-client on the same system, one for each phone/modem.
+
+=== remsim-bankd
+
+The remsim-bankd software is co-located next to a bank of SIM cards.
+
+The tasks of remsim-bankd include:
+
+* interaction with the actual card reader hardware.  At this point, only
+  PC/SC based readers are supported, with 1 to 255 slots per reader.
+* establishing a TCP connection with the remsim-server, in order to
+  enable the server to issue control commands
+* running a TCP server where TCP connections from remsim-client
+  instances are accepted and handled.
+
+

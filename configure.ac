@@ -79,6 +79,48 @@ then
 	CPPFLAGS="$CPPFLAGS $WERROR_FLAGS"
 fi
 
+# Generate manuals
+AC_ARG_ENABLE(manuals,
+	[AS_HELP_STRING(
+		[--enable-manuals],
+		[Generate manual PDFs [default=no]],
+	)],
+	[osmo_ac_build_manuals=$enableval], [osmo_ac_build_manuals="no"])
+AM_CONDITIONAL([BUILD_MANUALS], [test x"$osmo_ac_build_manuals" = x"yes"])
+AC_ARG_VAR(OSMO_GSM_MANUALS_DIR, [path to common osmo-gsm-manuals files, overriding pkg-config and "../osmo-gsm-manuals"
+	fallback])
+if test x"$osmo_ac_build_manuals" = x"yes"
+then
+	# Find OSMO_GSM_MANUALS_DIR (env, pkg-conf, fallback)
+	if test -n "$OSMO_GSM_MANUALS_DIR"; then
+		echo "checking for OSMO_GSM_MANUALS_DIR... $OSMO_GSM_MANUALS_DIR (from env)"
+	else
+		OSMO_GSM_MANUALS_DIR="$($PKG_CONFIG osmo-gsm-manuals --variable=osmogsmmanualsdir 2>/dev/null)"
+		if test -n "$OSMO_GSM_MANUALS_DIR"; then
+			echo "checking for OSMO_GSM_MANUALS_DIR... $OSMO_GSM_MANUALS_DIR (from pkg-conf)"
+		else
+			OSMO_GSM_MANUALS_DIR="../osmo-gsm-manuals"
+			echo "checking for OSMO_GSM_MANUALS_DIR... $OSMO_GSM_MANUALS_DIR (fallback)"
+		fi
+	fi
+	if ! test -d "$OSMO_GSM_MANUALS_DIR"; then
+		AC_MSG_ERROR("OSMO_GSM_MANUALS_DIR does not exist! Install osmo-gsm-manuals or set OSMO_GSM_MANUALS_DIR.")
+	fi
+
+	# Find and run check-depends
+	CHECK_DEPENDS="$OSMO_GSM_MANUALS_DIR/check-depends.sh"
+	if ! test -x "$CHECK_DEPENDS"; then
+		CHECK_DEPENDS="osmo-gsm-manuals-check-depends"
+	fi
+	if ! $CHECK_DEPENDS; then
+		AC_MSG_ERROR("missing dependencies for --enable-manuals")
+	fi
+
+	# Put in Makefile with absolute path
+	OSMO_GSM_MANUALS_DIR="$(realpath "$OSMO_GSM_MANUALS_DIR")"
+	AC_SUBST([OSMO_GSM_MANUALS_DIR])
+fi
+
 CFLAGS="$CFLAGS -Wall"
 CPPFLAGS="$CPPFLAGS -Wall"
 
@@ -87,6 +129,8 @@ AC_MSG_RESULT([CPPFLAGS="$CPPFLAGS"])
 
 AC_OUTPUT(
 	Makefile
+	doc/Makefile
+	doc/manuals/Makefile
 	src/Makefile
 	src/rspro/Makefile
 	src/server/Makefile

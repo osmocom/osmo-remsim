@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign dist-bzip2
 
-SUBDIRS = src include
+SUBDIRS = src include doc
 
 EXTRA_DIST = asn1 .version README.md
 

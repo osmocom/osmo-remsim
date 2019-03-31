@@ -1,0 +1,78 @@
+== remsim-server
+
+=== Running
+
+`remsim-server` currently has no command-line arguments. It will bind to
+INADDR_ANY and offer the following TCP ports:
+
+* Port 9998 for the inbound control connections from `remsim-client`
+  and `remsim-bankd`
+* Port 9997 for the RESTful/JSON Web API (role: HTTP server)
+
+It is intended to make these settings (IP addresses, ports) configurable
+in future versions.
+
+=== Logging
+
+`remsim-server` currently logs to stdout only, and the logging verbosity
+is not yet configurable.  However, as the libosmocore logging framework
+is used, extending this is an easy modification.
+
+=== RESTful/JSON Web API
+
+`remsim-server` provides a RESTful/JSON WEB API for application logic
+integration.  The purpose of the API is to allow run-time configuration
+and monitoring of the entire osmo-remsim system.
+
+The API currently has version 1, and the URL prefix is /api/backend/v1
+
+==== /api/backend/v1/clients
+
+*GET* obtains a JSON list where each element represents one currently
+connected `remsim-client`.
+
+No other HTTP operation is implemented.
+
+==== /api/backend/v1/clients/:client_id
+
+*GET* obtains a single JSON object representing one specific currently
+connected `remsim-client`.
+
+No other HTTP operation is implemented.
+
+==== /api/backend/v1/bankds
+
+*GET* obtains a JSON list where each element represents one currently
+connected `remsim-bankd`.
+
+No other HTTP operation is implemented.
+
+==== /api/backend/v1/bankds/:bank_id
+
+*GET* obtains a single JSON object representing one specific currently
+connected `remsim-bankd`.
+
+No other HTTP operation is implemented.
+
+==== /api/backend/v1/slotmaps
+
+*GET* obtains a JSON list where each element represents one provisioned
+slot mapping.
+
+*POST* creates a new slot mapping as specified in the JSON syntax
+contained in the HTTP body.
+
+No other HTTP operation is implemented.
+
+==== /api/backend/v1/slotmaps/:slotmap_id
+
+*DELETE* deletes a slot mapping by its identifier.  If the mapping is
+currently in use, the related bankd is instructed to disconnect the
+client from the card.
+
+No other HTTP operation is implemented.
+
+==== /api/backend/v1/global-reset
+
+*POST* performs a global reset of the `remsim-server` state.  This means
+all mappings are removed.
