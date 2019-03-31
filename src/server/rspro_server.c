@@ -456,9 +456,12 @@ static int handle_rx_rspro(struct rspro_client_conn *conn, const RsproPDU_t *pdu
 	case RsproPDUchoice_PR_configClientIdRes:
 		osmo_fsm_inst_dispatch(conn->fi, CLNTC_E_CONFIG_CL_RES, (void *)pdu);
 		break;
+	case RsproPDUchoice_PR_configClientBankRes:
+		/* TODO: store somewhere that client has ACKed? */
+		break;
 	default:
-		LOGPFSML(conn->fi, LOGL_ERROR, "Received unknown/unimplemented RSPRO msg_type %d\n",
-			 pdu->msg.present);
+		LOGPFSML(conn->fi, LOGL_ERROR, "Received unknown/unimplemented RSPRO msg_type %s\n",
+			 rspro_msgt_name(pdu));
 		return -1;
 	}
 	return 0;
