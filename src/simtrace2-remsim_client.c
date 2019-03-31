@@ -97,7 +97,7 @@ static void *g_tall_ctx;
 void __thread *talloc_asn1_ctx;
 int asn_debug;
 
-static int gsmtap_send_sim(const uint8_t *apdu, unsigned int len)
+__attribute__((unused)) static int gsmtap_send_sim(const uint8_t *apdu, unsigned int len)
 {
 	struct gsmtap_hdr *gh;
 	unsigned int gross_len = len + sizeof(*gh);
@@ -270,7 +270,7 @@ static int cardem_request_sw_tx(struct cardem_inst *ci, const uint8_t *sw)
 }
 
 // FIXME check if the ATR actually includes a checksum
-static void atr_update_csum(uint8_t *atr, unsigned int atr_len)
+__attribute__((unused)) static void atr_update_csum(uint8_t *atr, unsigned int atr_len)
 {
 	uint8_t csum = 0;
 	int i;
@@ -394,7 +394,7 @@ static int process_do_pts(struct cardem_inst *ci, uint8_t *buf, int len)
 }
 
 /*! \brief Process a ERROR indication message from the SIMtrace2 */
-static int process_do_error(struct cardem_inst *ci, uint8_t *buf, int len)
+__attribute__((unused)) static int process_do_error(struct cardem_inst *ci, uint8_t *buf, int len)
 {
 	struct cardemu_usb_msg_error *err;
 	err = (struct cardemu_usb_msg_error *) buf;
