@@ -227,7 +227,8 @@ static void srvc_st_established_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 	if (srvc->own_comp_id.type == ComponentType_remsimClient)
 		pdu = rspro_gen_ConnectClientReq(&srvc->own_comp_id, srvc->clslot);
 	else
-		pdu = rspro_gen_ConnectBankReq(&srvc->own_comp_id, 1, 8 /* FIXME */);
+		pdu = rspro_gen_ConnectBankReq(&srvc->own_comp_id, srvc->bankd.bank_id,
+					       srvc->bankd.num_slots);
 	server_conn_send_rspro(srvc, pdu);
 }
 
