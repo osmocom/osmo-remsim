@@ -1,5 +1,24 @@
 == simtrace2-remsim-client
 
+The client interfaces with GSM phones / modems via dedicated "Card
+Emulation" devices such as the Osmocom SIMtrace2 or sysmocom sysmoQMOD
+board + firmware.  This hardware implements the ISO7816-3 electrical
+interface and protocol handling and  passes any TPDU headers received
+from the phone/modem to `remsim-client` for further processing of the
+TPDUs associated to the given APDU transfer.
+
+`remsim-client` connects via a <<RSPRO>> control connection to remsim-server
+at startup and registers itself.  It will receive configuration data
+such as the `remsim-bankd` IP+Port and the ClientId from remsim-server.
+
+After receiving the configuration, `remsim-client` will establish a RSPRO
+data connection to the `remsim-bankd` IP:Port.
+
+As the USB interface for remote SIM in simtrace2.git uses one interface
+per slot, we can implement the client in blocking mode, i.e. use
+blocking I/O on the TCP/RSPRO side.  This simplifies the code compared
+to a more complex async implementation.
+
 === Running
 
 simtrace2-remsim-client currently has the following command-line options:
