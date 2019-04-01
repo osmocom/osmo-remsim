@@ -60,7 +60,7 @@ approach seems to make more sense.
 
 ==== SYNOPSIS
 
-*remsim-bankd* [-h] [-i A.B.C.D] [-p <1-65535>] [-b <1-65535>] [-I A.B.C.D] [-P <1-65535> ]
+*remsim-bankd* [-h] [-i A.B.C.D] [-p <1-65535>] [-b <1-65535>] [-n <1-65535>] [-I A.B.C.D] [-P <1-65535> ]
 
 ==== OPTIONS
 
@@ -75,6 +75,8 @@ approach seems to make more sense.
 *-b, --bank-id <1-65535>*::
   Specify the numeric bank identifier of the SIM bank this bankd instance
   operates.  Must be unique among all banks connecting to the same remsim-server.
+*-n, --num-slots <1-65535>*::
+  Specify the number of slots that this bankd handles.
 *-I, --bind-IP A.B.C.D*::
   Specify the local IP address to which the socket for incoming connections
   from remsim-clients is bound to.

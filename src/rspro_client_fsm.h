@@ -34,6 +34,12 @@ struct rspro_server_conn {
 	/* configuration */
 	char *server_host;
 	uint16_t server_port;
+
+	/* only in case we are representing a bankd client */
+	struct {
+		uint16_t bank_id;
+		uint16_t num_slots;
+	} bankd;
 };
 
 int ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *rspro);

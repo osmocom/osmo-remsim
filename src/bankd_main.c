@@ -82,8 +82,8 @@ static void bankd_init(struct bankd *bankd)
 	pthread_mutex_init(&bankd->workers_mutex, NULL);
 
 	/* set some defaults, overridden by commandline/config */
-	bankd->cfg.bank_id = 1;
-	bankd->cfg.num_slots = 8;
+	bankd->srvc.bankd.bank_id = 1;
+	bankd->srvc.bankd.num_slots = 8;
 
 	bankd->comp_id.type = ComponentType_remsimBankd;
 	OSMO_STRLCPY_ARRAY(bankd->comp_id.name, "fixme-name");
@@ -149,13 +149,13 @@ static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t
 		break;
 	case RsproPDUchoice_PR_createMappingReq:
 		creq = &pdu->msg.choice.createMappingReq;
-		if (creq->bank.bankId != g_bankd->cfg.bank_id) {
+		if (creq->bank.bankId != g_bankd->srvc.bankd.bank_id) {
 			LOGPFSML(srvc->fi, LOGL_ERROR, "createMapping specifies invalid Bank ID %lu "
-				 "(we are %u)\n", creq->bank.bankId, g_bankd->cfg.bank_id);
+				 "(we are %u)\n", creq->bank.bankId, g_bankd->srvc.bankd.bank_id);
 			resp = rspro_gen_CreateMappingRes(ResultCode_illegalBankId);
-		} else if (creq->bank.slotNr >= g_bankd->cfg.num_slots) {
+		} else if (creq->bank.slotNr >= g_bankd->srvc.bankd.num_slots) {
 			LOGPFSML(srvc->fi, LOGL_ERROR, "createMapping specifies invalid Slot Nr %lu "
-				 "(we have %u)\n", creq->bank.slotNr, g_bankd->cfg.num_slots);
+				 "(we have %u)\n", creq->bank.slotNr, g_bankd->srvc.bankd.num_slots);
 			resp = rspro_gen_CreateMappingRes(ResultCode_illegalSlotId);
 		} else {
 			rspro2bank_slot(&bs, &creq->bank);
@@ -172,13 +172,13 @@ static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t
 		break;
 	case RsproPDUchoice_PR_removeMappingReq:
 		rreq = &pdu->msg.choice.removeMappingReq;
-		if (rreq->bank.bankId != g_bankd->cfg.bank_id) {
+		if (rreq->bank.bankId != g_bankd->srvc.bankd.bank_id) {
 			LOGPFSML(srvc->fi, LOGL_ERROR, "removeMapping specifies invalid Bank ID %lu "
-				 "(we are %u)\n", creq->bank.bankId, g_bankd->cfg.bank_id);
+				 "(we are %u)\n", creq->bank.bankId, g_bankd->srvc.bankd.bank_id);
 			resp = rspro_gen_RemoveMappingRes(ResultCode_illegalBankId);
-		} else if (rreq->bank.slotNr >= g_bankd->cfg.num_slots) {
+		} else if (rreq->bank.slotNr >= g_bankd->srvc.bankd.num_slots) {
 			LOGPFSML(srvc->fi, LOGL_ERROR, "removeMapping specifies invalid Slot Nr %lu "
-				 "(we have %u)\n", creq->bank.slotNr, g_bankd->cfg.num_slots);
+				 "(we have %u)\n", creq->bank.slotNr, g_bankd->srvc.bankd.num_slots);
 			resp = rspro_gen_RemoveMappingRes(ResultCode_illegalSlotId);
 		} else {
 			rspro2bank_slot(&bs, &rreq->bank);
@@ -223,6 +223,7 @@ static void printf_help()
 "  -i --server-host A.B.C.D	remsim-server IP address (default: 127.0.0.1)\n"
 "  -p --server-port <1-65535>	remsim-server TCP port (default: 9998)\n"
 "  -b --bank-id <1-65535>	Bank Identifier of this SIM bank (default: 1)\n"
+"  -b --num-slots <1-65535>	Number of Slots in this SIM bank (default: 8)\n"
 "  -I --bind-ip A.B.C.D		Local IP address to bind for incoming client\n"
 "				connections (default: INADDR_ANY)\n"
 "  -P --bind-port <1-65535>	Local TCP port to bind for incoming client\n"
@@ -242,13 +243,14 @@ void handle_options(int argc, char **argv)
 			{ "server-host", 1, 0, 'i' },
 			{ "server-port", 1, 0, 'p' },
 			{ "bank-id", 1, 0, 'b' },
+			{ "num-slots", 1, 0, 'n' },
 			{ "component-name", 1, 0, 'N' },
 			{ "bind-ip", 1, 0, 'I' },
 			{ "bind-port", 1, 0, 'P' },
 			{ 0, 0, 0, 0 }
 		};
 
-		c = getopt_long(argc, argv, "hi:o:b:N:I:P:", long_options, &option_index);
+		c = getopt_long(argc, argv, "hi:o:b:n:N:I:P:", long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -264,7 +266,10 @@ void handle_options(int argc, char **argv)
 			g_bankd->srvc.server_port = atoi(optarg);
 			break;
 		case 'b':
-			g_bankd->cfg.bank_id = atoi(optarg);
+			g_bankd->srvc.bankd.bank_id = atoi(optarg);
+			break;
+		case 'n':
+			g_bankd->srvc.bankd.num_slots = atoi(optarg);
 			break;
 		case 'N':
 			OSMO_STRLCPY_ARRAY(g_bankd->srvc.own_comp_id.name, optarg);
@@ -318,7 +323,7 @@ int main(int argc, char **argv)
 	g_bankd->accept_fd = rc;
 
 	/* create worker threads: One per reader/slot! */
-	for (i = 0; i < g_bankd->cfg.num_slots; i++) {
+	for (i = 0; i < g_bankd->srvc.bankd.num_slots; i++) {
 		struct bankd_worker *w;
 		w = bankd_create_worker(g_bankd, i);
 		if (!w)

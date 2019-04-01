@@ -110,11 +110,6 @@ struct bankd_driver_ops {
 
 /* global bank deamon */
 struct bankd {
-	struct {
-		uint16_t bank_id;
-		uint16_t num_slots;
-	} cfg;
-
 	struct app_comp_id comp_id;
 	/* RSPRO connection to the remsim-server */
 	struct rspro_server_conn srvc;
