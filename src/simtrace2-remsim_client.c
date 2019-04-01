@@ -155,7 +155,7 @@ int st_transp_tx_msg(struct st_transport *transp, struct msgb *msg)
 
 	rc = libusb_bulk_transfer(transp->usb_devh, transp->usb_ep.out,
 		msgb_data(msg), msgb_length(msg),
-		&xfer_len, 100000);
+		&xfer_len, 1000);
 
 	msgb_free(msg);
 	return rc;
