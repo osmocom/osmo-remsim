@@ -68,10 +68,10 @@ approach seems to make more sense.
   Print a short help message about the supported options
 *-i, --server-host A.B.C.D*::
   Specify the remote IP address/hostname of the remsim-server to which this bankd
-  shall establish its <<RSPRO>> control connection
+  shall establish its RSPRO control connection
 *-p, --server-port <1-65535>*::
   Specify the remote TCP port number of the remsim-server to whihc this bankd
-  shall establish its <<RSPRO>> control connection
+  shall establish its RSPRO control connection
 *-b, --bank-id <1-65535>*::
   Specify the numeric bank identifier of the SIM bank this bankd instance
   operates.  Must be unique among all banks connecting to the same remsim-server.
@@ -93,7 +93,7 @@ is used, extending this is an easy modification.
 bankd expects a CSV file `bankd_pcsc_slots.csv` in the current working directory at startup.
 
 This CSV file specifies the mapping between the string names of the PCSC
-readers and the <<RSPRO>> bandk/slot numbers.  The format is as follows:
+readers and the RSPRO bandk/slot numbers.  The format is as follows:
 
 .Example: CSV file mapping bankd slots 0..4 to an ACS ACR33U-A1 reader slots
 ----

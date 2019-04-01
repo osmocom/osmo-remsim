@@ -7,7 +7,7 @@ interface and protocol handling and  passes any TPDU headers received
 from the phone/modem to `remsim-client` for further processing of the
 TPDUs associated to the given APDU transfer.
 
-`remsim-client` connects via a <<RSPRO>> control connection to remsim-server
+`remsim-client` connects via a RSPRO control connection to remsim-server
 at startup and registers itself.  It will receive configuration data
 such as the `remsim-bankd` IP+Port and the ClientId from remsim-server.
 
@@ -33,10 +33,10 @@ simtrace2-remsim-client currently has the following command-line options:
   Print a short help message about the supported options
 *-s, --server-host A.B.C.D*::
   Specify the remote IP address / hostname of the remsim-server to which
-  this client shall establish its <<RSPRO>> control connection
+  this client shall establish its RSPRO control connection
 *-p, --server-port <1-65535>*::
   Specify the remote TCP port number of the remsim-server to which this client
-  shall establish its <<RSPRO>> control connection
+  shall establish its RSPRO control connection
 *-c, --client-id <1-65535>*::
   Specify the numeric client identifier of the SIM bank this bankd
   instance operates.  The tuple of client-id and client-slot must be unique
