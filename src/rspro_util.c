@@ -86,7 +86,7 @@ RsproPDU_t *rspro_dec_msg(struct msgb *msg)
 	RsproPDU_t *pdu = NULL;
 	asn_dec_rval_t rval;
 
-	printf("decoding %s\n", msgb_hexdump(msg));
+	//printf("decoding %s\n", msgb_hexdump(msg));
 	rval = ber_decode(NULL, &asn_DEF_RsproPDU, (void **) &pdu, msgb_l2(msg), msgb_l2len(msg));
 	if (rval.code != RC_OK) {
 		fprintf(stderr, "Failed to decode: %d. Consumed %lu of %u bytes\n",
