@@ -11,4 +11,4 @@ bin_PROGRAMS = remsim-server
 remsim_server_SOURCES = remsim_server.c rspro_server.c rest_api.c ../rspro_util.c ../slotmap.c ../debug.c
 remsim_server_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
 		      $(ULFIUS_LIBS) $(JANSSON_LIBS) \
-		      ../libosmo-rspro.la
+		      $(top_builddir)/src/libosmo-rspro.la
