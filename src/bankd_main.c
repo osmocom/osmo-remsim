@@ -28,6 +28,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <errno.h>
+#include <getopt.h>
 
 #include <pthread.h>
 
@@ -215,9 +216,67 @@ static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t
 	return 0;
 }
 
+static void printf_help()
+{
+	printf(
+"  -h --help			Print this help message\n"
+"  -i --server-host A.B.C.D	remsim-server IP address (default: 127.0.0.1)\n"
+"  -p --server-port <1-65535>	remsim-server TCP port (default: 9998)\n"
+"  -b --bank-id <1-65535>	Bank Identifier of this SIM bank (default: 1)\n"
+"  -I --bind-ip A.B.C.D		Local IP address to bind for incoming client\n"
+"				connections (default: INADDR_ANY)\n"
+"  -P --bind-port <1-65535>	Local TCP port to bind for incoming client\n"
+"				connectionss (default: 9999)\n"
+	      );
+}
+
+static int g_bind_port = 9999;
+static char *g_bind_ip = NULL;
 
 void handle_options(int argc, char **argv)
 {
+	while (1) {
+		int option_index = 0, c;
+		static const struct option long_options[] = {
+			{ "help", 0, 0, 'h' },
+			{ "server-host", 1, 0, 'i' },
+			{ "server-port", 1, 0, 'p' },
+			{ "bank-id", 1, 0, 'b' },
+			{ "component-name", 1, 0, 'N' },
+			{ "bind-ip", 1, 0, 'I' },
+			{ "bind-port", 1, 0, 'P' },
+			{ 0, 0, 0, 0 }
+		};
+
+		c = getopt_long(argc, argv, "hi:o:b:N:I:P:", long_options, &option_index);
+		if (c == -1)
+			break;
+
+		switch (c) {
+		case 'h':
+			printf_help();
+			exit(0);
+			break;
+		case 'i':
+			g_bankd->srvc.server_host = optarg;
+			break;
+		case 'p':
+			g_bankd->srvc.server_port = atoi(optarg);
+			break;
+		case 'b':
+			g_bankd->cfg.bank_id = atoi(optarg);
+			break;
+		case 'N':
+			OSMO_STRLCPY_ARRAY(g_bankd->srvc.own_comp_id.name, optarg);
+			break;
+		case 'I':
+			g_bind_ip = optarg;
+			break;
+		case 'P':
+			g_bind_port = atoi(optarg);
+			break;
+		}
+	}
 }
 
 int main(int argc, char **argv)
@@ -253,7 +312,7 @@ int main(int argc, char **argv)
 	}
 
 	/* create listening socket for inbound client connections */
-	rc = osmo_sock_init(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 9999, OSMO_SOCK_F_BIND);
+	rc = osmo_sock_init(AF_INET, SOCK_STREAM, IPPROTO_TCP, g_bind_ip, g_bind_port, OSMO_SOCK_F_BIND);
 	if (rc < 0)
 		exit(1);
 	g_bankd->accept_fd = rc;

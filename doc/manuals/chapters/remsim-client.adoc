@@ -1,0 +1,70 @@
+== simtrace2-remsim-client
+
+=== Running
+
+simtrace2-remsim-client currently has the following command-line options:
+
+==== SYNOPSIS
+
+*simtrace2-remsim-client* [...]
+
+==== OPTIONS
+
+*-h, --help*::
+  Print a short help message about the supported options
+*-s, --server-host A.B.C.D*::
+  Specify the remote IP address / hostname of the remsim-server to which
+  this client shall establish its <<RSPRO>> control connection
+*-p, --server-port <1-65535>*::
+  Specify the remote TCP port number of the remsim-server to which this client
+  shall establish its <<RSPRO>> control connection
+*-c, --client-id <1-65535>*::
+  Specify the numeric client identifier of the SIM bank this bankd
+  instance operates.  The tuple of client-id and client-slot must be unique
+  among all clients connecting to the same remsim-server.
+*-n, --client-slot <0-65535>*::
+  Specify the slot number served within this client.  The tuple of
+  client-id and client-slot must be unique among all clients connecting
+  to the same remsim-server.
+*-i, --gsmtap-ip A.B.C.D*::
+  Specify the IP address (if any) to which APDU traces are sent in
+  GSMTAP format (useful for debugging; supported by wireshark).
+*-k, --keep-running*::
+  Specify if the remsim-client should terminate after handling one
+  session, or whether it should keep running.  Fast respawn (i.e. no
+  --keep-running) is probably the more robust option at this point.
+*-V, --usb-vendor*::
+  Specify the USB Vendor ID of the USB device served by this client,
+  use e.g. 0x1d50 for SIMtrace2, sysmoQMOD and OWHW.
+*-P, --usb-product*::
+  Specify the USB Product ID of the USB device served by this client,
+  use e.g. 0x4004 for sysmoQMOD.
+*-C, --usb-config*::
+  Specify the USB Cofiguration number of the USB device served by this
+  client. Default will use current configuration of the device.
+*-I, --usb-interface*::
+  Specify the USB Interface number (within active configuration) of the
+  USB device served by this client.  Default will use FIXME.
+*-S, --usb-altsetting*::
+  Specify the USB Alternate Setting to be used within the USB Interface
+  of the USB device served by this client.  Default will use FIXME.
+*-A, --usb-address <0-255>*::
+  Specify the USB Address of the USB device served by this client. This
+  is useful in case multiple identical USB devices are attached to the
+  same host.  However, the address changed at every re-enumeration and
+  it's therefor recommended to use the USB path (see below).
+*-H, --usb-path*::
+  Specify the USB path of the USB device served by this client. This is
+  usefule to disambiguate between multiple identical USB devices
+  attached to the same host.  You don't need this if you have only one
+  SIM emulation device attached to your system.
+*-a, --atr HEXSTRING*::
+  Specify the initial ATR to be communicated to the modem/phone.  Can
+  and will later be overridden by the ATR as specified by remsim-bankd
+  once a card has been mapped to this client.
+
+=== Logging
+
+remsim-client currently logs to stdout only, and the logging verbosity
+is not yet configurable.  However, as the libosmocore logging framework
+is used, extending this is an easy modification.

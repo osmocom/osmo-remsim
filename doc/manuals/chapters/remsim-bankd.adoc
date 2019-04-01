@@ -1,0 +1,51 @@
+== remsim-bankd
+
+=== Running
+
+remsim-bankd currently has the following command-line options:
+
+==== SYNOPSIS
+
+*remsim-bankd* [-h] [-i A.B.C.D] [-p <1-65535>] [-b <1-65535>] [-I A.B.C.D] [-P <1-65535> ]
+
+==== OPTIONS
+
+*-h, --help*::
+  Print a short help message about the supported options
+*-i, --server-ip A.B.C.D*::
+  Specify the remote IP address of the remsim-server to which this bankd
+  shall establish its <<RSPRO>> control connection
+*-p, --server-port <1-65535>*::
+  Specify the remote TCP port number of the remsim-server to whihc this bankd
+  shall establish its <<RSPRO>> control connection
+*-b, --bank-id <1-65535>*::
+  Specify the numeric bank identifier of the SIM bank this bankd instance
+  operates.  Must be unique among all banks connecting to the same remsim-server.
+*-I, --bind-IP A.B.C.D*::
+  Specify the local IP address to which the socket for incoming connections
+  from remsim-clients is bound to.
+*-P, --bind-port <1-65535>*::
+  Specify the local TCP port to whicc the socket for incoming connections
+  from remsim-clients is bound to.
+
+=== Logging
+
+remsim-bankd currently logs to stdout only, and the logging verbosity
+is not yet configurable.  However, as the libosmocore logging framework
+is used, extending this is an easy modification.
+
+=== `bankd_pcsc_slots.csv` CSV file
+
+bankd expects a CSV file `bankd_pcsc_slots.csv` in the current working directory at startup.
+
+This CSV file specifies the mapping between the string names of the PCSC
+readers and the <<RSPRO>> bandk/slot numbers.  The format is as follows:
+
+.Example: CSV file mapping bankd slots 0..4 to an ACS ACR33U-A1 reader slots
+----
+"1","0","ACS ACR33 ICC Reader 00 00"
+"1","1","ACS ACR33 ICC Reader 00 01"
+"1","2","ACS ACR33 ICC Reader 00 02"
+"1","3","ACS ACR33 ICC Reader 00 03"
+"1","4","ACS ACR33 ICC Reader 00 04"
+----
