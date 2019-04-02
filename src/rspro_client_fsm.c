@@ -311,7 +311,7 @@ static int server_conn_fsm_timer_cb(struct osmo_fsm_inst *fi)
 		osmo_fsm_inst_state_chg(fi, SRVC_ST_REESTABLISH, T2_RECONNECT, 2);
 		break;
 	case 1:
-		/* FIXME: close connection and re-start connection attempt */
+		/* close connection and re-start connection attempt */
 		ipa_client_conn_close(srvc->conn);
 		osmo_fsm_inst_dispatch(fi, SRVC_E_TCP_DOWN, NULL);
 		break;

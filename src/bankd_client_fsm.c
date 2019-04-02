@@ -106,7 +106,7 @@ static void bdc_st_established_onenter(struct osmo_fsm_inst *fi, uint32_t prev_s
 	struct bankd_client *bc = (struct bankd_client *) fi->priv;
 	RsproPDU_t *pdu;
 
-	/* FIXME: Send ClientConnReq */
+	/* Send ClientConnReq */
 	pdu = rspro_gen_ConnectClientReq(&bc->srv_conn.own_comp_id, bc->srv_conn.clslot);
 	_bankd_conn_send_rspro(bc, pdu);
 }

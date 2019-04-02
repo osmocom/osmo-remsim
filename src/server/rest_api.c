@@ -331,7 +331,7 @@ static int api_cb_slotmaps_post(const struct _u_request *req, struct _u_response
 	llist_for_each_entry(conn, &srv->banks, list) {
 		if (conn->bank.bank_id == slotmap.bank.bank_id) {
 			slotmap_state_change(map, SLMAP_S_NEW, &conn->bank.maps_new);
-			/* FIXME: Notify the conn FSM about some new maps being available */
+			/* Notify the conn FSM about some new maps being available */
 			trigger_main_thread_via_eventfd();
 			break;
 		}
