@@ -41,8 +41,16 @@ PKG_CHECK_MODULES(OSMOABIS, libosmoabis)
 PKG_CHECK_MODULES(OSMOSIM, libosmosim)
 PKG_CHECK_MODULES(PCSC, libpcsclite)
 PKG_CHECK_MODULES(USB, libusb-1.0)
-PKG_CHECK_MODULES(ULFIUS, libulfius)
-PKG_CHECK_MODULES(JANSSON, jansson)
+
+AC_ARG_ENABLE([remsim-server],[AS_HELP_STRING([--disable-remsim-server], [Build osmo-remsim-server])],
+	[osmo_ac_build_server="$enableval"],[osmo_ac_build_server="yes"])
+if test "$osmo_ac_build_server" = "yes"; then
+	PKG_CHECK_MODULES(ULFIUS, libulfius)
+	PKG_CHECK_MODULES(JANSSON, jansson)
+	AC_DEFINE(BUILD_SERVER, 1, [Define if we want to build osmo-remsim-server])
+fi
+AM_CONDITIONAL(BUILD_SERVER, test "x$osmo_ac_build_server" = "xyes")
+AC_SUBST(BUILD_SERVER)
 
 AC_CONFIG_MACRO_DIR([m4])
 
