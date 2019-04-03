@@ -2,6 +2,9 @@ AUTOMAKE_OPTIONS = foreign dist-bzip2
 
 SUBDIRS = src include doc
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libosmo-rspro.pc
+
 EXTRA_DIST = asn1 .version README.md
 
 pkgcofigdir = $(libdir)/pkgconfig

@@ -129,6 +129,7 @@ AC_MSG_RESULT([CPPFLAGS="$CPPFLAGS"])
 
 AC_OUTPUT(
 	Makefile
+	libosmo-rspro.pc
 	doc/Makefile
 	doc/manuals/Makefile
 	src/Makefile

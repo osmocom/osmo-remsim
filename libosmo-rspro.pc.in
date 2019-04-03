@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: Osmocom RSPRO library
+Description: Osmocom Remote SIM Protocol library
+Version: @VERSION@
+Libs: -L${libdir} -losmo-rspro
+Cflags: -I${includedir}/
