@@ -1,0 +1,6 @@
+osmo-remsim (0.1.0) unstable; urgency=medium
+
+  [ Harald Welte ]
+  * initial release.
+
+ -- Harald Welte <laforge@gnumonks.org>  Wed, 03 Apr 2019 08:59:40 +0200

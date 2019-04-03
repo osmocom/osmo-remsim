@@ -1,0 +1,69 @@
+Source: osmo-remsim
+Maintainer: Harald Welte <laforge@gnumonks.org>
+Section: net
+Priority: optional
+Build-Depends: debhelper (>= 9),
+               pkg-config,
+               dh-autoreconf,
+               dh-systemd (>= 1.5),
+               autotools-dev,
+               pkg-config,
+               libosmocore-dev,
+               libosmo-abis-dev,
+               libpcsclite-dev,
+               libusb-1.0-0-dev,
+               libulfius-dev,
+               libjansson-dev
+Standards-Version: 3.9.8
+Vcs-Browser: http://git.osmocom.org/osmo-remsim/
+Vcs-Git: git://git.osmocom.org/osmo-remsim
+Homepage: https://projects.osmocom.org/projects/osmo-remsim
+
+Package: libosmo-rspro0
+Section: libs
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Pre-Depends: ${misc:Pre-Depends}
+Description: Osmocom Remote SIM - Shared Library
+ libosmo-rsrpo is an utility library for encoding/decoding the ASN.1 BER
+ based RSPRO (Remote SIM Protocol) protocol used between the osmo-remsim
+ programs.
+
+Package: libosmo-rspro-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends: ${misc:Depends}
+Description: Osmocom Remote SIM - Shared Library Development Haders
+ libosmo-rsrpo is an utility library for encoding/decoding the ASN.1 BER
+ based RSPRO (Remote SIM Protocol) protocol used between the osmo-remsim
+ programs.
+
+Package: osmo-remsim-server
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Osmocom Remote SIM - Central Server
+ The remsim-server is the central element of a osmo-remsim deployment,
+ it maintains a list of clients + bankds connected to it, as well as the
+ dynamic SIM card mappings between them.
+
+Package: osmo-remsim-bankd
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Osmocom Remote SIM - Bank Daemon
+ The remsim-bankd is managing a bank of SIM card readers and their
+ respective cards.  It establishes a control connection to remsim-server
+ and receives inbound connections from remsim-clients.
+
+Package: osmo-remsim-client
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Osmocom Remote SIM - Client
+ The remsim-client is managing a given phone/modem.  It attaches to the
+ 'cardem' firmware of a SIMtrcace2 (or compatible, such as sysmoQMOD)
+ hardware and forwards the SIM card communication to a remsim-bankd,
+ under the control of remsim-server.
