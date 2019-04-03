@@ -19,6 +19,7 @@ configure
 compile
 depcomp
 install-sh
+libosmo-rspro.pc
 libtool
 ltmain.sh
 missing
@@ -29,8 +30,22 @@ tags
 m4
 gen_rspro.stamp
 
-src/pcsc_test
-src/remsim-bankd
-src/remsim-client
-src/simtrace2-remsim-client
-src/server/remsim-server
+src/osmo-remsim-client
+src/osmo-remsim-client-st2
+src/bankd/pcsc_test
+src/bankd/osmo-remsim-bankd
+src/server/osmo-remsim-server
+
+contrib/deps
+deps
+
+debian/tmp
+debian/osmo-remsim-*
+debian/libosmo-rspro0
+debian/libosmo-rspro-dev
+debian/*.substvars
+debian/*.debhelper.log
+debian/autoreconf.*
+debian/.debhelper
+debian/debhelper*
+debian/files
