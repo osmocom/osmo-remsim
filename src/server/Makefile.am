@@ -12,3 +12,8 @@ remsim_server_SOURCES = remsim_server.c rspro_server.c rest_api.c ../rspro_util.
 remsim_server_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
 		      $(ULFIUS_LIBS) $(JANSSON_LIBS) \
 		      $(top_builddir)/src/libosmo-rspro.la
+
+# as suggested in http://lists.gnu.org/archive/html/automake/2009-03/msg00011.html
+FORCE:
+$(top_builddir)/src/libosmo-rspro.la: FORCE
+	(cd $(top_builddir)/src && $(MAKE) $(AM_MAKEFLAGS) libosmo-rspro.la)
