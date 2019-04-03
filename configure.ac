@@ -39,7 +39,6 @@ PKG_CHECK_MODULES(OSMOCORE, libosmocore >= 0.11.0)
 PKG_CHECK_MODULES(OSMOGSM, libosmogsm >= 0.11.0)
 PKG_CHECK_MODULES(OSMOABIS, libosmoabis)
 PKG_CHECK_MODULES(OSMOSIM, libosmosim)
-PKG_CHECK_MODULES(PCSC, libpcsclite)
 PKG_CHECK_MODULES(USB, libusb-1.0)
 
 AC_ARG_ENABLE([remsim-server],[AS_HELP_STRING([--disable-remsim-server], [Build osmo-remsim-server])],
@@ -51,6 +50,16 @@ if test "$osmo_ac_build_server" = "yes"; then
 fi
 AM_CONDITIONAL(BUILD_SERVER, test "x$osmo_ac_build_server" = "xyes")
 AC_SUBST(BUILD_SERVER)
+
+AC_ARG_ENABLE([remsim-bankd],[AS_HELP_STRING([--disable-remsim-bankd], [Build osmo-remsim-bankd])],
+	[osmo_ac_build_bankd="$enableval"],[osmo_ac_build_bankd="yes"])
+if test "$osmo_ac_build_bankd" = "yes"; then
+	AC_DEFINE(BUILD_BANKD, 1, [Define if we want to build osmo-remsim-bankd])
+fi
+AM_CONDITIONAL(BUILD_BANKD, test "x$osmo_ac_build_bankd" = "xyes")
+	PKG_CHECK_MODULES(PCSC, libpcsclite)
+AC_SUBST(BUILD_BANKD)
+
 
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -142,6 +151,7 @@ AC_OUTPUT(
 	doc/manuals/Makefile
 	src/Makefile
 	src/rspro/Makefile
+	src/bankd/Makefile
 	src/server/Makefile
 	include/Makefile
 	include/osmocom/Makefile

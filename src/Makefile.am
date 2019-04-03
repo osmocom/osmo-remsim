@@ -1,4 +1,7 @@
 SUBDIRS = rspro
+if BUILD_BANKD
+SUBDIRS += bankd
+endif
 if BUILD_SERVER
 SUBDIRS += server
 endif
@@ -15,7 +18,7 @@ libosmo_rspro_la_LIBADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
 			  rspro/libosmo-asn1-rspro.la
 libosmo_rspro_la_SOURCES = rspro_util.c asn1c_helpers.c
 
-noinst_HEADERS = debug.h bankd.h client.h internal.h rspro_util.h slotmap.h rspro_client_fsm.h \
+noinst_HEADERS = debug.h client.h rspro_util.h slotmap.h rspro_client_fsm.h \
 		 asn1c_helpers.h \
 		 simtrace2/apdu_dispatch.h \
 		 simtrace2/libusb_util.h \
@@ -23,16 +26,7 @@ noinst_HEADERS = debug.h bankd.h client.h internal.h rspro_util.h slotmap.h rspr
 		 simtrace2/simtrace_prot.h \
 		 simtrace2/simtrace_usb.h
 
-bin_PROGRAMS = osmo-remsim-bankd osmo-remsim-client-st2
-noinst_PROGRAMS = pcsc_test remsim-client
-
-pcsc_test_SOURCES = driver_core.c driver_pcsc.c main.c
-pcsc_test_LDADD = $(OSMOCORE_LIBS) \
-		  $(PCSC_LIBS) libosmo-rspro.la
-
-osmo_remsim_bankd_SOURCES = slotmap.c bankd_main.c bankd_pcsc.c rspro_client_fsm.c debug.c
-osmo_remsim_bankd_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
-			  $(PCSC_LIBS) libosmo-rspro.la -lcsv
+bin_PROGRAMS = osmo-remsim-client-st2
 
 remsim_client_SOURCES = remsim_client.c rspro_client_fsm.c bankd_client_fsm.c debug.c
 remsim_client_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
