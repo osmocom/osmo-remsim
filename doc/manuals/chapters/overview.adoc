@@ -36,51 +36,51 @@ the Osmocom project, including the Osmocom SIMtrace project.
 
 Development of osmo-remsim software was funded by GSMK and sysmocom.
 
-=== remsim-server
+=== osmo-remsim-server
 
-The remsim-server is the central element of the osmo-remsim
+The `osmo-remsim-server` is the central element of the osmo-remsim
 architecture.  All other elements connect to it.  It maintains the
 inventory of other network elements, as well as the list of
 slot-mappings, i.e. the relationship between each given physical card
 in a bank and each card emulator attached to a phone/modem.
 
-The tasks of remsim-server include:
+The tasks of `osmo-remsim-server` include:
 
-* accepting incoming TCP control connections from remsim-client and
-  remsim-bankd instances
+* accepting incoming TCP control connections from `osmo-remsim-client` and
+  `osmo-remsim-bankd` instances
 * providing a RESTful JSON interface for external application logic to
 
-=== remsim-client
+=== osmo-remsim-client
 
-The remsim-client software is co-located next to a cellular phone/modem.
+The `osmo-remsim-client` software is co-located next to a cellular phone/modem.
 It typically runs on an [embedded] computer next to the phone/modem.
 
-The tasks of remsim-client include:
+The tasks of `osmo-remsim-client` include:
 
 * interaction over USB with a device supported by the 'SIMtrace2 cardem'
   firmware, which provides the physical interface to the phone/modem SIM
   interface
-* establishing a TCP connection with the remsim-server, in order to
+* establishing a TCP connection with the `osmo-remsim-server`, in order to
   enable the server to issue control commands
-* under control of remsim-server, establishing a TCP connection to a
-  remsim-bankd in order to connect a card physically located at the
+* under control of `osmo-remsim-server`, establishing a TCP connection to a
+  `osmo-remsim-bankd` in order to connect a card physically located at the
   bankd.
 
-remsim-client supports at this point only one phone/modem.  If you have
+`osmo-remsim-client` supports at this point only one phone/modem.  If you have
 multiple phones/modems at one location, you can simply run multiple
-instances of remsim-client on the same system, one for each phone/modem.
+instances of `osmo-remsim-client` on the same system, one for each phone/modem.
 
-=== remsim-bankd
+=== osmo-remsim-bankd
 
-The remsim-bankd software is co-located next to a bank of SIM cards.
+The `osmo-remsim-bankd` software is co-located next to a bank of SIM cards.
 
-The tasks of remsim-bankd include:
+The tasks of `osmo-remsim-bankd` include:
 
 * interaction with the actual card reader hardware.  At this point, only
   PC/SC based readers are supported, with 1 to 255 slots per reader.
-* establishing a TCP connection with the remsim-server, in order to
+* establishing a TCP connection with the `osmo-remsim-server`, in order to
   enable the server to issue control commands
-* running a TCP server where TCP connections from remsim-client
+* running a TCP server where TCP connections from `osmo-remsim-client`
   instances are accepted and handled.
 
 

@@ -1,18 +1,18 @@
-== remsim-bankd
+== osmo-remsim-bankd
 
-The `remsim-bankd` (SIM Bank Daemon) manages one given SIM bank.  The
-initial implementation supports a PC/SC driver to expose any PC/SC
+The `osmo-remsim-bankd` (SIM Bank Daemon) manages one given SIM bank.
+The initial implementation supports a PC/SC driver to expose any PC/SC
 compatible card readers as SIM bank.
 
-`remsim-bankd` initially connects via a RSPRO control connection to
-`remsim-server` at startup, and will in turn receive a set of initial
-[client,slot]:[bankd,slot] mappings.  These mappings determine which
-slot on the client (corresponding to a modem) is mapped to which slot on
-the SIM bank.  Mappings can be updated by `remsim-server` at any given
-point in time.
+`osmo-remsim-bankd` initially connects via a RSPRO control connection to
+`osmo-remsim-server` at startup, and will in turn receive a set of
+initial [client,slot]:[bankd,slot] mappings.  These mappings determine
+which slot on the client (corresponding to a modem) is mapped to which
+slot on the SIM bank.  Mappings can be updated by `osmo-remsim-server`
+at any given point in time.
 
-`remsim-bankd` implements a RSPRO server, where it listens to connections
-from `remsim-clients`.
+`osmo-remsim-bankd` implements a RSPRO server, where it listens to
+connections from `osmo-remsim-clients`.
 
 As PC/SC only offers a blocking API, there is one thread per PC/SC slot.
 This thread will perform blocking I/O on the socket towards the client,
@@ -32,10 +32,10 @@ reader, and that mapping is only established at a later point after the
 client has identified itself.  The advantage is that the entire bankd
 can live without any non-blocking I/O.
 
-The main thread handles the connection to `remsim-server`, where it can
-also use non-blocking I/O.  However, re-connection would be required, to
-avoid stalling all banks/cards in the event of a connection loss to the
-server.
+The main thread handles the connection to `osmo-remsim-server`, where it
+can also use non-blocking I/O.  However, re-connection would be
+required, to avoid stalling all banks/cards in the event of a connection
+loss to the server.
 
 worker threads have the following states:
 * INIT (just started)
@@ -56,39 +56,40 @@ approach seems to make more sense.
 
 === Running
 
-`remsim-bankd` currently has the following command-line options:
+`osmo-remsim-bankd` currently has the following command-line options:
 
 ==== SYNOPSIS
 
-*remsim-bankd* [-h] [-i A.B.C.D] [-p <1-65535>] [-b <1-65535>] [-n <1-65535>] [-I A.B.C.D] [-P <1-65535> ]
+*osmo-remsim-bankd* [-h] [-i A.B.C.D] [-p <1-65535>] [-b <1-65535>] [-n <1-65535>] [-I A.B.C.D] [-P <1-65535> ]
 
 ==== OPTIONS
 
 *-h, --help*::
   Print a short help message about the supported options
 *-i, --server-host A.B.C.D*::
-  Specify the remote IP address/hostname of the remsim-server to which this bankd
-  shall establish its RSPRO control connection
+  Specify the remote IP address/hostname of the `osmo-remsim-server` to
+  which this bankd shall establish its RSPRO control connection
 *-p, --server-port <1-65535>*::
-  Specify the remote TCP port number of the remsim-server to whihc this bankd
-  shall establish its RSPRO control connection
+  Specify the remote TCP port number of the `osmo-remsim-server` to which
+  this bankd shall establish its RSPRO control connection
 *-b, --bank-id <1-65535>*::
-  Specify the numeric bank identifier of the SIM bank this bankd instance
-  operates.  Must be unique among all banks connecting to the same remsim-server.
+  Specify the numeric bank identifier of the SIM bank this bankd
+  instance operates.  Must be unique among all banks connecting to the
+  same `osmo-remsim-server`.
 *-n, --num-slots <1-65535>*::
   Specify the number of slots that this bankd handles.
 *-I, --bind-IP A.B.C.D*::
   Specify the local IP address to which the socket for incoming connections
-  from remsim-clients is bound to.
+  from `osmo-remsim-clients` is bound to.
 *-P, --bind-port <1-65535>*::
   Specify the local TCP port to whicc the socket for incoming connections
-  from remsim-clients is bound to.
+  from `osmo-remsim-client`s is bound to.
 
 === Logging
 
-remsim-bankd currently logs to stdout only, and the logging verbosity
-is not yet configurable.  However, as the libosmocore logging framework
-is used, extending this is an easy modification.
+`osmo-remsim-bankd` currently logs to stdout only, and the logging
+verbosity is not yet configurable.  However, as the libosmocore logging
+framework is used, extending this is an easy modification.
 
 === `bankd_pcsc_slots.csv` CSV file
 
