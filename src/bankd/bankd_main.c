@@ -91,11 +91,7 @@ static void bankd_init(struct bankd *bankd)
 	OSMO_STRLCPY_ARRAY(bankd->comp_id.sw_version, PACKAGE_VERSION);
 	/* FIXME: other members of app_comp_id */
 
-	/* Np lock or mutex required for the pcsc_slot_names list, as this is only
-	 * read once during bankd initialization, when the worker threads haven't
-	 * started yet */
 	INIT_LLIST_HEAD(&bankd->pcsc_slot_names);
-	OSMO_ASSERT(bankd_pcsc_read_slotnames(bankd, "bankd_pcsc_slots.csv") == 0);
 }
 
 /* create + start a new bankd_worker thread */
@@ -308,6 +304,11 @@ int main(int argc, char **argv)
 	g_bankd->main = pthread_self();
 	signal(SIGMAPDEL, handle_sig_mapdel);
 	signal(SIGUSR1, handle_sig_usr1);
+
+	/* Np lock or mutex required for the pcsc_slot_names list, as this is only
+	 * read once during bankd initialization, when the worker threads haven't
+	 * started yet */
+	OSMO_ASSERT(bankd_pcsc_read_slotnames(g_bankd, "bankd_pcsc_slots.csv") == 0);
 
 	/* Connection towards remsim-server */
 	rc = server_conn_fsm_alloc(g_bankd, srvc);
