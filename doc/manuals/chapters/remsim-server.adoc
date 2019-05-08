@@ -40,14 +40,14 @@ connected `osmo-remsim-client`.
 
 No other HTTP operation is implemented.
 
-==== /api/backend/v1/bankds
+==== /api/backend/v1/banks
 
 *GET* obtains a JSON list where each element represents one currently
 connected `osmo-remsim-bankd`.
 
 No other HTTP operation is implemented.
 
-==== /api/backend/v1/bankds/:bank_id
+==== /api/backend/v1/banks/:bank_id
 
 *GET* obtains a single JSON object representing one specific currently
 connected `osmo-remsim-bankd`.
