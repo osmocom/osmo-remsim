@@ -219,7 +219,7 @@ static void printf_help()
 "  -i --server-host A.B.C.D	remsim-server IP address (default: 127.0.0.1)\n"
 "  -p --server-port <1-65535>	remsim-server TCP port (default: 9998)\n"
 "  -b --bank-id <1-65535>	Bank Identifier of this SIM bank (default: 1)\n"
-"  -b --num-slots <1-65535>	Number of Slots in this SIM bank (default: 8)\n"
+"  -n --num-slots <1-65535>	Number of Slots in this SIM bank (default: 8)\n"
 "  -I --bind-ip A.B.C.D		Local IP address to bind for incoming client\n"
 "				connections (default: INADDR_ANY)\n"
 "  -P --bind-port <1-65535>	Local TCP port to bind for incoming client\n"
