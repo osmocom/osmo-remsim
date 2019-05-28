@@ -1,0 +1,12 @@
+[Unit]
+Description=Osmocom Remote SIM Server
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/bin/osmo-remsim-server
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+
