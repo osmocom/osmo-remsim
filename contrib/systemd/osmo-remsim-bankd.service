@@ -1,0 +1,14 @@
+[Unit]
+Description=Osmocom Remote SIM BankD
+
+[Service]
+Type=simple
+Restart=always
+EnvironmentFile=/etc/default/osmo-remsim-bankd
+WorkingDirectory=/etc/osmocom
+ExecStart=/usr/bin/osmo-remsim-bankd $BANKD_OPTS
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+

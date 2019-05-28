@@ -1,0 +1,5 @@
+# Default settings for osmo-remsim-bankd This file is sourced by systemd
+
+# Options to pass to osmo-remsim-bankd
+BANKD_OPTS="-i 10.9.99.1 -n 5"
+
