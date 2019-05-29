@@ -1,0 +1,14 @@
+[Unit]
+Description=Osmocom Remote SIM Client %i
+
+[Service]
+Type=simple
+Restart=always
+EnvironmentFile=/etc/default/osmo-remsim-client
+EnvironmentFile=/etc/default/osmo-remsim-client-%i
+ExecStart=/usr/bin/osmo-remsim-client-st2 $GLOBAL_CLIENT_OPTS -I $REMSIM_I -H $REMSIM_H -c $REMSIM_c
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,4 @@
+# Default settings for osmo-remsim-client This file is sourced by systemd
+
+# Options to pass to osmo-remsim-client
+GLOBAL_CLIENT_OPTS="-s 10.9.99.10 -V 1d50 -P 4004 -C 1"
