@@ -106,3 +106,15 @@ readers and the RSPRO bandk/slot numbers.  The format is as follows:
 "1","3","ACS ACR33 ICC Reader 00 03"
 "1","4","ACS ACR33 ICC Reader 00 04"
 ----
+
+You can obtain the exact string to use as PC/SC reader name from the output of the
+`pcsc_scan` utility (part of pcsc-lite package).  The tool will produce output like:
+
+.Example: Output of `pcsc_scan` utility on a system with a single reader installed
+----
+Scanning present readers...
+0: Alcor Micro AU9560 00 00
+----
+
+In this example, there's only a single PC/SC reader available, and it has a string of
+"Alcor Micro AU9560 00 00" whcih needs to be copy-pasted into the CSV file.
