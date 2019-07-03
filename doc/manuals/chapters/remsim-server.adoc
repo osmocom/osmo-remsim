@@ -76,3 +76,13 @@ No other HTTP operation is implemented.
 
 *POST* performs a global reset of the `osmo-remsim-server` state.  This
 means all mappings are removed.
+
+==== Examples
+.remsim-server is on 10.2.3.4, one simbank with 5 cards: http://10.2.3.4:9997/api/backend/v1/banks
+----
+{"banks":[{"peer":"B1","state":"CONNECTED_BANKD","component_id":{"type_":"remsimBankd","name":"fixme-name","software":"remsim-bankd","swVersion":"0.1.0.17-6d8a"},"bankId":1,"numberOfSlots":5}]}
+----
+.remsim-server is on 10.2.3.4, 4 clients: http://10.2.3.4:9997/api/backend/v1/clients
+----
+{"clients":[{"peer":"C0:2","state":"CONNECTED_CLIENT","component_id":{"type_":"remsimClient","name":"simtrace2-remsim-client","software":"remsim-client","swVersion":"0.1.0.17-6d8a"}},{"peer":"C0:0","state":"CONNECTED_CLIENT","component_id":{"type_":"remsimClient","name":"simtrace2-remsim-client","software":"remsim-client","swVersion":"0.1.0.17-6d8a"}},{"peer":"C0:3","state":"CONNECTED_CLIENT","component_id":{"type_":"remsimClient","name":"simtrace2-remsim-client","software":"remsim-client","swVersion":"0.1.0.17-6d8a"}},{"peer":"C0:1","state":"CONNECTED_CLIENT","component_id":{"type_":"remsimClient","name":"simtrace2-remsim-client","software":"remsim-client","swVersion":"0.1.0.17-6d8a"}}]}
+----
