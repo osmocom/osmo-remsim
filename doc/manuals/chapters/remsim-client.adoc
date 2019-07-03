@@ -83,6 +83,15 @@ osmo-remsim-client-st2 currently has the following command-line options:
   and will later be overridden by the ATR as specified by
   `osmo-remsim-bankd` once a card has been mapped to this client.
 
+==== Examples
+.remsim-server is on 10.2.3.4, sysmoQMOD on usb bus, all 4 modems:
+----
+osmo-remsim-client-st2 -s 10.2.3.4 -V 1d50 -P 4004 -C 1 -I 0 -H 2-1.1 -c 0 -n 0
+osmo-remsim-client-st2 -s 10.2.3.4 -V 1d50 -P 4004 -C 1 -I 1 -H 2-1.1 -c 0 -n 1
+osmo-remsim-client-st2 -s 10.2.3.4 -V 1d50 -P 4004 -C 1 -I 0 -H 2-1.4 -c 0 -n 2
+osmo-remsim-client-st2 -s 10.2.3.4 -V 1d50 -P 4004 -C 1 -I 1 -H 2-1.4 -c 0 -n 3
+----
+
 === Logging
 
 `osmo-remsim-client` currently logs to stdout only, and the logging

@@ -85,6 +85,16 @@ approach seems to make more sense.
   Specify the local TCP port to whicc the socket for incoming connections
   from `osmo-remsim-client`s is bound to.
 
+==== Examples
+.remsim-server is on 10.2.3.4, cardreader has 5 slots:
+----
+osmo-remsim-bankd -i 10.2.3.4 -n 5
+----
+.remsim-server is on 10.2.3.4, cardreader has 4 slots, local ip is 10.5.4.3
+----
+osmo-remsim-bankd -i 10.2.3.4 -n 4 -I 10.5.4.3
+----
+
 === Logging
 
 `osmo-remsim-bankd` currently logs to stdout only, and the logging

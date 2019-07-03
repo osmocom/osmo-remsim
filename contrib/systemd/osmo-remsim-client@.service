@@ -6,7 +6,7 @@ Type=simple
 Restart=always
 EnvironmentFile=/etc/default/osmo-remsim-client
 EnvironmentFile=/etc/default/osmo-remsim-client-%i
-ExecStart=/usr/bin/osmo-remsim-client-st2 $GLOBAL_CLIENT_OPTS -I $REMSIM_I -H $REMSIM_H -c $REMSIM_c
+ExecStart=/usr/bin/osmo-remsim-client-st2 $GLOBAL_CLIENT_OPTS -I $REMSIM_I -H $REMSIM_H -c $REMSIM_c -n $REMSIM_n
 RestartSec=2
 
 [Install]
