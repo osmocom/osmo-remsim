@@ -59,7 +59,7 @@ static void dump_apdu_ctx(const struct apdu_context *ac)
 }
 
 /*! \brief input function for APDU segmentation
- *  \param ac APDU context accross successive calls
+ *  \param ac APDU context across successive calls
  *  \param[in] apdu_buf APDU inpud data buffer
  *  \param[in] apdu_len Length of apdu_buf
  *  \param[in] new_apdu Is this the beginning of a new APDU?

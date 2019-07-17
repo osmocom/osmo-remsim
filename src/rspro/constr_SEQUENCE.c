@@ -166,7 +166,7 @@ SEQUENCE_decode_ber(asn_codec_ctx_t *opt_codec_ctx, asn_TYPE_descriptor_t *td,
 		}
 
 		if(ctx->left >= 0)
-			ctx->left += rval.consumed; /* ?Substracted below! */
+			ctx->left += rval.consumed; /* ?Subtracted below! */
 		ADVANCE(rval.consumed);
 
 		NEXT_PHASE(ctx);

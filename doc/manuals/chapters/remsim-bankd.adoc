@@ -127,4 +127,4 @@ Scanning present readers...
 ----
 
 In this example, there's only a single PC/SC reader available, and it has a string of
-"Alcor Micro AU9560 00 00" whcih needs to be copy-pasted into the CSV file.
+"Alcor Micro AU9560 00 00" which needs to be copy-pasted into the CSV file.

@@ -156,7 +156,7 @@ CHOICE_decode_ber(asn_codec_ctx_t *opt_codec_ctx, asn_TYPE_descriptor_t *td,
 			}
 
 			if(ctx->left >= 0) {
-				/* ?Substracted below! */
+				/* ?Subtracted below! */
 				ctx->left += rval.consumed;
 			}
 			ADVANCE(rval.consumed);

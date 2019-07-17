@@ -390,7 +390,7 @@ buffer_dump() {
 
 /*
  * Move the buffer content left N bits, possibly joining it with
- * preceeding content.
+ * preceding content.
  */
 static void
 buffer_shift_left(size_t offset, int bits) {
