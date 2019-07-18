@@ -613,6 +613,7 @@ static int sock_read_cb(struct ipa_server_conn *peer, struct msgb *msg)
 	default:
 		goto invalid;
 	}
+	msgb_free(msg);
 	return rc;
 
 invalid:
