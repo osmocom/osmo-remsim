@@ -31,6 +31,7 @@ int main(int argc, char **argv)
 
 	g_tall_ctx = talloc_named_const(NULL, 0, "global");
 	talloc_asn1_ctx = talloc_named_const(g_tall_ctx, 0, "asn1");
+	msgb_talloc_ctx_init(g_tall_ctx, 0);
 
 	osmo_init_logging2(g_tall_ctx, &log_info);
 
