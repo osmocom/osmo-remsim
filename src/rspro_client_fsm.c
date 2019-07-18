@@ -152,7 +152,7 @@ static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 	default:
 		goto invalid;
 	}
-
+	msgb_free(msg);
 	return rc;
 
 invalid:
