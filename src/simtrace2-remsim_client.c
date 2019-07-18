@@ -627,7 +627,7 @@ int bankd_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 	LOGPFSML(bc->bankd_fi, LOGL_DEBUG, "Received RSPRO %s\n", msgb_hexdump(msg));
 
 	rc = bankd_handle_msg(bc, msg);
-
+	msgb_free(msg);
 	return rc;
 
 invalid:
