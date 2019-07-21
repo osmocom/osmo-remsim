@@ -1,9 +1,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include <jansson.h>
 #include <ulfius.h>
+#include <orcania.h>
 
 #include <osmocom/core/utils.h>
 #include <osmocom/core/linuxlist.h>
@@ -461,13 +463,43 @@ static const struct _u_endpoint api_endpoints[] = {
 };
 
 static struct _u_instance g_instance;
+static pthread_mutex_t g_tall_lock = PTHREAD_MUTEX_INITIALIZER;
+static void *g_tall_rest;
 
-int rest_api_init(uint16_t port)
+static void *my_o_malloc(size_t sz)
+{
+	void *obj;
+	pthread_mutex_lock(&g_tall_lock);
+	obj = talloc_size(g_tall_rest, sz);
+	pthread_mutex_unlock(&g_tall_lock);
+	return obj;
+}
+
+static void *my_o_realloc(void *obj, size_t sz)
+{
+	pthread_mutex_lock(&g_tall_lock);
+	obj = talloc_realloc_size(g_tall_rest, obj, sz);
+	pthread_mutex_unlock(&g_tall_lock);
+	return obj;
+}
+
+static void my_o_free(void *obj)
+{
+	pthread_mutex_lock(&g_tall_lock);
+	talloc_free(obj);
+	pthread_mutex_unlock(&g_tall_lock);
+}
+
+int rest_api_init(void *ctx, uint16_t port)
 {
 	int i;
 
+	g_tall_rest = ctx;
+	o_set_alloc_funcs(my_o_malloc, my_o_realloc, my_o_free);
+
 	if (ulfius_init_instance(&g_instance, port, NULL, NULL) != U_OK)
 		return -1;
+	g_instance.mhd_response_copy_data = 1;
 
 	for (i = 0; i < ARRAY_SIZE(api_endpoints); i++)
 		ulfius_add_endpoint(&g_instance, &api_endpoints[i]);

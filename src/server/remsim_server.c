@@ -27,10 +27,12 @@ static void handle_sig_usr1(int signal)
 
 int main(int argc, char **argv)
 {
+	void *talloc_rest_ctx;
 	int rc;
 
 	g_tall_ctx = talloc_named_const(NULL, 0, "global");
 	talloc_asn1_ctx = talloc_named_const(g_tall_ctx, 0, "asn1");
+	talloc_rest_ctx = talloc_named_const(g_tall_ctx, 0, "rest");
 	msgb_talloc_ctx_init(g_tall_ctx, 0);
 
 	osmo_init_logging2(g_tall_ctx, &log_info);
@@ -56,7 +58,7 @@ int main(int argc, char **argv)
 
 	signal(SIGUSR1, handle_sig_usr1);
 
-	rc = rest_api_init(9997);
+	rc = rest_api_init(talloc_rest_ctx, 9997);
 	if (rc < 0)
 		goto out_eventfd;
 

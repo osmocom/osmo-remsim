@@ -45,6 +45,7 @@ AC_ARG_ENABLE([remsim-server],[AS_HELP_STRING([--disable-remsim-server], [Build 
 	[osmo_ac_build_server="$enableval"],[osmo_ac_build_server="yes"])
 if test "$osmo_ac_build_server" = "yes"; then
 	PKG_CHECK_MODULES(ULFIUS, libulfius)
+	PKG_CHECK_MODULES(ORCANIA, liborcania)
 	PKG_CHECK_MODULES(JANSSON, jansson)
 	AC_DEFINE(BUILD_SERVER, 1, [Define if we want to build osmo-remsim-server])
 fi
