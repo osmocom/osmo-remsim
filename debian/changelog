@@ -1,3 +1,45 @@
+osmo-remsim (0.2.0) unstable; urgency=medium
+
+  [ Harald Welte ]
+  * bankd: move bank_id / num_slots from g_bankd to remsim_srv_conn
+  * bankd: Use configured bank_id/nr_slots in ConnectBankReq
+  * cosmetic: remove some FIXME that actually are already fixed
+  * Makefile.am: Fix dependency of server on libosmo-rspro.la
+  * Add libosmo-rspro.pc.in for pkg-config integration
+  * rename executables to include osmo- name prefix
+  * Add Debian packaging information
+  * debian/control: add missing libcsv dependency
+  * configure.ac: Add --disable-remsim-server
+  * configure.ac: Add --disable-remsim-bankd
+  * update .gitignore
+  * README.md: add 'osmo-' prefix to remsim-{server,bankd,client}
+  * doc: REST API url is /banks, not /bankds
+  * bankd: Don't read CSV file until _after_ handling options
+  * doc: Describe how to obtains PC/SC reader string names
+  * remsim_server: Enable talloc tracking of msgb allocations
+  * remsim_client: Enable talloc tracking of msgb allocations
+  * rspro_server.c: Fix memory leak in processing inbound RSPRO
+  * remsim_client: Fix memory leak receiving RSPRO messages
+  * rspro_client_fsm: Fix memory leak processing RSPRO
+  * track libulfius and jansson memory allocations with talloc
+  * server: rest_api: Fix memory leak in slotmap post
+
+  [ Joachim Steiger ]
+  * osmo-remsim-bankd: Fix typo in help for --num-slots
+  * osmo-remsim-server: add systemd service script
+  * osmo-remsim-bankd: add systemd service script and etc/default config
+  * osmo-remsim-client: add systemd service script template and etc/default configs
+  * add examples to the command line options for remsim-bankd and remsim-client
+  * add examples to remsim-server (json output)
+
+  [ Oliver Smith ]
+  * contrib/jenkins.sh: run "make maintainer-clean"
+
+  [ Martin Hauke ]
+  * Fix common misspellings and typos
+
+ -- Harald Welte <laforge@gnumonks.org>  Sun, 21 Jul 2019 21:12:24 +0200
+
 osmo-remsim (0.1.0) unstable; urgency=medium
 
   [ Harald Welte ]
