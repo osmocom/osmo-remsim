@@ -309,7 +309,7 @@ static int api_cb_slotmaps_post(const struct _u_request *req, struct _u_response
 	struct slot_mapping slotmap, *map;
 	struct rspro_client_conn *conn;
 	json_error_t json_err;
-	json_t *json_req;
+	json_t *json_req = NULL;
 	int rc;
 
 	json_req = ulfius_get_json_body_request(req, &json_err);
@@ -341,10 +341,12 @@ static int api_cb_slotmaps_post(const struct _u_request *req, struct _u_response
 	pthread_rwlock_unlock(&srv->rwlock);
 
 
+	json_decref(json_req);
 	ulfius_set_empty_body_response(resp, 201);
 
 	return U_CALLBACK_COMPLETE;
 err:
+	json_decref(json_req);
 	ulfius_set_empty_body_response(resp, 400);
 	return U_CALLBACK_COMPLETE;
 }
