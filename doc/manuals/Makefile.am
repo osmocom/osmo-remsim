@@ -8,5 +8,6 @@ if BUILD_MANUALS
   include $(OSMO_GSM_MANUALS_DIR)/build/Makefile.asciidoc.inc
   osmo-remsim-usermanual.pdf: $(srcdir)/chapters/*.adoc
 
+  OSMO_REPOSITORY = osmo-remsim
   include $(OSMO_GSM_MANUALS_DIR)/build/Makefile.common.inc
 endif
