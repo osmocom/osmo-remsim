@@ -578,6 +578,7 @@ static int bankd_handle_setAtrReq(struct bankd_client *bc, RsproPDU_t *pdu)
 
 static int bankd_handle_msg(struct bankd_client *bc, struct msgb *msg)
 {
+	/* rspro_dec_msg takes ownership of msgb and talloc_free()s it in successful and unsuccessful case */
 	RsproPDU_t *pdu = rspro_dec_msg(msg);
 	if (!pdu) {
 		LOGPFSML(bc->bankd_fi, LOGL_ERROR, "Error decoding PDU\n");
@@ -627,7 +628,6 @@ int bankd_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 	LOGPFSML(bc->bankd_fi, LOGL_DEBUG, "Received RSPRO %s\n", msgb_hexdump(msg));
 
 	rc = bankd_handle_msg(bc, msg);
-	msgb_free(msg);
 	return rc;
 
 invalid:

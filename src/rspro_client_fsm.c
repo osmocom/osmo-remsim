@@ -130,6 +130,7 @@ static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 			break;
 		default:
 			break;
+		msgb_free(msg);
 		}
 		break;
 	case IPAC_PROTO_OSMO:
@@ -139,6 +140,8 @@ static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 		switch (he->proto) {
 		case IPAC_PROTO_EXT_RSPRO:
 			LOGPFSM(srvc->fi, "Received RSPRO %s\n", msgb_hexdump(msg));
+			/* respro_dec_msg() takes ownership of the input message buffer in successful
+			 * and unsuccessful cases */
 			pdu = rspro_dec_msg(msg);
 			if (!pdu)
 				goto invalid;
@@ -152,7 +155,6 @@ static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 	default:
 		goto invalid;
 	}
-	msgb_free(msg);
 	return rc;
 
 invalid:
