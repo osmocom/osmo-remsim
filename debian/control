@@ -8,6 +8,7 @@ Build-Depends: debhelper (>= 9),
                dh-systemd (>= 1.5),
                autotools-dev,
                pkg-config,
+               osmo-gsm-manuals-dev,
                libcsv-dev,
                libosmocore-dev,
                libosmo-abis-dev,
@@ -68,3 +69,11 @@ Description: Osmocom Remote SIM - Client
  'cardem' firmware of a SIMtrcace2 (or compatible, such as sysmoQMOD)
  hardware and forwards the SIM card communication to a remsim-bankd,
  under the control of remsim-server.
+
+package: osmo-remsim-doc
+Architecture: all
+Section: doc
+Priority: optional
+Depends: ${misc:Depends}
+Description: ${misc:Package} PDF documentation
+ User manual for ${misc:Package} in PDF format.
