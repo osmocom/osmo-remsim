@@ -20,7 +20,7 @@ include::{srcdir}/chapters/rspro.adoc[]
 
 //include::./common/chapters/logging.adoc[]
 
-include::{srcdir}/chapters/architecture.adoc[]
+//include::{srcdir}/chapters/architecture.adoc[]
 
 //include::./common/chapters/port_numbers.adoc[]
 
