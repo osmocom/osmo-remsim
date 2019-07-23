@@ -1,3 +1,12 @@
+osmo-remsim (0.2.1) unstable; urgency=medium
+
+  * rspro_client_fsm/remsim_client: Fix double-free
+  * usermanual: disable non-existant architecture chapter
+  * doc/manuals: Use correct path (osmo-remsim-doc)
+  * debian: build manuals as osmo-remsim-doc package
+
+ -- Harald Welte <laforge@gnumonks.org>  Tue, 23 Jul 2019 20:37:00 +0200
+
 osmo-remsim (0.2.0) unstable; urgency=medium
 
   [ Harald Welte ]
