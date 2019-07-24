@@ -121,8 +121,10 @@ static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 	switch (hh->proto) {
 	case IPAC_PROTO_IPACCESS:
 		rc = ipaccess_bts_handle_ccm(srvc->conn, &srvc->ipa_dev, msg);
-		if (rc < 0)
+		if (rc < 0) {
+			msgb_free(msg);
 			break;
+		}
 		switch (hh->data[0]) {
 		case IPAC_MSGT_PONG:
 			ipa_keepalive_fsm_pong_received(srvc->keepalive_fi);
@@ -130,8 +132,8 @@ static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 			break;
 		default:
 			break;
-		msgb_free(msg);
 		}
+		msgb_free(msg);
 		break;
 	case IPAC_PROTO_OSMO:
 		if (!he || msgb_l2len(msg) < sizeof(*he))
