@@ -5,7 +5,7 @@ SUBDIRS = src include doc
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libosmo-rspro.pc
 
-EXTRA_DIST = asn1 .version README.md
+EXTRA_DIST = asn1 .version README.md contrib/remsim-apitool.py
 
 pkgcofigdir = $(libdir)/pkgconfig
 
