@@ -69,7 +69,7 @@ def main(argv):
     group.add_argument("-c", "--show-clients",   help="show clients         (GET /clients)",nargs='?',const="all",default=None)
     group.add_argument("-b", "--show-banks",     help="show banks           (GET /banks)",nargs='?',const="all",default=None)
     group.add_argument("-s", "--show-slotmaps",  help="show slotmaps        (GET /slotmaps)",nargs='?',const="all",default=None)
-    group.add_argument("-m", "--create-slotmap", help="create new slotmap   (POST /slotmaps)",nargs=4,metavar=('bank_id', 'bank_slot','client_id','client_slot'))
+    group.add_argument("-m", "--create-slotmap", help="create new slotmap   (POST /slotmaps)", type=int, nargs=4,metavar=('bank_id', 'bank_slot','client_id','client_slot'))
     group.add_argument("-d", "--delete-slotmap", help="delete slotmapping   (DELETE /slotmaps/<id>)", type=int, nargs=2, metavar=('bank_id','bank_slot'))
     group.add_argument("-a", "--show-all",       help="show all (default if no argument given)", action="store_true")
 
