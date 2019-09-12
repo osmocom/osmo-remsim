@@ -45,8 +45,8 @@ def rest_delete(suffix):
 #rest calls
 def slotmap_create(bank_id, bank_slot, client_id, client_slot):
     js = {
-        'bank': {'bankId': bank_id, 'slotNr': bank_slot},
-        'client': {'clientId': client_id, 'slotNr': client_slot},
+        'bank': {'bankId': int(bank_id), 'slotNr': int(bank_slot)},
+        'client': {'clientId': int(client_id), 'slotNr': int(client_slot)},
         }
     return rest_post('/slotmaps', js)
 
