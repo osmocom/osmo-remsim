@@ -133,7 +133,6 @@ static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 		default:
 			break;
 		}
-		msgb_free(msg);
 		break;
 	case IPAC_PROTO_OSMO:
 		if (!he || msgb_l2len(msg) < sizeof(*he))
@@ -146,7 +145,7 @@ static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 			 * and unsuccessful cases */
 			pdu = rspro_dec_msg(msg);
 			if (!pdu)
-				goto invalid;
+				break;
 			rc = srvc->handle_rx(srvc, pdu);
 			ASN_STRUCT_FREE(asn_DEF_RsproPDU, pdu);
 			break;
@@ -157,6 +156,8 @@ static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 	default:
 		goto invalid;
 	}
+
+	msgb_free(msg);
 	return rc;
 
 invalid:

@@ -80,7 +80,7 @@ struct msgb *rspro_enc_msg(RsproPDU_t *pdu)
 	return msg;
 }
 
-/* consumes 'msg' _if_ it is successful */
+/* caller must make sure to free msg */
 RsproPDU_t *rspro_dec_msg(struct msgb *msg)
 {
 	RsproPDU_t *pdu = NULL;
@@ -91,11 +91,8 @@ RsproPDU_t *rspro_dec_msg(struct msgb *msg)
 	if (rval.code != RC_OK) {
 		fprintf(stderr, "Failed to decode: %d. Consumed %lu of %u bytes\n",
 			rval.code, rval.consumed, msgb_length(msg));
-		msgb_free(msg);
 		return NULL;
 	}
-
-	msgb_free(msg);
 
 	return pdu;
 }

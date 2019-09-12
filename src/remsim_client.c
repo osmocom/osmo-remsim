@@ -90,7 +90,6 @@ int bankd_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 		default:
 			break;
 		}
-		msgb_free(msg);
 		break;
 	case IPAC_PROTO_OSMO:
 		if (!he || msgb_l2len(msg) < sizeof(*he))
@@ -109,6 +108,7 @@ int bankd_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 		goto invalid;
 	}
 
+	msgb_free(msg);
 	return rc;
 
 invalid:
