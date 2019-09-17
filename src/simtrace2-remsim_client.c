@@ -692,9 +692,9 @@ static void print_welcome(void)
 static void print_help(void)
 {
 	printf( "\t-s\t--server-host HOST\n"
-		"\t-p\t--bankd-port PORT\n"
+		"\t-p\t--server-port PORT\n"
 		"\t-c\t--client-id <0-65535>\n"
-		"\t-n\t--slot-nr <0-65535>\n"
+		"\t-n\t--client-slot <0-65535>\n"
 		"\t-h\t--help\n"
 		"\t-i\t--gsmtap-ip\tA.B.C.D\n"
 		"\t-k\t--keep-running\n"
