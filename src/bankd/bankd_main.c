@@ -363,6 +363,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Unable to create Server conn FSM: %s\n", strerror(errno));
 		exit(1);
 	}
+	osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_ESTABLISH, NULL);
 
 	/* create listening socket for inbound client connections */
 	rc = osmo_sock_init(AF_INET, SOCK_STREAM, IPPROTO_TCP, g_bind_ip, g_bind_port, OSMO_SOCK_F_BIND);

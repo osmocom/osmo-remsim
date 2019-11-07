@@ -255,6 +255,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Unable to create Server conn FSM: %s\n", strerror(errno));
 		exit(1);
 	}
+	osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_ESTABLISH, NULL);
 
 	asn_debug = 0;
 

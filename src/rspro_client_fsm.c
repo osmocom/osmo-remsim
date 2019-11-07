@@ -100,6 +100,7 @@ enum server_conn_fsm_state {
 };
 
 static const struct value_string server_conn_fsm_event_names[] = {
+	OSMO_VALUE_STRING(SRVC_E_ESTABLISH),
 	OSMO_VALUE_STRING(SRVC_E_TCP_UP),
 	OSMO_VALUE_STRING(SRVC_E_TCP_DOWN),
 	OSMO_VALUE_STRING(SRVC_E_KA_TIMEOUT),
@@ -180,52 +181,10 @@ static const struct ipa_keepalive_params ka_params = {
 	.wait_for_resp = 10,
 };
 
-static void srvc_st_init_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
-{
-	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
-	int rc;
-
-	srvc->conn = ipa_client_conn_create(fi, NULL, 0, srvc->server_host, srvc->server_port,
-						srvc_updown_cb, srvc_read_cb, NULL, srvc);
-	if (!srvc->conn) {
-		LOGPFSM(fi, "Unable to create socket: %s\n", strerror(errno));
-		goto out_fi;
-	}
-
-	srvc->keepalive_fi = ipa_client_conn_alloc_keepalive_fsm(srvc->conn, &ka_params, fi->id);
-	if (!srvc->keepalive_fi) {
-		LOGPFSM(fi, "Unable to create keepalive FSM\n");
-		goto out_conn;
-	}
-	/* ensure parent is notified once keepalive FSM instance is dying */
-	osmo_fsm_inst_change_parent(srvc->keepalive_fi, srvc->fi, SRVC_E_KA_TIMEOUT);
-
-	/* Attempt to connect TCP socket */
-	rc = ipa_client_conn_open(srvc->conn);
-	if (rc < 0) {
-		LOGPFSML(fi, LOGL_NOTICE, "Unable to connect: %s\n", strerror(errno));
-		goto out_ka;
-	}
-
-	return;
-
-out_ka:
-	osmo_fsm_inst_term(srvc->keepalive_fi, OSMO_FSM_TERM_ERROR, NULL);
-out_conn:
-	ipa_client_conn_destroy(srvc->conn);
-out_fi:
-	osmo_fsm_inst_term(fi, OSMO_FSM_TERM_ERROR, NULL);
-}
-
 static void srvc_st_init(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
 	switch (event) {
-	case SRVC_E_TCP_UP:
-		osmo_fsm_inst_state_chg(fi, SRVC_ST_ESTABLISHED, T1_WAIT_CLIENT_CONN_RES, 1);
-		break;
-	case SRVC_E_TCP_DOWN:
-		osmo_fsm_inst_state_chg(fi, SRVC_ST_REESTABLISH, T2_RECONNECT, 2);
-		break;
+	case SRVC_E_ESTABLISH:
 	default:
 		OSMO_ASSERT(0);
 	}
@@ -290,12 +249,39 @@ static void srvc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
 	int rc;
 
-	ipa_keepalive_fsm_stop(srvc->keepalive_fi);
+	if (srvc->keepalive_fi) {
+		ipa_keepalive_fsm_stop(srvc->keepalive_fi);
+		osmo_fsm_inst_term(srvc->keepalive_fi, OSMO_FSM_TERM_REGULAR, NULL);
+		srvc->keepalive_fi = NULL;
+	}
+
+	if (srvc->conn) {
+		LOGPFSML(fi, LOGL_INFO, "Destroying existing connection to server\n");
+		ipa_client_conn_close(srvc->conn);
+		ipa_client_conn_destroy(srvc->conn);
+		srvc->conn = NULL;
+	}
+	LOGPFSML(fi, LOGL_INFO, "Creating TCP connection to server at %s:%u\n",
+		 srvc->server_host, srvc->server_port);
+	srvc->conn = ipa_client_conn_create(fi, NULL, 0, srvc->server_host, srvc->server_port,
+						srvc_updown_cb, srvc_read_cb, NULL, srvc);
+	if (!srvc->conn) {
+		LOGPFSML(fi, LOGL_FATAL, "Unable to create socket: %s\n", strerror(errno));
+		exit(1);
+	}
+
+	srvc->keepalive_fi = ipa_client_conn_alloc_keepalive_fsm(srvc->conn, &ka_params, fi->id);
+	if (!srvc->keepalive_fi) {
+		LOGPFSM(fi, "Unable to create keepalive FSM\n");
+		exit(1);
+	}
+	/* ensure parent is notified once keepalive FSM instance is dying */
+	osmo_fsm_inst_change_parent(srvc->keepalive_fi, srvc->fi, SRVC_E_KA_TIMEOUT);
 
 	/* Attempt to connect TCP socket */
 	rc = ipa_client_conn_open(srvc->conn);
 	if (rc < 0) {
-		LOGPFSM(fi, "Unable to connect RSPRO to %s:%d - %s\n",
+		LOGPFSML(fi, LOGL_FATAL, "Unable to connect RSPRO to %s:%u - %s\n",
 			srvc->server_host, srvc->server_port, strerror(errno));
 		/* FIXME: retry? Timer? Abort? */
 		OSMO_ASSERT(0);
@@ -316,16 +302,28 @@ static void srvc_st_reestablish(struct osmo_fsm_inst *fi, uint32_t event, void *
 	}
 }
 
+static void srvc_allstate_action(struct osmo_fsm_inst *fi, uint32_t event, void *data)
+{
+	switch (event) {
+	case SRVC_E_ESTABLISH:
+		osmo_fsm_inst_state_chg(fi, SRVC_ST_REESTABLISH, T2_RECONNECT, 2);
+		break;
+	default:
+		OSMO_ASSERT(0);
+	}
+}
+
 static int server_conn_fsm_timer_cb(struct osmo_fsm_inst *fi)
 {
 	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
 
 	switch (fi->T) {
 	case 2:
+		/* TCP reconnect failed: retry */
 		osmo_fsm_inst_state_chg(fi, SRVC_ST_REESTABLISH, T2_RECONNECT, 2);
 		break;
 	case 1:
-		/* close connection and re-start connection attempt */
+		/* no ClientConnectRes received: disconnect + reconnect */
 		ipa_client_conn_close(srvc->conn);
 		osmo_fsm_inst_dispatch(fi, SRVC_E_TCP_DOWN, NULL);
 		break;
@@ -339,10 +337,9 @@ static int server_conn_fsm_timer_cb(struct osmo_fsm_inst *fi)
 static const struct osmo_fsm_state server_conn_fsm_states[] = {
 	[SRVC_ST_INIT] = {
 		.name = "INIT",
-		.in_event_mask = S(SRVC_E_TCP_UP) | S(SRVC_E_TCP_DOWN),
-		.out_state_mask = S(SRVC_ST_ESTABLISHED) | S(SRVC_ST_REESTABLISH),
+		.in_event_mask = 0, /* S(SRVC_E_ESTABLISH) via allstate */
+		.out_state_mask = S(SRVC_ST_REESTABLISH),
 		.action = srvc_st_init,
-		.onenter = srvc_st_init_onenter,
 	},
 	[SRVC_ST_ESTABLISHED] = {
 		.name = "ESTABLISHED",
@@ -370,6 +367,8 @@ struct osmo_fsm rspro_client_server_fsm = {
 	.name = "RSPRO_CLIENT",
 	.states = server_conn_fsm_states,
 	.num_states = ARRAY_SIZE(server_conn_fsm_states),
+	.allstate_event_mask = S(SRVC_E_ESTABLISH),
+	.allstate_action = srvc_allstate_action,
 	.timer_cb = server_conn_fsm_timer_cb,
 	.log_subsys = DMAIN,
 	.event_names = server_conn_fsm_event_names,
@@ -384,8 +383,6 @@ int server_conn_fsm_alloc(void *ctx, struct rspro_server_conn *srvc)
 		return -1;
 
 	srvc->fi = fi;
-	/* onenter of the initial state is not automatically executed by osmo_fsm :( */
-	srvc_st_init_onenter(fi, 0);
 	return 0;
 }
 
