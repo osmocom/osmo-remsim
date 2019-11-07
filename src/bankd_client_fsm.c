@@ -152,6 +152,7 @@ static void bdc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_s
 	/* re-create bankd_conn */
 	if (bc->bankd_conn) {
 		LOGPFSML(fi, LOGL_INFO, "Destroying existing connection to bankd\n");
+		ipa_client_conn_close(bc->bankd_conn);
 		ipa_client_conn_destroy(bc->bankd_conn);
 		bc->bankd_conn = NULL;
 	}
