@@ -747,6 +747,8 @@ restart_wait:
 		switch (hh->data[0]) {
 		case IPAC_MSGT_PING:
 			return ipa_ccm_send_pong(worker->client.fd);
+		case IPAC_MSGT_ID_ACK:
+			return ipa_ccm_send_id_ack(g_worker->client.fd);
 		default:
 			LOGW(worker, "IPA CCM 0x%02x not implemented yet\n", hh->data[0]);
 			break;
