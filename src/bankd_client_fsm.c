@@ -271,5 +271,5 @@ int bankd_conn_fsm_alloc(struct bankd_client *bc)
 
 static __attribute__((constructor)) void on_dso_load(void)
 {
-	osmo_fsm_register(&remsim_client_bankd_fsm);
+	OSMO_ASSERT(osmo_fsm_register(&remsim_client_bankd_fsm) == 0);
 }

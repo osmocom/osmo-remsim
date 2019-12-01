@@ -382,5 +382,5 @@ int server_conn_fsm_alloc(void *ctx, struct rspro_server_conn *srvc)
 
 static __attribute__((constructor)) void on_dso_load(void)
 {
-	osmo_fsm_register(&rspro_client_server_fsm);
+	OSMO_ASSERT(osmo_fsm_register(&rspro_client_server_fsm) == 0);
 }

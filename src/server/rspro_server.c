@@ -491,7 +491,7 @@ struct osmo_fsm_inst *server_client_fsm_alloc(void *ctx, struct rspro_client_con
 
 static __attribute__((constructor)) void on_dso_load(void)
 {
-	osmo_fsm_register(&remsim_server_client_fsm);
+	OSMO_ASSERT(osmo_fsm_register(&remsim_server_client_fsm) == 0);
 }
 
 
