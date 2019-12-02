@@ -63,15 +63,18 @@ int bankd_conn_send_rspro(struct bankd_client *bc, RsproPDU_t *rspro)
 }
 
 /***********************************************************************
- * bankd connection FSM: Remsim Client connection to Bankd
+ * client-side FSM for RSPRO connection to remsim-bankd
+ *
+ * This is part of remsim-client and manages the connection to remsim-bankd,
+ * over which actual TPDU exchanges happen.
  ***********************************************************************/
 
 enum bankd_conn_fsm_state {
-	/* waiting for initial connectiong to remsim-bankd */
+	/* waiting for initial connection to remsim-bankd */
 	BDC_ST_INIT,
 	/* bankd connection established, waiting for ClientConnectRes */
 	BDC_ST_ESTABLISHED,
-	/* bankd connection etsablished, ClientConnect succeeded */
+	/* bankd connection established, ClientConnect succeeded */
 	BDC_ST_CONNECTED,
 	/* connection lost, we're waiting for a re-establish */
 	BDC_ST_REESTABLISH,

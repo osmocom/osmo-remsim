@@ -44,7 +44,16 @@
 #define T2_RECONNECT			10
 
 /***********************************************************************
- * server connection FSM: remsim-{client,bankd} to remsim-server
+ * client-side FSM for a RSPRO connection to remsim-server
+ *
+ * This implements the TCP/IPA client side of an RSPRO connection between
+ * a logical (TCP-level) client implementation and a remote RSPRO server.
+ *
+ * 'client' and 'server' here strictly refer to RSPRO protocol roles, not
+ * to be confused with the remsim-client or remsim-server!
+ *
+ * Specifically, this RSPRO client FSM is used by both remsim-client and
+ * remsim-bankd for their RSPRO control connection to remsim-server.
  ***********************************************************************/
 
 static void push_and_send(struct ipa_client_conn *ipa, struct msgb *msg_tx)
