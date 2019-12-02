@@ -77,6 +77,12 @@ int ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *rspro)
 	return 0;
 }
 
+static int _server_conn_send_rspro(struct rspro_server_conn *srvc, RsproPDU_t *rspro)
+{
+	LOGPFSM(srvc->fi, "Tx RSPRO %s\n", rspro_msgt_name(rspro));
+	return ipa_client_conn_send_rspro(srvc->conn, rspro);
+}
+
 int server_conn_send_rspro(struct rspro_server_conn *srvc, RsproPDU_t *rspro)
 {
 	if (!rspro) {
@@ -84,8 +90,11 @@ int server_conn_send_rspro(struct rspro_server_conn *srvc, RsproPDU_t *rspro)
 		osmo_log_backtrace(DMAIN, LOGL_ERROR);
 		return -EINVAL;
 	}
-	LOGPFSM(srvc->fi, "Tx RSPRO %s\n", rspro_msgt_name(rspro));
-	return ipa_client_conn_send_rspro(srvc->conn, rspro);
+	if (osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_RSPRO_TX, rspro) < 0) {
+		ASN_STRUCT_FREE(asn_DEF_RsproPDU, rspro);
+		return -EPERM;
+	}
+	return 0;
 }
 
 enum server_conn_fsm_state {
@@ -105,6 +114,7 @@ static const struct value_string server_conn_fsm_event_names[] = {
 	OSMO_VALUE_STRING(SRVC_E_TCP_DOWN),
 	OSMO_VALUE_STRING(SRVC_E_KA_TIMEOUT),
 	OSMO_VALUE_STRING(SRVC_E_CLIENT_CONN_RES),
+	OSMO_VALUE_STRING(SRVC_E_RSPRO_TX),
 	{ 0, NULL }
 };
 
@@ -202,7 +212,7 @@ static void srvc_st_established_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 	else
 		pdu = rspro_gen_ConnectBankReq(&srvc->own_comp_id, srvc->bankd.bank_id,
 					       srvc->bankd.num_slots);
-	server_conn_send_rspro(srvc, pdu);
+	_server_conn_send_rspro(srvc, pdu);
 }
 
 static void srvc_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *data)
@@ -234,10 +244,17 @@ static void srvc_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 
 static void srvc_st_connected(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
+	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
+	RsproPDU_t *pdu = NULL;
+
 	switch (event) {
 	case SRVC_E_TCP_DOWN:
 	case SRVC_E_KA_TIMEOUT:
 		osmo_fsm_inst_state_chg(fi, SRVC_ST_REESTABLISH, T2_RECONNECT, 2);
+		break;
+	case SRVC_E_RSPRO_TX:
+		pdu = data;
+		_server_conn_send_rspro(srvc, pdu);
 		break;
 	default:
 		OSMO_ASSERT(0);
@@ -350,7 +367,7 @@ static const struct osmo_fsm_state server_conn_fsm_states[] = {
 	},
 	[SRVC_ST_CONNECTED] = {
 		.name = "CONNECTED",
-		.in_event_mask = S(SRVC_E_TCP_DOWN) | S(SRVC_E_KA_TIMEOUT),
+		.in_event_mask = S(SRVC_E_TCP_DOWN) | S(SRVC_E_KA_TIMEOUT) | S(SRVC_E_RSPRO_TX),
 		.out_state_mask = S(SRVC_ST_REESTABLISH),
 		.action = srvc_st_connected,
 	},
