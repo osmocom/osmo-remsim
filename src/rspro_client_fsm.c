@@ -64,7 +64,7 @@ static void push_and_send(struct ipa_client_conn *ipa, struct msgb *msg_tx)
 	/* msg_tx is now queued and will be freed. */
 }
 
-int ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *rspro)
+static int ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *rspro)
 {
 	struct msgb *msg = rspro_enc_msg(rspro);
 	if (!msg) {
