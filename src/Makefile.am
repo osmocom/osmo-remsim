@@ -28,12 +28,12 @@ noinst_HEADERS = debug.h client.h rspro_util.h slotmap.h rspro_client_fsm.h \
 
 bin_PROGRAMS = osmo-remsim-client-st2
 
-remsim_client_SOURCES = remsim_client.c rspro_client_fsm.c bankd_client_fsm.c debug.c
+remsim_client_SOURCES = remsim_client.c rspro_client_fsm.c debug.c
 remsim_client_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
 		     libosmo-rspro.la
 
 osmo_remsim_client_st2_SOURCES = simtrace2-remsim_client.c \
-				 bankd_client_fsm.c rspro_client_fsm.c debug.c \
+				 rspro_client_fsm.c debug.c \
 				 simtrace2/apdu_dispatch.c \
 				 simtrace2/simtrace2-discovery.c \
 				 simtrace2/libusb_util.c

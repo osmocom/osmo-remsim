@@ -430,7 +430,7 @@ static int process_do_rx_da(struct cardem_inst *ci, uint8_t *buf, int len)
 		BankSlot_t bslot;
 		bank_slot2rspro(&bslot, &g_client->bankd_slot);
 		RsproPDU_t *pdu = rspro_gen_TpduModem2Card(g_client->srv_conn.clslot, &bslot, apdu_command, sizeof(ac.hdr) + ac.lc.tot); // create RSPRO packet
-		bankd_conn_send_rspro(g_client, pdu);
+		server_conn_send_rspro(&g_client->bankd_conn, pdu);
 		// the response will come separately
 	} else if (ac.lc.tot > ac.lc.cur) { // there is pending data from the modem
 		cardem_request_pb_and_rx(ci, ac.hdr.ins, ac.lc.tot - ac.lc.cur); // send procedure byte to get remaining data
@@ -532,7 +532,7 @@ static void signal_handler(int signal)
 
 /** remsim_client **/
 
-static int bankd_handle_tpduCardToModem(struct bankd_client *bc, RsproPDU_t *pdu)
+static int bankd_handle_tpduCardToModem(struct bankd_client *bc, const RsproPDU_t *pdu)
 {
 	OSMO_ASSERT(pdu);
 	OSMO_ASSERT(RsproPDUchoice_PR_tpduCardToModem == pdu->msg.present);
@@ -554,7 +554,7 @@ static int bankd_handle_tpduCardToModem(struct bankd_client *bc, RsproPDU_t *pdu
 	return 0;
 }
 
-static int bankd_handle_setAtrReq(struct bankd_client *bc, RsproPDU_t *pdu)
+static int bankd_handle_setAtrReq(struct bankd_client *bc, const RsproPDU_t *pdu)
 {
 	RsproPDU_t *resp;
 	int rc;
@@ -571,68 +571,33 @@ static int bankd_handle_setAtrReq(struct bankd_client *bc, RsproPDU_t *pdu)
 		resp = rspro_gen_SetAtrRes(ResultCode_cardTransmissionError);
 	if (!resp)
 		return -ENOMEM;
-	bankd_conn_send_rspro(g_client, resp);
+	server_conn_send_rspro(&g_client->bankd_conn, resp);
 
 	return 0;
 }
 
-static int bankd_handle_msg(struct bankd_client *bc, struct msgb *msg)
+/* handle incoming message from bankd */
+static int bankd_handle_rx(struct rspro_server_conn *bankdc, const RsproPDU_t *pdu)
 {
-	RsproPDU_t *pdu = rspro_dec_msg(msg);
-	if (!pdu) {
-		LOGPFSML(bc->bankd_fi, LOGL_ERROR, "Error decoding PDU\n");
-		return -1;
-	}
-
 	switch (pdu->msg.present) {
 	case RsproPDUchoice_PR_connectClientRes:
 		/* Store 'identity' of bankd to in peer_comp_id */
-		rspro_comp_id_retrieve(&bc->peer_comp_id, &pdu->msg.choice.connectClientRes.identity);
-		osmo_fsm_inst_dispatch(bc->bankd_fi, BDC_E_CLIENT_CONN_RES, pdu);
+		rspro_comp_id_retrieve(&bankdc->peer_comp_id, &pdu->msg.choice.connectClientRes.identity);
+		osmo_fsm_inst_dispatch(bankdc->fi, SRVC_E_CLIENT_CONN_RES, (void *) pdu);
 		break;
 	case RsproPDUchoice_PR_tpduCardToModem: // APDU response from card received
-		bankd_handle_tpduCardToModem(bc, pdu);
+		bankd_handle_tpduCardToModem(g_client, pdu);
 		break;
 	case RsproPDUchoice_PR_setAtrReq:
-		bankd_handle_setAtrReq(bc, pdu);
+		bankd_handle_setAtrReq(g_client, pdu);
 		break;
 	default:
-		LOGPFSML(bc->bankd_fi, LOGL_ERROR, "Unknown/Unsuppoerted RSPRO PDU %s: %s\n",
-			 rspro_msgt_name(pdu), msgb_hexdump(msg));
+		LOGPFSML(bankdc->fi, LOGL_ERROR, "Unknown/Unsuppoerted RSPRO PDU %s\n",
+			 rspro_msgt_name(pdu));
 		return -1;
 	}
 
 	return 0;
-}
-
-int bankd_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
-{
-	struct ipaccess_head *hh = (struct ipaccess_head *) msg->data;
-	struct ipaccess_head_ext *he = (struct ipaccess_head_ext *) msgb_l2(msg);
-	struct bankd_client *bc = conn->data;
-	int rc;
-
-	if (msgb_length(msg) < sizeof(*hh))
-		goto invalid;
-	msg->l2h = &hh->data[0];
-	if (hh->proto != IPAC_PROTO_OSMO)
-		goto invalid;
-	if (!he || msgb_l2len(msg) < sizeof(*he))
-		goto invalid;
-	msg->l2h = &he->data[0];
-
-	if (he->proto != IPAC_PROTO_EXT_RSPRO)
-		goto invalid;
-
-	LOGPFSML(bc->bankd_fi, LOGL_DEBUG, "Received RSPRO %s\n", msgb_hexdump(msg));
-
-	rc = bankd_handle_msg(bc, msg);
-	msgb_free(msg);
-	return rc;
-
-invalid:
-	msgb_free(msg);
-	return -1;
 }
 
 /* handle incoming messages from server */
@@ -651,18 +616,21 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 		if (!g_client->srv_conn.clslot)
 			g_client->srv_conn.clslot = talloc_zero(g_client, ClientSlot_t);
 		*g_client->srv_conn.clslot = pdu->msg.choice.configClientIdReq.clientSlot;
+		if (!g_client->bankd_conn.clslot)
+			g_client->bankd_conn.clslot = talloc_zero(g_client, ClientSlot_t);
+		*g_client->bankd_conn.clslot = *g_client->srv_conn.clslot;
 		/* send response to server */
 		resp = rspro_gen_ConfigClientIdRes(ResultCode_ok);
 		server_conn_send_rspro(srvc, resp);
 		break;
 	case RsproPDUchoice_PR_configClientBankReq:
 		/* store/set the bankd ip/port as instructed by the server */
-		osmo_talloc_replace_string(g_client, &g_client->bankd_host,
+		osmo_talloc_replace_string(g_client, &g_client->bankd_conn.server_host,
 					   rspro_IpAddr2str(&pdu->msg.choice.configClientBankReq.bankd.ip));
 		rspro2bank_slot(&g_client->bankd_slot, &pdu->msg.choice.configClientBankReq.bankSlot);
-		g_client->bankd_port = pdu->msg.choice.configClientBankReq.bankd.port;
+		g_client->bankd_conn.server_port = pdu->msg.choice.configClientBankReq.bankd.port;
 		/* instruct bankd FSM to connect */
-		osmo_fsm_inst_dispatch(g_client->bankd_fi, BDC_E_ESTABLISH, NULL);
+		osmo_fsm_inst_dispatch(g_client->bankd_conn.fi, SRVC_E_ESTABLISH, NULL);
 		/* send response to server */
 		resp = rspro_gen_ConfigClientBankRes(ResultCode_ok);
 		server_conn_send_rspro(srvc, resp);
@@ -733,7 +701,7 @@ static const struct option opts[] = {
 
 int main(int argc, char **argv)
 {
-	struct rspro_server_conn *srvc;
+	struct rspro_server_conn *srvc, *bankdc;
 	struct st_transport *transp = ci->slot->transp;
 	char *gsmtap_host = "127.0.0.1";
 	int rc;
@@ -853,6 +821,8 @@ int main(int argc, char **argv)
 		g_client->srv_conn.clslot = talloc_zero(g_client, ClientSlot_t);
 		g_client->srv_conn.clslot->clientId = client_id;
 		g_client->srv_conn.clslot->slotNr = client_slot;
+		g_client->bankd_conn.clslot = talloc_zero(g_client, ClientSlot_t);
+		*g_client->bankd_conn.clslot = *g_client->srv_conn.clslot;
 	}
 
 	srvc = &g_client->srv_conn;
@@ -870,12 +840,17 @@ int main(int argc, char **argv)
 	}
 	osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_ESTABLISH, NULL);
 
-	asn_debug = 0;
-
-	if (bankd_conn_fsm_alloc(g_client) < 0) {
-		fprintf(stderr, "Unable to connect: %s\n", strerror(errno));
+	bankdc = &g_client->bankd_conn;
+	/* server_host / server_port are configured from remsim-server */
+	bankdc->handle_rx = bankd_handle_rx;
+	memcpy(&bankdc->own_comp_id, &srvc->own_comp_id, sizeof(bankdc->own_comp_id));
+	rc = server_conn_fsm_alloc(g_client, bankdc);
+	if (rc < 0) {
+		fprintf(stderr, "Unable to create bankd conn FSM: %s\n", strerror(errno));
 		exit(1);
 	}
+
+	asn_debug = 0;
 
 	// connect to SIMtrace2 cardem
 	do {
