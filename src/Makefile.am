@@ -11,7 +11,7 @@ AM_CFLAGS = -Wall -I$(top_srcdir)/include -I$(top_builddir)/include \
 	    $(PCSC_CFLAGS) $(USB_CFLAGS) $(OSMOSIM_CFLAGS) \
 	    -I$(top_srcdir)/include/osmocom/rspro
 
-RSPRO_LIBVERSION=0:0:0
+RSPRO_LIBVERSION=1:0:0
 lib_LTLIBRARIES = libosmo-rspro.la
 libosmo_rspro_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(RSPRO_LIBVERSION)
 libosmo_rspro_la_LIBADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \

@@ -1,3 +1,23 @@
+osmo-remsim (0.2.2) unstable; urgency=medium
+
+  [ Harald Welte ]
+  * rspro_client_fsm: Fix another memory leak
+  * remsim-apitool: Fix slotmap-create (integer needed, not string!)
+  * rspro_dec_msg: Simplify msgb ownership handling
+  * bankd_client_fsm: close IPA client connection before re-establishing it
+  * Check for osmo_fsm_register() error return value
+  * cosmetic: more comments; spelling fixes in comments
+  * bankd: send IPA CCM ID_ACK after receiving ID_ACK
+
+  [ Joachim Steiger ]
+  * add contrib/remsim-apitool.py to control the REST-interface of osmo-remsim-server
+
+  [ Kévin Redon ]
+  * remsim-apitool.py: pass IDs as integer
+  * client: fix help strings
+
+ -- Harald Welte <laforge@osmocom.org>  Tue, 03 Dec 2019 20:38:18 +0100
+
 osmo-remsim (0.2.1) unstable; urgency=medium
 
   * rspro_client_fsm/remsim_client: Fix double-free
