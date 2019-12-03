@@ -243,6 +243,7 @@ static void printf_help()
 {
 	printf(
 "  -h --help			Print this help message\n"
+"  -V --version			Print the version of the program\n"
 "  -i --server-host A.B.C.D	remsim-server IP address (default: 127.0.0.1)\n"
 "  -p --server-port <1-65535>	remsim-server TCP port (default: 9998)\n"
 "  -b --bank-id <1-65535>	Bank Identifier of this SIM bank (default: 1)\n"
@@ -263,6 +264,7 @@ void handle_options(int argc, char **argv)
 		int option_index = 0, c;
 		static const struct option long_options[] = {
 			{ "help", 0, 0, 'h' },
+			{ "version", 0, 0, 'V' },
 			{ "server-host", 1, 0, 'i' },
 			{ "server-port", 1, 0, 'p' },
 			{ "bank-id", 1, 0, 'b' },
@@ -273,13 +275,17 @@ void handle_options(int argc, char **argv)
 			{ 0, 0, 0, 0 }
 		};
 
-		c = getopt_long(argc, argv, "hi:o:b:n:N:I:P:", long_options, &option_index);
+		c = getopt_long(argc, argv, "hVi:o:b:n:N:I:P:", long_options, &option_index);
 		if (c == -1)
 			break;
 
 		switch (c) {
 		case 'h':
 			printf_help();
+			exit(0);
+			break;
+		case 'V':
+			printf("osmo-remsim-bankd version %s\n", VERSION);
 			exit(0);
 			break;
 		case 'i':

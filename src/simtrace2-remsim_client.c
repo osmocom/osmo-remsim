@@ -696,6 +696,7 @@ static void print_help(void)
 		"\t-c\t--client-id <0-65535>\n"
 		"\t-n\t--client-slot <0-65535>\n"
 		"\t-h\t--help\n"
+		"\t-v\t--version\n"
 		"\t-i\t--gsmtap-ip\tA.B.C.D\n"
 		"\t-k\t--keep-running\n"
 		"\t-V\t--usb-vendor\tVENDOR_ID\n"
@@ -716,6 +717,7 @@ static const struct option opts[] = {
 	{ "client-id", 1, 0, 'c' },
 	{ "client-slot", 1, 0, 'n' },
 	{ "help", 0, 0, 'h' },
+	{ "version", 0, 0, 'v' },
 	{ "gsmtap-ip", 1, 0, 'i' },
 	{ "keep-running", 0, 0, 'k' },
 	{ "usb-vendor", 1, 0, 'V' },
@@ -751,7 +753,7 @@ int main(int argc, char **argv)
 	while (1) {
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "s:p:c:n:hi:kV:P:C:I:S:A:H:a:", opts, &option_index);
+		c = getopt_long(argc, argv, "s:p:c:n:hvi:kV:P:C:I:S:A:H:a:", opts, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -769,6 +771,10 @@ int main(int argc, char **argv)
 			break;
 		case 'h':
 			print_help();
+			exit(0);
+			break;
+		case 'v':
+			printf("osmo-remsim-client version %s\n", VERSION);
 			exit(0);
 			break;
 		case 'i':

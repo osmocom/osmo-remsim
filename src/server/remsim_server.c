@@ -1,6 +1,9 @@
 #include <unistd.h>
 #include <signal.h>
 
+#define _GNU_SOURCE
+#include <getopt.h>
+
 #include <sys/eventfd.h>
 
 #include <osmocom/core/utils.h>
@@ -25,6 +28,49 @@ static void handle_sig_usr1(int signal)
 	talloc_report_full(g_tall_ctx, stderr);
 }
 
+static void print_help()
+{
+	printf( "  Some useful help...\n"
+		"  -h --help			This text\n"
+		"  -V --version			Print version of the program\n"
+		);
+}
+
+static void handle_options(int argc, char **argv)
+{
+	while (1) {
+		int option_index = 0, c;
+		static struct option long_options[] = {
+			{ "help", 0, 0, 'h' },
+			{ "version", 0, 0, 'V' },
+			{0, 0, 0, 0}
+		};
+
+		c = getopt_long(argc, argv, "hV", long_options, &option_index);
+		if (c == -1)
+			break;
+
+		switch (c) {
+		case 'h':
+			print_help();
+			exit(0);
+			break;
+		case 'V':
+			printf("osmo-resmim-server version %s\n", VERSION);
+			exit(0);
+			break;
+		default:
+			/* ignore */
+			break;
+		}
+	}
+
+	if (argc > optind) {
+		fprintf(stderr, "Unsupported extra positional arguments in command line\n");
+		exit(2);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	void *talloc_rest_ctx;
@@ -36,6 +82,8 @@ int main(int argc, char **argv)
 	msgb_talloc_ctx_init(g_tall_ctx, 0);
 
 	osmo_init_logging2(g_tall_ctx, &log_info);
+
+	handle_options(argc, argv);
 
 	g_rps = rspro_server_create(g_tall_ctx, "0.0.0.0", 9998);
 	if (!g_rps)
