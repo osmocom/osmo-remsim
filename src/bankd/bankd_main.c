@@ -176,6 +176,18 @@ static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t
 		} else {
 			rspro2bank_slot(&bs, &creq->bank);
 			rspro2client_slot(&cs, &creq->client);
+			/* check if map exists */
+			map = slotmap_by_bank(g_bankd->slotmaps, &bs);
+			if (map) {
+				if (client_slot_equals(&map->client, &cs)) {
+					LOGPFSML(srvc->fi, LOGL_ERROR, "ignoring identical slotmap\n");
+					resp = rspro_gen_CreateMappingRes(ResultCode_ok);
+					goto send_resp;
+				} else {
+					LOGPFSM(srvc->fi, "implicitly removing slotmap\n");
+					bankd_srvc_remove_mapping(map);
+				}
+			}
 			/* Add a new mapping */
 			map = slotmap_add(g_bankd->slotmaps, &bs, &cs);
 			if (!map) {
@@ -184,6 +196,7 @@ static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t
 			} else
 				resp = rspro_gen_CreateMappingRes(ResultCode_ok);
 		}
+send_resp:
 		server_conn_send_rspro(srvc, resp);
 		break;
 	case RsproPDUchoice_PR_removeMappingReq:
