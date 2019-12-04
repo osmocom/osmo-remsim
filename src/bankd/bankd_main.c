@@ -190,11 +190,11 @@ static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t
 		rreq = &pdu->msg.choice.removeMappingReq;
 		if (rreq->bank.bankId != g_bankd->srvc.bankd.bank_id) {
 			LOGPFSML(srvc->fi, LOGL_ERROR, "removeMapping specifies invalid Bank ID %lu "
-				 "(we are %u)\n", creq->bank.bankId, g_bankd->srvc.bankd.bank_id);
+				 "(we are %u)\n", rreq->bank.bankId, g_bankd->srvc.bankd.bank_id);
 			resp = rspro_gen_RemoveMappingRes(ResultCode_illegalBankId);
 		} else if (rreq->bank.slotNr >= g_bankd->srvc.bankd.num_slots) {
 			LOGPFSML(srvc->fi, LOGL_ERROR, "removeMapping specifies invalid Slot Nr %lu "
-				 "(we have %u)\n", creq->bank.slotNr, g_bankd->srvc.bankd.num_slots);
+				 "(we have %u)\n", rreq->bank.slotNr, g_bankd->srvc.bankd.num_slots);
 			resp = rspro_gen_RemoveMappingRes(ResultCode_illegalSlotId);
 		} else {
 			rspro2bank_slot(&bs, &rreq->bank);
