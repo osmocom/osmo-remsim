@@ -31,6 +31,8 @@ ASN_MODULE_SOURCES =	\
 	PortNumber.c \
 	RemoveMappingReq.c \
 	RemoveMappingRes.c \
+	ResetStateReq.c \
+	ResetStateRes.c \
 	ResultCode.c \
 	RsproPDU.c \
 	RsproPDUchoice.c \
@@ -76,6 +78,8 @@ ASN_MODULE_INC = \
 	PortNumber.h \
 	RemoveMappingReq.h \
 	RemoveMappingRes.h \
+	ResetStateReq.h \
+	ResetStateRes.h \
 	ResultCode.h \
 	RsproPDU.h \
 	RsproPDUchoice.h \

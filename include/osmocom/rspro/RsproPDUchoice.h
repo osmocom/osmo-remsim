@@ -24,6 +24,8 @@
 #include <osmocom/rspro/ConfigClientBankReq.h>
 #include <osmocom/rspro/ConfigClientBankRes.h>
 #include <osmocom/rspro/ErrorInd.h>
+#include <osmocom/rspro/ResetStateReq.h>
+#include <osmocom/rspro/ResetStateRes.h>
 #include <osmocom/rspro/SetAtrReq.h>
 #include <osmocom/rspro/SetAtrRes.h>
 #include <osmocom/rspro/TpduModemToCard.h>
@@ -52,6 +54,8 @@ typedef enum RsproPDUchoice_PR {
 	RsproPDUchoice_PR_configClientBankReq,
 	RsproPDUchoice_PR_configClientBankRes,
 	RsproPDUchoice_PR_errorInd,
+	RsproPDUchoice_PR_resetStateReq,
+	RsproPDUchoice_PR_resetStateRes,
 	RsproPDUchoice_PR_setAtrReq,
 	RsproPDUchoice_PR_setAtrRes,
 	RsproPDUchoice_PR_tpduModemToCard,
@@ -79,6 +83,8 @@ typedef struct RsproPDUchoice {
 		ConfigClientBankReq_t	 configClientBankReq;
 		ConfigClientBankRes_t	 configClientBankRes;
 		ErrorInd_t	 errorInd;
+		ResetStateReq_t	 resetStateReq;
+		ResetStateRes_t	 resetStateRes;
 		SetAtrReq_t	 setAtrReq;
 		SetAtrRes_t	 setAtrRes;
 		TpduModemToCard_t	 tpduModemToCard;

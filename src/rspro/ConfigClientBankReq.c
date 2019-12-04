@@ -4,7 +4,7 @@
  * 	found in "../../asn1/RSPRO.asn"
  */
 
-#include "ConfigClientBankReq.h"
+#include <osmocom/rspro/ConfigClientBankReq.h>
 
 static asn_TYPE_member_t asn_MBR_ConfigClientBankReq_1[] = {
 	{ ATF_NOFLAGS, 0, offsetof(struct ConfigClientBankReq, bankSlot),

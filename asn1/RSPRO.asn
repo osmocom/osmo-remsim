@@ -308,6 +308,17 @@ ErrorInd ::= SEQUENCE {
 	...
 }
 
+-- SERVER->*: request reset of all state on peer side
+ResetStateReq ::= SEQUENCE {
+	...
+}
+
+-- *->SERVER: confirm reset of all state on peer side
+ResetStateRes ::= SEQUENCE {
+	result		ResultCode,
+	...
+}
+
 
 ----------------------------------------------------------------------
 -- PDU
@@ -328,6 +339,8 @@ RsproPDUchoice ::= CHOICE {
 	configClientBankReq	[17]	ConfigClientBankReq,
 	configClientBankRes	[18]	ConfigClientBankRes,
 	errorInd		[16]	ErrorInd,
+	resetStateReq		[19]	ResetStateReq,
+	resetStateRes		[20]	ResetStateRes,
 	-- APDUs etc.
 	setAtrReq		[10]	SetAtrReq,
 	setAtrRes		[11]	SetAtrRes,

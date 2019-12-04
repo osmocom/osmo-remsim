@@ -31,6 +31,8 @@ noinst_HEADERS = \
 	PortNumber.h \
 	RemoveMappingReq.h \
 	RemoveMappingRes.h \
+	ResetStateReq.h \
+	ResetStateRes.h \
 	ResultCode.h \
 	RsproPDU.h \
 	RsproPDUchoice.h \

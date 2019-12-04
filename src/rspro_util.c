@@ -385,6 +385,29 @@ RsproPDU_t *rspro_gen_TpduCard2Modem(const BankSlot_t *bank, const ClientSlot_t 
 	return pdu;
 }
 
+RsproPDU_t *rspro_gen_ResetStateReq(void)
+{
+	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
+	if (!pdu)
+		return NULL;
+	pdu->version = 2;
+	pdu->msg.present = RsproPDUchoice_PR_resetStateReq;
+
+	return pdu;
+}
+
+RsproPDU_t *rspro_gen_ResetStateRes(e_ResultCode res)
+{
+	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
+	if (!pdu)
+		return NULL;
+	pdu->version = 2;
+	pdu->msg.present = RsproPDUchoice_PR_resetStateRes;
+	pdu->msg.choice.resetStateRes.result = res;
+
+	return pdu;
+}
+
 e_ResultCode rspro_get_result(const RsproPDU_t *pdu)
 {
 	switch (pdu->msg.present) {
@@ -402,6 +425,8 @@ e_ResultCode rspro_get_result(const RsproPDU_t *pdu)
 		return pdu->msg.choice.configClientBankRes.result;
 	case RsproPDUchoice_PR_setAtrRes:
 		return pdu->msg.choice.setAtrRes.result;
+	case RsproPDUchoice_PR_resetStateRes:
+		return pdu->msg.choice.resetStateRes.result;
 	default:
 		OSMO_ASSERT(0);
 	}

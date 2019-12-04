@@ -42,6 +42,8 @@ RsproPDU_t *rspro_gen_TpduModem2Card(const ClientSlot_t *client, const BankSlot_
 				     const uint8_t *tpdu, unsigned int tpdu_len);
 RsproPDU_t *rspro_gen_TpduCard2Modem(const BankSlot_t *bank, const ClientSlot_t *client,
 				     const uint8_t *tpdu, unsigned int tpdu_len);
+RsproPDU_t *rspro_gen_ResetStateReq(void);
+RsproPDU_t *rspro_gen_ResetStateRes(e_ResultCode res);
 
 e_ResultCode rspro_get_result(const RsproPDU_t *pdu);
 
