@@ -125,6 +125,26 @@ static struct bankd_worker *bankd_create_worker(struct bankd *bankd, unsigned in
 
 static bool terminate = false;
 
+/* Remove a mapping */
+static void bankd_srvc_remove_mapping(struct slot_mapping *map)
+{
+	struct bank_slot bs = map->bank;
+
+	slotmap_del(g_bankd->slotmaps, map);
+
+	/* kill/reset the respective worker, if any! */
+	struct bankd_worker *worker;
+	pthread_mutex_lock(&g_bankd->workers_mutex);
+	llist_for_each_entry(worker, &g_bankd->workers, list) {
+		if (bs.bank_id == worker->slot.bank_id &&
+		    bs.slot_nr == worker->slot.slot_nr) {
+			pthread_kill(worker->thread, SIGMAPDEL);
+			break;
+		}
+	}
+	pthread_mutex_unlock(&g_bankd->workers_mutex);
+}
+
 /* handle incoming messages from server */
 static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 {
@@ -185,20 +205,8 @@ static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t
 				resp = rspro_gen_RemoveMappingRes(ResultCode_unknownSlotmap);
 			} else {
 				LOGPFSM(srvc->fi, "removing slotmap\n");
-				slotmap_del(g_bankd->slotmaps, map);
+				bankd_srvc_remove_mapping(map);
 				resp = rspro_gen_RemoveMappingRes(ResultCode_ok);
-
-				/* kill/reset the respective worker, if any! */
-				struct bankd_worker *worker;
-				pthread_mutex_lock(&g_bankd->workers_mutex);
-				llist_for_each_entry(worker, &g_bankd->workers, list) {
-					if (bs.bank_id == worker->slot.bank_id &&
-					    bs.slot_nr == worker->slot.slot_nr) {
-						pthread_kill(worker->thread, SIGMAPDEL);
-						break;
-					}
-				}
-				pthread_mutex_unlock(&g_bankd->workers_mutex);
 			}
 		}
 		server_conn_send_rspro(srvc, resp);
