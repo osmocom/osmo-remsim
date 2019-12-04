@@ -150,6 +150,7 @@ static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t
 {
 	const CreateMappingReq_t *creq = NULL;
 	const RemoveMappingReq_t *rreq = NULL;
+	struct bankd_worker *worker;
 	struct slot_mapping *map;
 	struct bank_slot bs;
 	struct client_slot cs;
@@ -228,6 +229,19 @@ send_resp:
 				}
 			}
 		}
+		server_conn_send_rspro(srvc, resp);
+		break;
+	case RsproPDUchoice_PR_resetStateReq:
+		/* delete all slotmaps */
+		slotmap_del_all(g_bankd->slotmaps);
+		/* notify all workers about maps having disappeared */
+		pthread_mutex_lock(&g_bankd->workers_mutex);
+		llist_for_each_entry(worker, &g_bankd->workers, list) {
+			pthread_kill(worker->thread, SIGMAPDEL);
+		}
+		pthread_mutex_unlock(&g_bankd->workers_mutex);
+		/* send response to server */
+		resp = rspro_gen_ResetStateRes(ResultCode_ok);
 		server_conn_send_rspro(srvc, resp);
 		break;
 	default:

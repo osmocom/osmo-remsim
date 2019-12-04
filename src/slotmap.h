@@ -83,6 +83,9 @@ struct slot_mapping *slotmap_add(struct slotmaps *maps, const struct bank_slot *
 void slotmap_del(struct slotmaps *maps, struct slot_mapping *map);
 void _slotmap_del(struct slotmaps *maps, struct slot_mapping *map);
 
+/* thread-safe removal of all bank<->client maps */
+void slotmap_del_all(struct slotmaps *maps);
+
 /* initialize the entire map collection */
 struct slotmaps *slotmap_init(void *ctx);
 

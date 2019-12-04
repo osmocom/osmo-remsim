@@ -159,6 +159,19 @@ void slotmap_del(struct slotmaps *maps, struct slot_mapping *map)
 	slotmaps_unlock(maps);
 }
 
+
+/* thread-safe removal of all bank<->client maps */
+void slotmap_del_all(struct slotmaps *maps)
+{
+	struct slot_mapping *map, *map2;
+
+	slotmaps_wrlock(maps);
+	llist_for_each_entry_safe(map, map2, &maps->mappings, list) {
+		_slotmap_del(maps, map);
+	}
+	slotmaps_unlock(maps);
+}
+
 struct slotmaps *slotmap_init(void *ctx)
 {
 	struct slotmaps *sm = talloc_zero(ctx, struct slotmaps);
