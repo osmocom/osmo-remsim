@@ -431,9 +431,11 @@ static void handle_sig_mapdel(int sig)
 {
 	LOGW(g_worker, "SIGMAPDEL received: Main thread informs us our map is gone\n");
 	OSMO_ASSERT(sig == SIGMAPDEL);
-	g_worker->slot.bank_id = 0xffff;
-	g_worker->slot.slot_nr = 0xffff;
-	worker_set_state(g_worker, BW_ST_CONN_CLIENT_UNMAPPED);
+	if (g_worker->state >= BW_ST_CONN_CLIENT_MAPPED) {
+		g_worker->slot.bank_id = 0xffff;
+		g_worker->slot.slot_nr = 0xffff;
+		worker_set_state(g_worker, BW_ST_CONN_CLIENT_UNMAPPED);
+	}
 }
 
 static void handle_sig_usr1(int sig)
