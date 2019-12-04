@@ -217,9 +217,15 @@ send_resp:
 				LOGPFSML(srvc->fi, LOGL_ERROR, "could not find to-be-deleted slotmap\n");
 				resp = rspro_gen_RemoveMappingRes(ResultCode_unknownSlotmap);
 			} else {
-				LOGPFSM(srvc->fi, "removing slotmap\n");
-				bankd_srvc_remove_mapping(map);
-				resp = rspro_gen_RemoveMappingRes(ResultCode_ok);
+				rspro2client_slot(&cs, &rreq->client);
+				if (!client_slot_equals(&map->client, &cs)) {
+					LOGPFSM(srvc->fi, "ClientId in removeMappingReq != map\n");
+					resp = rspro_gen_RemoveMappingRes(ResultCode_unknownSlotmap);
+				} else {
+					LOGPFSM(srvc->fi, "removing slotmap\n");
+					bankd_srvc_remove_mapping(map);
+					resp = rspro_gen_RemoveMappingRes(ResultCode_ok);
+				}
 			}
 		}
 		server_conn_send_rspro(srvc, resp);
