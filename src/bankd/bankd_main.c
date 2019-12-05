@@ -125,6 +125,24 @@ static struct bankd_worker *bankd_create_worker(struct bankd *bankd, unsigned in
 
 static bool terminate = false;
 
+/* deliver given signal 'sig' to the firts worker matching bs and cs (if given) */
+static void send_signal_to_worker(const struct bank_slot *bs, const struct client_slot *cs, int sig)
+{
+	struct bankd_worker *worker;
+	pthread_mutex_lock(&g_bankd->workers_mutex);
+	llist_for_each_entry(worker, &g_bankd->workers, list) {
+		if (bs && (bs->bank_id != worker->slot.bank_id || bs->slot_nr != worker->slot.slot_nr))
+			continue;
+		if (cs && (cs->client_id != worker->client.clslot.client_id ||
+			   cs->slot_nr != worker->client.clslot.slot_nr))
+			continue;
+
+		pthread_kill(worker->thread, sig);
+		break;
+	}
+	pthread_mutex_unlock(&g_bankd->workers_mutex);
+}
+
 /* Remove a mapping */
 static void bankd_srvc_remove_mapping(struct slot_mapping *map)
 {
@@ -133,16 +151,7 @@ static void bankd_srvc_remove_mapping(struct slot_mapping *map)
 	slotmap_del(g_bankd->slotmaps, map);
 
 	/* kill/reset the respective worker, if any! */
-	struct bankd_worker *worker;
-	pthread_mutex_lock(&g_bankd->workers_mutex);
-	llist_for_each_entry(worker, &g_bankd->workers, list) {
-		if (bs.bank_id == worker->slot.bank_id &&
-		    bs.slot_nr == worker->slot.slot_nr) {
-			pthread_kill(worker->thread, SIGMAPDEL);
-			break;
-		}
-	}
-	pthread_mutex_unlock(&g_bankd->workers_mutex);
+	send_signal_to_worker(&bs, NULL, SIGMAPDEL);
 }
 
 /* handle incoming messages from server */
