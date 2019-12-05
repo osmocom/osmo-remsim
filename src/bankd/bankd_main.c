@@ -53,9 +53,11 @@
 
 /* signal indicates to worker thread that its map has been deleted */
 #define SIGMAPDEL	SIGRTMIN+1
+#define SIGMAPADD	SIGRTMIN+2
 
 static void handle_sig_usr1(int sig);
 static void handle_sig_mapdel(int sig);
+static void handle_sig_mapadd(int sig);
 
 __thread void *talloc_asn1_ctx;
 struct bankd *g_bankd;
@@ -203,8 +205,10 @@ static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t
 			if (!map) {
 				LOGPFSML(srvc->fi, LOGL_ERROR, "could not create slotmap\n");
 				resp = rspro_gen_CreateMappingRes(ResultCode_illegalSlotId);
-			} else
+			} else {
+				send_signal_to_worker(NULL, &cs, SIGMAPADD);
 				resp = rspro_gen_CreateMappingRes(ResultCode_ok);
+			}
 		}
 send_resp:
 		server_conn_send_rspro(srvc, resp);
@@ -359,6 +363,7 @@ int main(int argc, char **argv)
 
 	g_bankd->main = pthread_self();
 	signal(SIGMAPDEL, handle_sig_mapdel);
+	signal(SIGMAPADD, handle_sig_mapadd);
 	signal(SIGUSR1, handle_sig_usr1);
 
 	/* Np lock or mutex required for the pcsc_slot_names list, as this is only
@@ -446,6 +451,13 @@ static void handle_sig_mapdel(int sig)
 		g_worker->slot.slot_nr = 0xffff;
 		worker_set_state(g_worker, BW_ST_CONN_CLIENT_UNMAPPED);
 	}
+}
+
+/* signal handler for receiving SIGMAPADD from main thread */
+static void handle_sig_mapadd(int sig)
+{
+	LOGW(g_worker, "SIGMAPADD received\n");
+	/* do nothing */
 }
 
 static void handle_sig_usr1(int sig)
@@ -769,6 +781,8 @@ restart_wait:
 	if (rc == -1 && errno == EINTR) {
 		if (worker->state == BW_ST_CONN_CLIENT_UNMAPPED)
 			return -23;
+		else
+			worker_try_slotmap(worker);
 		goto restart_wait;
 	} else if (rc < 0)
 		return rc;
