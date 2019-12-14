@@ -849,6 +849,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Unable to create bankd conn FSM: %s\n", strerror(errno));
 		exit(1);
 	}
+	osmo_fsm_inst_update_id(bankdc->fi, "bankd");
 
 	asn_debug = 0;
 
