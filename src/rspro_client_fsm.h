@@ -9,6 +9,7 @@ enum server_conn_fsm_event {
 	SRVC_E_TCP_UP,
 	SRVC_E_TCP_DOWN,
 	SRVC_E_KA_TIMEOUT,
+	SRVC_E_KA_TERMINATED,
 	SRVC_E_CLIENT_CONN_RES,
 	SRVC_E_RSPRO_TX		/* transmit a RSPRO PDU to the peer */
 };

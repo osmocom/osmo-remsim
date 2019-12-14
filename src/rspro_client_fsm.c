@@ -113,6 +113,7 @@ static const struct value_string server_conn_fsm_event_names[] = {
 	OSMO_VALUE_STRING(SRVC_E_TCP_UP),
 	OSMO_VALUE_STRING(SRVC_E_TCP_DOWN),
 	OSMO_VALUE_STRING(SRVC_E_KA_TIMEOUT),
+	OSMO_VALUE_STRING(SRVC_E_KA_TERMINATED),
 	OSMO_VALUE_STRING(SRVC_E_CLIENT_CONN_RES),
 	OSMO_VALUE_STRING(SRVC_E_RSPRO_TX),
 	{ 0, NULL }
@@ -261,6 +262,13 @@ static void srvc_st_connected(struct osmo_fsm_inst *fi, uint32_t event, void *da
 	}
 }
 
+static int ipa_kaepalive_timeout_cb(struct osmo_fsm_inst *ka_fi, void *conn)
+{
+	struct osmo_fsm_inst *fi = ka_fi->proc.parent;
+	osmo_fsm_inst_dispatch(fi, SRVC_E_KA_TIMEOUT, NULL);
+	return 0; /* we will explicitly terminate it */
+}
+
 static void srvc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
 {
 	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
@@ -292,8 +300,9 @@ static void srvc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 		LOGPFSM(fi, "Unable to create keepalive FSM\n");
 		exit(1);
 	}
+	ipa_keepalive_fsm_set_timeout_cb(srvc->keepalive_fi, ipa_kaepalive_timeout_cb);
 	/* ensure parent is notified once keepalive FSM instance is dying */
-	osmo_fsm_inst_change_parent(srvc->keepalive_fi, srvc->fi, SRVC_E_KA_TIMEOUT);
+	osmo_fsm_inst_change_parent(srvc->keepalive_fi, srvc->fi, SRVC_E_KA_TERMINATED);
 
 	/* Attempt to connect TCP socket */
 	rc = ipa_client_conn_open(srvc->conn);
