@@ -809,6 +809,8 @@ static void handle_sig_usr1(int signal)
 {
 	OSMO_ASSERT(signal == SIGUSR1);
 	talloc_report_full(g_tall_ctx, stderr);
+	printf("===== NULL\n");
+	talloc_report_full(NULL, stderr);
 }
 
 static void print_welcome(void)
@@ -1000,6 +1002,7 @@ int main(int argc, char **argv)
 
 	print_welcome();
 
+	talloc_enable_null_tracking();
 	g_tall_ctx = talloc_named_const(NULL, 0, "global");
 	talloc_asn1_ctx = talloc_named_const(g_tall_ctx, 0, "asn1");
 	msgb_talloc_ctx_init(g_tall_ctx, 0);
