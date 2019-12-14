@@ -162,8 +162,10 @@ static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 		case IPAC_PROTO_EXT_RSPRO:
 			LOGPFSM(srvc->fi, "Received RSPRO %s\n", msgb_hexdump(msg));
 			pdu = rspro_dec_msg(msg);
-			if (!pdu)
+			if (!pdu) {
+				rc = -EIO;
 				break;
+			}
 			rc = srvc->handle_rx(srvc, pdu);
 			ASN_STRUCT_FREE(asn_DEF_RsproPDU, pdu);
 			break;
