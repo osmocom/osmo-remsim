@@ -9,6 +9,7 @@ endif
 AM_CFLAGS = -Wall -I$(top_srcdir)/include -I$(top_builddir)/include \
 	    $(OSMOCORE_CFLAGS) $(OSMOGSM_CFLAGS) $(OSMOABIS_CFLAGS) \
 	    $(PCSC_CFLAGS) $(USB_CFLAGS) $(OSMOSIM_CFLAGS) \
+	    $(OSMOSIMTRACE2_CFLAGS) \
 	    -I$(top_srcdir)/include/osmocom/rspro
 
 RSPRO_LIBVERSION=1:0:0
@@ -19,12 +20,7 @@ libosmo_rspro_la_LIBADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
 libosmo_rspro_la_SOURCES = rspro_util.c asn1c_helpers.c
 
 noinst_HEADERS = debug.h client.h rspro_util.h slotmap.h rspro_client_fsm.h \
-		 asn1c_helpers.h \
-		 simtrace2/apdu_dispatch.h \
-		 simtrace2/libusb_util.h \
-		 simtrace2/simtrace2-discovery.h \
-		 simtrace2/simtrace_prot.h \
-		 simtrace2/simtrace_usb.h
+		 asn1c_helpers.h
 
 bin_PROGRAMS = osmo-remsim-client-st2
 
@@ -33,9 +29,7 @@ remsim_client_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
 		     libosmo-rspro.la
 
 osmo_remsim_client_st2_SOURCES = simtrace2-remsim_client.c \
-				 rspro_client_fsm.c debug.c \
-				 simtrace2/apdu_dispatch.c \
-				 simtrace2/simtrace2-discovery.c \
-				 simtrace2/libusb_util.c
+				 rspro_client_fsm.c debug.c
 osmo_remsim_client_st2_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
+			       $(OSMOUSB_LIBS) $(OSMOSIMTRACE2_LIBS) \
 			       $(USB_LIBS) $(OSMOSIM_LIBS) libosmo-rspro.la

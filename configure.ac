@@ -39,6 +39,8 @@ PKG_CHECK_MODULES(OSMOCORE, libosmocore >= 0.11.0)
 PKG_CHECK_MODULES(OSMOGSM, libosmogsm >= 0.11.0)
 PKG_CHECK_MODULES(OSMOABIS, libosmoabis)
 PKG_CHECK_MODULES(OSMOSIM, libosmosim)
+PKG_CHECK_MODULES(OSMOUSB, libosmousb)
+PKG_CHECK_MODULES(OSMOSIMTRACE2, libosmo-simtrace2)
 PKG_CHECK_MODULES(USB, libusb-1.0)
 
 AC_ARG_ENABLE([remsim-server],[AS_HELP_STRING([--disable-remsim-server], [Build osmo-remsim-server])],

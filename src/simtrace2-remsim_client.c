@@ -50,11 +50,10 @@
 
 #include <libusb.h>
 
-#include "simtrace2/libusb_util.h"
-#include "simtrace2/simtrace_prot.h"
-#include "simtrace2/simtrace_usb.h"
-#include "simtrace2/apdu_dispatch.h"
-#include "simtrace2/simtrace2-discovery.h"
+#include <osmocom/usb/libusb.h>
+#include <osmocom/simtrace2/simtrace_prot.h>
+#include <osmocom/simtrace2/simtrace_usb.h>
+#include <osmocom/simtrace2/apdu_dispatch.h>
 
 #include <osmocom/core/gsmtap.h>
 #include <osmocom/core/gsmtap_util.h>
@@ -406,7 +405,7 @@ __attribute__((unused)) static int process_do_error(struct cardem_inst *ci, uint
 	return 0;
 }
 
-static struct apdu_context ac; // this will hold the complete APDU (across calls)
+static struct osmo_apdu_context ac; // this will hold the complete APDU (across calls)
 
 /*! \brief Process a RX-DATA indication message from the SIMtrace2 */
 static int process_do_rx_da(struct cardem_inst *ci, uint8_t *buf, int len)
@@ -417,8 +416,8 @@ static int process_do_rx_da(struct cardem_inst *ci, uint8_t *buf, int len)
 	printf("SIMtrace => DATA: flags=%x, %s: ", data->flags,
 		osmo_hexdump(data->data, data->data_len));
 
-	rc = apdu_segment_in(&ac, data->data, data->data_len,
-			     data->flags & CEMU_DATA_F_TPDU_HDR); // parse the APDU data in the USB message
+	rc = osmo_apdu_segment_in(&ac, data->data, data->data_len,
+				  data->flags & CEMU_DATA_F_TPDU_HDR); // parse the APDU data in the USB message
 
 	if (rc & APDU_ACT_TX_CAPDU_TO_CARD) { // there is no pending data coming from the modem
 		uint8_t apdu_command[sizeof(ac.hdr) + ac.lc.tot]; // to store the APDU command to send
@@ -864,7 +863,7 @@ int main(int argc, char **argv)
 		ifm->addr = addr;
 		if (path)
 			osmo_strlcpy(ifm->path, path, sizeof(ifm->path));
-		transp->usb_devh = usb_open_claim_interface(NULL, ifm);
+		transp->usb_devh = osmo_libusb_open_claim_interface(NULL, NULL, ifm);
 		if (!transp->usb_devh) {
 			fprintf(stderr, "can't open USB device\n");
 			goto close_exit;
@@ -876,8 +875,8 @@ int main(int argc, char **argv)
 			goto close_exit;
 		}
 
-		rc = get_usb_ep_addrs(transp->usb_devh, if_num, &transp->usb_ep.out,
-				      &transp->usb_ep.in, &transp->usb_ep.irq_in);
+		rc = osmo_libusb_get_ep_addrs(transp->usb_devh, if_num, &transp->usb_ep.out,
+						&transp->usb_ep.in, &transp->usb_ep.irq_in);
 		if (rc < 0) {
 			fprintf(stderr, "can't obtain EP addrs; rc=%d\n", rc);
 			goto close_exit;
