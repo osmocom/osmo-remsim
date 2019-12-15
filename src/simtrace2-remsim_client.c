@@ -143,20 +143,50 @@ static void apdu_out_cb(uint8_t *buf, unsigned int len, void *user_data)
 }
 #endif
 
+static void usb_out_xfer_cb(struct libusb_transfer *xfer)
+{
+	struct msgb *msg = xfer->user_data;
+
+	switch (xfer->status) {
+	case LIBUSB_TRANSFER_COMPLETED:
+		break;
+	case LIBUSB_TRANSFER_NO_DEVICE:
+		fprintf(stderr, "USB device disappeared\n");
+		exit(23);
+		break;
+	default:
+		osmo_panic("USB OUT transfer failed, status=%u\n", xfer->status);
+		break;
+	}
+
+	msgb_free(msg);
+	libusb_free_transfer(xfer);
+}
+
 /*! \brief Transmit a given command to the SIMtrace2 device */
 int st_transp_tx_msg(struct st_transport *transp, struct msgb *msg)
 {
+	struct libusb_transfer *xfer;
 	int rc;
 
 	printf("SIMtrace <- %s\n", msgb_hexdump(msg));
 
-	int xfer_len;
+	xfer = libusb_alloc_transfer(0);
+	OSMO_ASSERT(xfer);
+	xfer->dev_handle = transp->usb_devh;
+	xfer->flags = 0;
+	xfer->type = LIBUSB_TRANSFER_TYPE_BULK;
+	xfer->endpoint = transp->usb_ep.out;
+	xfer->timeout = 1000;
+	xfer->user_data = msg;
+	xfer->length = msgb_length(msg);
+	xfer->buffer = msgb_data(msg);
+	xfer->callback = usb_out_xfer_cb;
 
-	rc = libusb_bulk_transfer(transp->usb_devh, transp->usb_ep.out,
-		msgb_data(msg), msgb_length(msg),
-		&xfer_len, 1000);
+	/* submit the OUT transfer */
+	rc = libusb_submit_transfer(xfer);
+	OSMO_ASSERT(rc == 0);
 
-	msgb_free(msg);
 	return rc;
 }
 
@@ -472,37 +502,105 @@ static int process_usb_msg(struct cardem_inst *ci, uint8_t *buf, int len)
 	return rc;
 }
 
-static void run_mainloop(struct cardem_inst *ci)
+static void usb_in_xfer_cb(struct libusb_transfer *xfer)
 {
-	struct st_transport *transp = ci->slot->transp;
-	unsigned int msg_count, byte_count = 0;
-	uint8_t buf[16*265];
-	int xfer_len;
+	struct cardem_inst *ci = xfer->user_data;
 	int rc;
 
-	printf("Entering main loop\n");
-
-	while (1) {
-		/* read data from SIMtrace2 device (local or via USB) */
-		rc = libusb_bulk_transfer(transp->usb_devh, transp->usb_ep.in,
-			 buf, sizeof(buf), &xfer_len, 100);
-		if (rc < 0 && rc != LIBUSB_ERROR_TIMEOUT &&
-			rc != LIBUSB_ERROR_INTERRUPTED &&
-			rc != LIBUSB_ERROR_IO) {
-			fprintf(stderr, "BULK IN transfer error: %s\n", libusb_error_name(rc));
-			return;
-		}
-		/* dispatch any incoming data */
-		if (xfer_len > 0) {
-			process_usb_msg(ci, buf, xfer_len);
-			msg_count++;
-			byte_count += xfer_len;
-		}
-		// handle remote SIM client fsm
-		// TODO register the USB fd for this select
-		osmo_select_main(true);
+	switch (xfer->status) {
+	case LIBUSB_TRANSFER_COMPLETED:
+		/* hand the message up the stack */
+		process_usb_msg(ci, xfer->buffer, xfer->actual_length);
+		break;
+	case LIBUSB_TRANSFER_NO_DEVICE:
+		fprintf(stderr, "USB device disappeared\n");
+		exit(23);
+		break;
+	default:
+		osmo_panic("USB IN transfer failed, status=%u\n", xfer->status);
+		break;
 	}
+
+	/* re-submit the IN transfer */
+	rc = libusb_submit_transfer(xfer);
+	OSMO_ASSERT(rc == 0);
 }
+
+
+static void allocate_and_submit_in(struct cardem_inst *ci)
+{
+	struct st_transport *transp = ci->slot->transp;
+	struct libusb_transfer *xfer;
+	int rc;
+
+	xfer = libusb_alloc_transfer(0);
+	OSMO_ASSERT(xfer);
+	xfer->dev_handle = transp->usb_devh;
+	xfer->flags = 0;
+	xfer->type = LIBUSB_TRANSFER_TYPE_BULK;
+	xfer->endpoint = transp->usb_ep.in;
+	xfer->timeout = 0;
+	xfer->user_data = ci;
+	xfer->length = 16*256;
+
+	xfer->buffer = libusb_dev_mem_alloc(xfer->dev_handle, xfer->length);
+	OSMO_ASSERT(xfer->buffer);
+	xfer->callback = usb_in_xfer_cb;
+
+	/* submit the IN transfer */
+	rc = libusb_submit_transfer(xfer);
+	OSMO_ASSERT(rc == 0);
+}
+
+
+static void usb_irq_xfer_cb(struct libusb_transfer *xfer)
+{
+	int rc;
+
+	switch (xfer->status) {
+	case LIBUSB_TRANSFER_COMPLETED:
+		/* FIXME: do something with the received data */
+		break;
+	case LIBUSB_TRANSFER_NO_DEVICE:
+		fprintf(stderr, "USB device disappeared\n");
+		exit(23);
+		break;
+	default:
+		osmo_panic("USB IRQ transfer failed, status=%u\n", xfer->status);
+		break;
+	}
+
+	/* re-submit the IN transfer */
+	rc = libusb_submit_transfer(xfer);
+	OSMO_ASSERT(rc == 0);
+}
+
+
+static void allocate_and_submit_irq(struct cardem_inst *ci)
+{
+	struct st_transport *transp = ci->slot->transp;
+	struct libusb_transfer *xfer;
+	int rc;
+
+	xfer = libusb_alloc_transfer(0);
+	OSMO_ASSERT(xfer);
+	xfer->dev_handle = transp->usb_devh;
+	xfer->flags = 0;
+	xfer->type = LIBUSB_TRANSFER_TYPE_INTERRUPT;
+	xfer->endpoint = transp->usb_ep.irq_in;
+	xfer->timeout = 0;
+	xfer->user_data = ci;
+	xfer->length = 64;
+
+	xfer->buffer = libusb_dev_mem_alloc(xfer->dev_handle, xfer->length);
+	OSMO_ASSERT(xfer->buffer);
+	xfer->callback = usb_irq_xfer_cb;
+
+	/* submit the IN transfer */
+	rc = libusb_submit_transfer(xfer);
+	OSMO_ASSERT(rc == 0);
+}
+
 
 static struct st_transport _transp;
 
@@ -652,7 +750,7 @@ static void handle_sig_usr1(int signal)
 static void print_welcome(void)
 {
 	printf("simtrace2-remsim-client - Remote SIM card client for SIMtrace\n"
-	       "(C) 2010-2017, Harald Welte <laforge@gnumonks.org>\n"
+	       "(C) 2010-2019, Harald Welte <laforge@gnumonks.org>\n"
 	       "(C) 2018, sysmocom -s.f.m.c. GmbH, Author: Kevin Redon <kredon@sysmocom.de>\n\n");
 }
 
@@ -794,7 +892,7 @@ int main(int argc, char **argv)
 	msgb_talloc_ctx_init(g_tall_ctx, 0);
 	osmo_init_logging2(g_tall_ctx, &log_info);
 
-	rc = libusb_init(NULL);
+	rc = osmo_libusb_init(NULL);
 	if (rc < 0) {
 		fprintf(stderr, "libusb initialization failed\n");
 		goto do_exit;
@@ -941,7 +1039,15 @@ int main(int argc, char **argv)
 		/* select remote (forwarded) SIM */
 		st_modem_reset_pulse(ci->slot, 300);
 
-		run_mainloop(ci);
+		printf("Entering main loop\n");
+
+		allocate_and_submit_irq(ci);
+		allocate_and_submit_in(ci);
+
+		while (1) {
+			osmo_select_main(false);
+		}
+
 		ret = 0;
 
 		libusb_release_interface(transp->usb_devh, 0);
