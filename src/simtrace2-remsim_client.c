@@ -298,6 +298,22 @@ static int cardem_request_sw_tx(struct cardem_inst *ci, const uint8_t *sw)
 	return st_slot_tx_msg(ci->slot, msg, SIMTRACE_MSGC_CARDEM, SIMTRACE_MSGT_DT_CEMU_TX_DATA);
 }
 
+/*! \brief Request the SIMtrace2 to send a Status Word */
+static int cardem_request_config(struct cardem_inst *ci, uint32_t features)
+{
+	struct msgb *msg = st_msgb_alloc();
+	struct cardemu_usb_msg_config *cfg;
+
+	cfg = (struct cardemu_usb_msg_config *) msgb_put(msg, sizeof(*cfg));
+
+	printf("SIMtrace <= %s(%08x)\n", __func__, features);
+
+	memset(cfg, 0, sizeof(*cfg));
+	cfg->features = features;
+
+	return st_slot_tx_msg(ci->slot, msg, SIMTRACE_MSGC_CARDEM, SIMTRACE_MSGT_BD_CEMU_CONFIG);
+}
+
 // FIXME check if the ATR actually includes a checksum
 __attribute__((unused)) static void atr_update_csum(uint8_t *atr, unsigned int atr_len)
 {
@@ -493,6 +509,53 @@ static int process_usb_msg(struct cardem_inst *ci, uint8_t *buf, int len)
 	case SIMTRACE_MSGT_DO_CEMU_RX_DATA:
 		rc = process_do_rx_da(ci, buf, len);
 		break;
+	case SIMTRACE_MSGT_BD_CEMU_CONFIG:
+		/* firmware confirms configuration change; ignore */
+		break;
+	default:
+		printf("unknown simtrace msg type 0x%02x\n", sh->msg_type);
+		rc = -1;
+		break;
+	}
+
+	return rc;
+}
+
+
+/*! \brief Process a STATUS message on IRQ endpoint from the SIMtrace2 */
+static int process_irq_status(struct cardem_inst *ci, const uint8_t *buf, int len)
+{
+	const struct cardemu_usb_msg_status *status = (struct cardemu_usb_msg_status *) buf;
+
+	printf("SIMtrace IRQ STATUS: flags=0x%x, fi=%u, di=%u, wi=%u wtime=%u\n",
+		status->flags, status->fi, status->di, status->wi,
+		status->waiting_time);
+
+	BankSlot_t bslot;
+	bank_slot2rspro(&bslot, &g_client->bankd_slot);
+	RsproPDU_t *pdu = rspro_gen_ClientSlotStatusInd(g_client->srv_conn.clslot, &bslot,
+							status->flags & CEMU_STATUS_F_RESET_ACTIVE,
+							status->flags & CEMU_STATUS_F_VCC_PRESENT,
+							status->flags & CEMU_STATUS_F_CLK_ACTIVE,
+							-1 /* FIXME: make this dependent on board */);
+	server_conn_send_rspro(&g_client->bankd_conn, pdu);
+
+	return 0;
+}
+
+static int process_usb_msg_irq(struct cardem_inst *ci, const uint8_t *buf, unsigned int len)
+{
+	struct simtrace_msg_hdr *sh = (struct simtrace_msg_hdr *)buf;
+	int rc;
+
+	printf("SIMtrace IRQ %s\n", osmo_hexdump(buf, len));
+
+	buf += sizeof(*sh);
+
+	switch (sh->msg_type) {
+	case SIMTRACE_MSGT_BD_CEMU_STATUS:
+		rc = process_irq_status(ci, buf, len);
+		break;
 	default:
 		printf("unknown simtrace msg type 0x%02x\n", sh->msg_type);
 		rc = -1;
@@ -555,11 +618,12 @@ static void allocate_and_submit_in(struct cardem_inst *ci)
 
 static void usb_irq_xfer_cb(struct libusb_transfer *xfer)
 {
+	struct cardem_inst *ci = xfer->user_data;
 	int rc;
 
 	switch (xfer->status) {
 	case LIBUSB_TRANSFER_COMPLETED:
-		/* FIXME: do something with the received data */
+		process_usb_msg_irq(ci, xfer->buffer, xfer->actual_length);
 		break;
 	case LIBUSB_TRANSFER_NO_DEVICE:
 		fprintf(stderr, "USB device disappeared\n");
@@ -1025,6 +1089,9 @@ int main(int argc, char **argv)
 			}
 			printf("modem %d reset\n", modem);
 		}
+
+		/* request firmware to generate STATUS on IRQ endpoint */
+		cardem_request_config(ci, CEMU_FEAT_F_STATUS_IRQ);
 
 		/* simulate card-insert to modem (owhw, not qmod) */
 		cardem_request_card_insert(ci, true);
