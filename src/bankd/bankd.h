@@ -14,7 +14,7 @@
 
 #include "rspro_util.h"
 #include "slotmap.h"
-#include "client.h"
+#include "rspro_client_fsm.h"
 #include "debug.h"
 
 extern struct value_string worker_state_names[];

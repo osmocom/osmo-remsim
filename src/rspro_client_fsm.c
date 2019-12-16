@@ -35,8 +35,8 @@
 #include <osmocom/abis/ipa.h>
 #include <osmocom/gsm/protocol/ipaccess.h>
 
-#include "client.h"
-#include "rspro_util.h"
+#include "debug.h"
+#include "rspro_client_fsm.h"
 
 #define S(x)	(1 << (x))
 

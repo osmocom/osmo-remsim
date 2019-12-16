@@ -4,6 +4,8 @@
 #include <osmocom/abis/ipa.h>
 #include <osmocom/rspro/RsproPDU.h>
 
+#include "rspro_util.h"
+
 enum server_conn_fsm_event {
 	SRVC_E_ESTABLISH,	/* instruct SRVC to (re)etablish TCP connection to bankd */
 	SRVC_E_TCP_UP,

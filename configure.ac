@@ -38,10 +38,6 @@ AC_CHECK_HEADERS([csv.h])
 PKG_CHECK_MODULES(OSMOCORE, libosmocore >= 1.3.0)
 PKG_CHECK_MODULES(OSMOGSM, libosmogsm >= 0.11.0)
 PKG_CHECK_MODULES(OSMOABIS, libosmoabis)
-PKG_CHECK_MODULES(OSMOSIM, libosmosim)
-PKG_CHECK_MODULES(OSMOUSB, libosmousb)
-PKG_CHECK_MODULES(OSMOSIMTRACE2, libosmo-simtrace2)
-PKG_CHECK_MODULES(USB, libusb-1.0)
 
 AC_ARG_ENABLE([remsim-server],[AS_HELP_STRING([--disable-remsim-server], [Build osmo-remsim-server])],
 	[osmo_ac_build_server="$enableval"],[osmo_ac_build_server="yes"])
@@ -58,10 +54,23 @@ AC_ARG_ENABLE([remsim-bankd],[AS_HELP_STRING([--disable-remsim-bankd], [Build os
 	[osmo_ac_build_bankd="$enableval"],[osmo_ac_build_bankd="yes"])
 if test "$osmo_ac_build_bankd" = "yes"; then
 	AC_DEFINE(BUILD_BANKD, 1, [Define if we want to build osmo-remsim-bankd])
+	PKG_CHECK_MODULES(OSMOSIM, libosmosim)
+	PKG_CHECK_MODULES(PCSC, libpcsclite)
 fi
 AM_CONDITIONAL(BUILD_BANKD, test "x$osmo_ac_build_bankd" = "xyes")
-	PKG_CHECK_MODULES(PCSC, libpcsclite)
 AC_SUBST(BUILD_BANKD)
+
+AC_ARG_ENABLE([remsim-client],[AS_HELP_STRING([--disable-remsim-client], [Build osmo-remsim-client])],
+	[osmo_ac_build_client="$enableval"],[osmo_ac_build_client="yes"])
+if test "$osmo_ac_build_client" = "yes"; then
+	AC_DEFINE(BUILD_CLIENT, 1, [Define if we want to build osmo-remsim-client])
+	PKG_CHECK_MODULES(OSMOSIM, libosmosim)
+	PKG_CHECK_MODULES(OSMOUSB, libosmousb)
+	PKG_CHECK_MODULES(OSMOSIMTRACE2, libosmo-simtrace2)
+	PKG_CHECK_MODULES(USB, libusb-1.0)
+fi
+AM_CONDITIONAL(BUILD_CLIENT, test "x$osmo_ac_build_client" = "xyes")
+AC_SUBST(BUILD_CLIENT)
 
 
 AC_CONFIG_MACRO_DIR([m4])
@@ -155,6 +164,7 @@ AC_OUTPUT(
 	src/Makefile
 	src/rspro/Makefile
 	src/bankd/Makefile
+	src/client/Makefile
 	src/server/Makefile
 	include/Makefile
 	include/osmocom/Makefile
