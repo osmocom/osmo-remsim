@@ -385,6 +385,84 @@ RsproPDU_t *rspro_gen_TpduCard2Modem(const BankSlot_t *bank, const ClientSlot_t 
 	return pdu;
 }
 
+RsproPDU_t *rspro_gen_BankSlotStatusInd(const BankSlot_t *bank, const ClientSlot_t *client,
+					bool rst_active, int vcc_present, int clk_active,
+					int card_present)
+{
+	SlotPhysStatus_t *pstatus;
+	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
+	if (!pdu)
+		return NULL;
+	pdu->version = 2;
+	pdu->msg.present = RsproPDUchoice_PR_bankSlotStatusInd;
+	OSMO_ASSERT(bank);
+	pdu->msg.choice.bankSlotStatusInd.fromBankSlot = *bank;
+	OSMO_ASSERT(client)
+	pdu->msg.choice.bankSlotStatusInd.toClientSlot = *client;
+
+	pstatus = &pdu->msg.choice.bankSlotStatusInd.slotPhysStatus;
+	pstatus->resetActive = rst_active ? 1 : 0;
+
+	if (vcc_present >= 0) {
+		pstatus->vccPresent = CALLOC(1, sizeof(BOOLEAN_t));
+		OSMO_ASSERT(pstatus->vccPresent);
+		*pstatus->vccPresent = vcc_present;
+	}
+
+	if (clk_active >= 0) {
+		pstatus->clkActive = CALLOC(1, sizeof(BOOLEAN_t));
+		OSMO_ASSERT(pstatus->clkActive);
+		*pstatus->clkActive = clk_active;
+	}
+
+	if (card_present >= 0) {
+		pstatus->cardPresent = CALLOC(1, sizeof(BOOLEAN_t));
+		OSMO_ASSERT(pstatus->cardPresent);
+		*pstatus->cardPresent = card_present;
+	}
+
+	return pdu;
+}
+
+RsproPDU_t *rspro_gen_ClientSlotStatusInd(const ClientSlot_t *client, const BankSlot_t *bank,
+					  bool rst_active, int vcc_present, int clk_active,
+					  int card_present)
+{
+	SlotPhysStatus_t *pstatus;
+	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
+	if (!pdu)
+		return NULL;
+	pdu->version = 2;
+	pdu->msg.present = RsproPDUchoice_PR_clientSlotStatusInd;
+	OSMO_ASSERT(client)
+	pdu->msg.choice.clientSlotStatusInd.fromClientSlot = *client;
+	OSMO_ASSERT(bank);
+	pdu->msg.choice.clientSlotStatusInd.toBankSlot = *bank;
+
+	pstatus = &pdu->msg.choice.clientSlotStatusInd.slotPhysStatus;
+	pstatus->resetActive = rst_active ? 1 : 0;
+
+	if (vcc_present >= 0) {
+		pstatus->vccPresent = CALLOC(1, sizeof(BOOLEAN_t));
+		OSMO_ASSERT(pstatus->vccPresent);
+		*pstatus->vccPresent = vcc_present;
+	}
+
+	if (clk_active >= 0) {
+		pstatus->clkActive = CALLOC(1, sizeof(BOOLEAN_t));
+		OSMO_ASSERT(pstatus->clkActive);
+		*pstatus->clkActive = clk_active;
+	}
+
+	if (card_present >= 0) {
+		pstatus->cardPresent = CALLOC(1, sizeof(BOOLEAN_t));
+		OSMO_ASSERT(pstatus->cardPresent);
+		*pstatus->cardPresent = card_present;
+	}
+
+	return pdu;
+}
+
 RsproPDU_t *rspro_gen_ResetStateReq(void)
 {
 	RsproPDU_t *pdu = CALLOC(1, sizeof(*pdu));
