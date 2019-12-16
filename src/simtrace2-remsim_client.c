@@ -992,10 +992,120 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 }
 
 
+static void main_body(struct client_config *cfg)
+{
+	struct st_transport *transp = ci->slot->transp;
+	struct usb_interface_match _ifm, *ifm = &_ifm;
+	int rc;
+
+	ifm->vendor = cfg->usb.vendor_id;
+	ifm->product = cfg->usb.product_id;
+	ifm->configuration = cfg->usb.config_id;
+	ifm->interface = cfg->usb.if_num;
+	ifm->altsetting = cfg->usb.altsetting;
+	ifm->addr = cfg->usb.addr;
+	if (cfg->usb.path)
+		osmo_strlcpy(ifm->path, cfg->usb.path, sizeof(ifm->path));
+	transp->usb_devh = osmo_libusb_open_claim_interface(NULL, NULL, ifm);
+	if (!transp->usb_devh) {
+		fprintf(stderr, "can't open USB device\n");
+		return;
+	}
+
+	rc = libusb_claim_interface(transp->usb_devh, cfg->usb.if_num);
+	if (rc < 0) {
+		fprintf(stderr, "can't claim interface %d; rc=%d\n", cfg->usb.if_num, rc);
+		goto close_exit;
+	}
+
+	rc = osmo_libusb_get_ep_addrs(transp->usb_devh, cfg->usb.if_num, &transp->usb_ep.out,
+					&transp->usb_ep.in, &transp->usb_ep.irq_in);
+	if (rc < 0) {
+		fprintf(stderr, "can't obtain EP addrs; rc=%d\n", rc);
+		goto close_exit;
+	}
+
+	// switch modem SIM port to emulated SIM on OWHW
+	if (USB_VENDOR_OPENMOKO == ifm->vendor && USB_PRODUCT_OWHW_SAM3 == ifm->product) { // we are on the OWHW
+		int modem = -1;
+		switch (ifm->interface) { // the USB interface indicates for which modem we want to emulate the SIM
+		case 0:
+			modem = 1;
+			break;
+		case 1:
+			modem = 2;
+			break;
+		default:
+			fprintf(stderr, "unknown GPIO for SIMtrace interface %d\n", ifm->interface);
+			goto close_exit;
+		}
+		//
+		char gpio_path[PATH_MAX];
+		snprintf(gpio_path, sizeof(gpio_path), "/dev/gpio/connect_st_usim%d/value", modem);
+		int connec_st_usim = open(gpio_path, O_WRONLY);
+		if (-1 == connec_st_usim) {
+			fprintf(stderr, "can't open GPIO %s to switch modem %d to emulated USIM\n", gpio_path, modem);
+			goto close_exit;
+		}
+		if (1 != write(connec_st_usim, "1", 1)) {
+			fprintf(stderr, "can't write GPIO %s to switch modem %d to emulated USIM\n", gpio_path, modem);
+			goto close_exit;
+		}
+		printf("switched modem %d to emulated USIM\n", modem);
+
+		snprintf(gpio_path, sizeof(gpio_path), "/dev/gpio/mdm%d_rst/value", modem);
+		int mdm_rst = open(gpio_path, O_WRONLY);
+		if (-1 == mdm_rst) {
+			fprintf(stderr, "can't open GPIO %s to reset modem %d\n", gpio_path, modem);
+			goto close_exit;
+		}
+		if (1 != write(mdm_rst, "1", 1)) {
+			fprintf(stderr, "can't write GPIO %s to reset modem %d\n", gpio_path, modem);
+			goto close_exit;
+		}
+		sleep(1); // wait a bit to ensure reset is effective
+		if (1 != write(mdm_rst, "0", 1)) {
+			fprintf(stderr, "can't write GPIO %s to reset modem %d\n", gpio_path, modem);
+			goto close_exit;
+		}
+		printf("modem %d reset\n", modem);
+	}
+
+	/* request firmware to generate STATUS on IRQ endpoint */
+	cardem_request_config(ci, CEMU_FEAT_F_STATUS_IRQ);
+
+	/* simulate card-insert to modem (owhw, not qmod) */
+	cardem_request_card_insert(ci, true);
+
+	/* select remote (forwarded) SIM */
+	st_modem_sim_select_remote(ci->slot);
+
+	/* set the ATR */
+	//atr_update_csum(real_atr, sizeof(real_atr));
+	cardem_request_set_atr(ci, cfg->atr.data, cfg->atr.len);
+
+	/* select remote (forwarded) SIM */
+	st_modem_reset_pulse(ci->slot, 300);
+
+	printf("Entering main loop\n");
+
+	allocate_and_submit_irq(ci);
+	allocate_and_submit_in(ci);
+
+	while (1) {
+		osmo_select_main(false);
+	}
+
+	libusb_release_interface(transp->usb_devh, 0);
+
+close_exit:
+	if (transp->usb_devh)
+		libusb_close(transp-> usb_devh);
+}
+
 int main(int argc, char **argv)
 {
 	struct rspro_server_conn *srvc, *bankdc;
-	struct st_transport *transp = ci->slot->transp;
 	struct client_config *cfg;
 	int rc;
 	int ret = 1;
@@ -1082,116 +1192,12 @@ int main(int argc, char **argv)
 
 	// connect to SIMtrace2 cardem
 	do {
-		struct usb_interface_match _ifm, *ifm = &_ifm;
-		ifm->vendor = cfg->usb.vendor_id;
-		ifm->product = cfg->usb.product_id;
-		ifm->configuration = cfg->usb.config_id;
-		ifm->interface = cfg->usb.if_num;
-		ifm->altsetting = cfg->usb.altsetting;
-		ifm->addr = cfg->usb.addr;
-		if (cfg->usb.path)
-			osmo_strlcpy(ifm->path, cfg->usb.path, sizeof(ifm->path));
-		transp->usb_devh = osmo_libusb_open_claim_interface(NULL, NULL, ifm);
-		if (!transp->usb_devh) {
-			fprintf(stderr, "can't open USB device\n");
-			goto close_exit;
-		}
-
-		rc = libusb_claim_interface(transp->usb_devh, cfg->usb.if_num);
-		if (rc < 0) {
-			fprintf(stderr, "can't claim interface %d; rc=%d\n", cfg->usb.if_num, rc);
-			goto close_exit;
-		}
-
-		rc = osmo_libusb_get_ep_addrs(transp->usb_devh, cfg->usb.if_num, &transp->usb_ep.out,
-						&transp->usb_ep.in, &transp->usb_ep.irq_in);
-		if (rc < 0) {
-			fprintf(stderr, "can't obtain EP addrs; rc=%d\n", rc);
-			goto close_exit;
-		}
-
-		// switch modem SIM port to emulated SIM on OWHW
-		if (USB_VENDOR_OPENMOKO == ifm->vendor && USB_PRODUCT_OWHW_SAM3 == ifm->product) { // we are on the OWHW
-			int modem = -1;
-			switch (ifm->interface) { // the USB interface indicates for which modem we want to emulate the SIM
-			case 0:
-				modem = 1;
-				break;
-			case 1:
-				modem = 2;
-				break;
-			default:
-				fprintf(stderr, "unknown GPIO for SIMtrace interface %d\n", ifm->interface);
-				goto close_exit;
-			}
-			//
-			char gpio_path[PATH_MAX];
-			snprintf(gpio_path, sizeof(gpio_path), "/dev/gpio/connect_st_usim%d/value", modem);
-			int connec_st_usim = open(gpio_path, O_WRONLY);
-			if (-1 == connec_st_usim) {
-				fprintf(stderr, "can't open GPIO %s to switch modem %d to emulated USIM\n", gpio_path, modem);
-				goto close_exit;
-			}
-			if (1 != write(connec_st_usim, "1", 1)) {
-				fprintf(stderr, "can't write GPIO %s to switch modem %d to emulated USIM\n", gpio_path, modem);
-				goto close_exit;
-			}
-			printf("switched modem %d to emulated USIM\n", modem);
-
-			snprintf(gpio_path, sizeof(gpio_path), "/dev/gpio/mdm%d_rst/value", modem);
-			int mdm_rst = open(gpio_path, O_WRONLY);
-			if (-1 == mdm_rst) {
-				fprintf(stderr, "can't open GPIO %s to reset modem %d\n", gpio_path, modem);
-				goto close_exit;
-			}
-			if (1 != write(mdm_rst, "1", 1)) {
-				fprintf(stderr, "can't write GPIO %s to reset modem %d\n", gpio_path, modem);
-				goto close_exit;
-			}
-			sleep(1); // wait a bit to ensure reset is effective
-			if (1 != write(mdm_rst, "0", 1)) {
-				fprintf(stderr, "can't write GPIO %s to reset modem %d\n", gpio_path, modem);
-				goto close_exit;
-			}
-			printf("modem %d reset\n", modem);
-		}
-
-		/* request firmware to generate STATUS on IRQ endpoint */
-		cardem_request_config(ci, CEMU_FEAT_F_STATUS_IRQ);
-
-		/* simulate card-insert to modem (owhw, not qmod) */
-		cardem_request_card_insert(ci, true);
-
-		/* select remote (forwarded) SIM */
-		st_modem_sim_select_remote(ci->slot);
-
-		/* set the ATR */
-		//atr_update_csum(real_atr, sizeof(real_atr));
-		cardem_request_set_atr(ci, cfg->atr.data, cfg->atr.len);
-
-		/* select remote (forwarded) SIM */
-		st_modem_reset_pulse(ci->slot, 300);
-
-		printf("Entering main loop\n");
-
-		allocate_and_submit_irq(ci);
-		allocate_and_submit_in(ci);
-
-		while (1) {
-			osmo_select_main(false);
-		}
-
-		ret = 0;
-
-		libusb_release_interface(transp->usb_devh, 0);
-close_exit:
-		if (transp->usb_devh)
-			libusb_close(transp->usb_devh);
-		if (cfg->keep_running)
-			sleep(1);
+		main_body(cfg);
+		sleep(1);
 	} while (cfg->keep_running);
 
-	libusb_exit(NULL);
+close_exit:
+	osmo_libusb_exit(NULL);
 do_exit:
 	return ret;
 }
