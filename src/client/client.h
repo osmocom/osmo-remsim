@@ -11,6 +11,8 @@
 
 /* main.c */
 
+struct cardem_inst;
+
 struct bankd_client {
 	/* connection to the remsim-server (control) */
 	struct rspro_server_conn srv_conn;
@@ -21,4 +23,6 @@ struct bankd_client {
 	struct app_comp_id peer_comp_id;
 
 	struct bank_slot bankd_slot;
+
+	struct cardem_inst *cardem;
 };

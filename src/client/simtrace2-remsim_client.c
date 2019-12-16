@@ -679,17 +679,13 @@ static struct st_slot _slot = {
 	.slot_nr = 0,
 };
 
-struct cardem_inst _ci = {
-	.slot = &_slot,
-};
-
-struct cardem_inst *ci = &_ci;
+static struct cardem_inst *g_ci;
 
 static void signal_handler(int signal)
 {
 	switch (signal) {
 	case SIGINT:
-		cardem_request_card_insert(ci, false);
+		cardem_request_card_insert(g_ci, false);
 		exit(0);
 		break;
 	default:
@@ -714,9 +710,9 @@ static int bankd_handle_tpduCardToModem(struct bankd_client *bc, const RsproPDU_
 	ac.sw[1] = card2modem->data.buf[card2modem->data.size - 1];
 	printf("SIMtrace <= SW=0x%02x%02x, len_rx=%d\n", ac.sw[0], ac.sw[1], card2modem->data.size - 2);
 	if (card2modem->data.size > 2) { // send PB and data to modem
-		cardem_request_pb_and_tx(ci, ac.hdr.ins, card2modem->data.buf, card2modem->data.size - 2);
+		cardem_request_pb_and_tx(bc->cardem, ac.hdr.ins, card2modem->data.buf, card2modem->data.size - 2);
 	}
-	cardem_request_sw_tx(ci, ac.sw); // send SW to modem
+	cardem_request_sw_tx(bc->cardem, ac.sw); // send SW to modem
 
 	return 0;
 }
@@ -730,7 +726,7 @@ static int bankd_handle_setAtrReq(struct bankd_client *bc, const RsproPDU_t *pdu
 	OSMO_ASSERT(RsproPDUchoice_PR_setAtrReq == pdu->msg.present);
 
 	/* FIXME: is this permitted at any time by the SIMtrace2 cardemfirmware? */
-	rc = cardem_request_set_atr(ci, pdu->msg.choice.setAtrReq.atr.buf,
+	rc = cardem_request_set_atr(bc->cardem, pdu->msg.choice.setAtrReq.atr.buf,
 				    pdu->msg.choice.setAtrReq.atr.size);
 	if (rc == 0)
 		resp = rspro_gen_SetAtrRes(ResultCode_ok);
@@ -998,7 +994,7 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 }
 
 
-static void main_body(struct client_config *cfg)
+static void main_body(struct cardem_inst *ci, struct client_config *cfg)
 {
 	struct st_transport *transp = ci->slot->transp;
 	struct usb_interface_match _ifm, *ifm = &_ifm;
@@ -1125,7 +1121,10 @@ int main(int argc, char **argv)
 	msgb_talloc_ctx_init(g_tall_ctx, 0);
 	osmo_init_logging2(g_tall_ctx, &log_info);
 
-	cfg = client_config_init(g_tall_ctx);
+	g_ci = talloc_zero(g_tall_ctx, struct cardem_inst);
+	g_ci->slot = &_slot;
+
+	cfg = client_config_init(g_ci);
 	handle_options(cfg, argc, argv);
 
 	if (cfg->usb.vendor_id < 0 || cfg->usb.product_id < 0) {
@@ -1153,6 +1152,7 @@ int main(int argc, char **argv)
 	// initialize remote SIM client
 
 	g_client = talloc_zero(g_tall_ctx, struct bankd_client);
+	g_client->cardem = g_ci;
 
 	if (cfg->client_id != -1) {
 		g_client->srv_conn.clslot = talloc_zero(g_client, ClientSlot_t);
@@ -1199,7 +1199,7 @@ int main(int argc, char **argv)
 
 	// connect to SIMtrace2 cardem
 	do {
-		main_body(cfg);
+		main_body(g_ci, cfg);
 		sleep(1);
 	} while (cfg->keep_running);
 
