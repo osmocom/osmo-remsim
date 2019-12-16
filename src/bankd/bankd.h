@@ -102,6 +102,8 @@ struct bankd_worker {
 struct bankd_driver_ops {
 	/* open a given card/slot: called once client + mapping exists */
 	int (*open_card)(struct bankd_worker *worker);
+	/* reset a given card/slot with either cold or warm reset */
+	int (*reset_card)(struct bankd_worker *worker, bool cold_reset);
 	int (*transceive)(struct bankd_worker *worker, const uint8_t *out, size_t out_len,
 			  uint8_t *in, size_t *in_len);
 	/* called at cleanup time of a worker thread: clear any driver related state */

@@ -727,6 +727,26 @@ static int worker_handle_tpduModemToCard(struct bankd_worker *worker, const Rspr
 	return 0;
 }
 
+static int worker_handle_clientSlotStatusInd(struct bankd_worker *worker, const RsproPDU_t *pdu)
+{
+	const struct ClientSlotStatusInd *cssi = &pdu->msg.choice.clientSlotStatusInd;
+	const struct SlotPhysStatus *sps = &cssi->slotPhysStatus;
+	int rc = 0;
+
+	LOGW(worker, "clientSlotStatusInd(RST=%s, VCC=%s, CLK=%s)\n",
+		sps->resetActive ? "ACTIVE" : "INACTIVE",
+		sps->vccPresent ? *sps->vccPresent ? "PRESENT" : "ABSENT" : "NULL",
+		sps->clkActive ? *sps->clkActive ? "ACTIVE" : "INACTIVE" : "NULL");
+
+	/* perform cold or warm reset */
+	if (sps->vccPresent && *sps->vccPresent == 0)
+		rc = worker->ops->reset_card(worker, true);
+	else if (sps->resetActive)
+		rc = worker->ops->reset_card(worker, false);
+
+	return rc;
+}
+
 /* handle one incoming RSPRO message from a client inside a worker thread */
 static int worker_handle_rspro(struct bankd_worker *worker, const RsproPDU_t *pdu)
 {
@@ -742,7 +762,7 @@ static int worker_handle_rspro(struct bankd_worker *worker, const RsproPDU_t *pd
 		rc = worker_handle_tpduModemToCard(worker, pdu);
 		break;
 	case RsproPDUchoice_PR_clientSlotStatusInd:
-		/* FIXME */
+		rc = worker_handle_clientSlotStatusInd(worker, pdu);
 		rc = 0;
 		break;
 	case RsproPDUchoice_PR_setAtrRes:
