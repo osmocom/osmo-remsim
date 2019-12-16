@@ -840,44 +840,83 @@ static void print_help(void)
 		);
 }
 
-static const struct option opts[] = {
-	{ "server-host", 1, 0, 's' },
-	{ "server-port", 1, 0, 'p' },
-	{ "client-id", 1, 0, 'c' },
-	{ "client-slot", 1, 0, 'n' },
-	{ "help", 0, 0, 'h' },
-	{ "version", 0, 0, 'v' },
-	{ "gsmtap-ip", 1, 0, 'i' },
-	{ "keep-running", 0, 0, 'k' },
-	{ "usb-vendor", 1, 0, 'V' },
-	{ "usb-product", 1, 0, 'P' },
-	{ "usb-config", 1, 0, 'C' },
-	{ "usb-interface", 1, 0, 'I' },
-	{ "usb-altsetting", 1, 0, 'S' },
-	{ "usb-address", 1, 0, 'A' },
-	{ "usb-path", 1, 0, 'H' },
-	{ "atr", 1, 0, 'a' },
-	{ NULL, 0, 0, 0 }
+#define ATR_SIZE_MAX            55
+struct client_config {
+	char *server_host;
+	int server_port;
+
+	int client_id;
+	int client_slot;
+
+	char *gsmtap_host;
+	bool keep_running;
+
+	struct {
+		uint8_t data[ATR_SIZE_MAX];
+		uint8_t len;
+	} atr;
+
+	struct {
+		int vendor_id;
+		int product_id;
+		int config_id;
+		int if_num;
+		int altsetting;
+		int addr;
+		char *path;
+	} usb;
 };
 
-int main(int argc, char **argv)
+static struct client_config *client_config_init(void *ctx)
 {
-	struct rspro_server_conn *srvc, *bankdc;
-	struct st_transport *transp = ci->slot->transp;
-	char *gsmtap_host = "127.0.0.1";
-	int rc;
-	int c, ret = 1;
-	int keep_running = 0;
-	int server_port = 9998;
-	int if_num = 0, vendor_id = -1, product_id = -1;
-	int config_id = -1, altsetting = 0, addr = -1;
-	int client_id = -1, client_slot = -1;
-	char *server_host = "127.0.0.1";
-	char *path = NULL;
-	uint8_t atr_data[33] = { 0x3B, 0x00 }; // the shortest simplest ATR possible
-	uint8_t atr_len = 2;
+	struct client_config *cfg = talloc_zero(ctx, struct client_config);
+	if (!cfg)
+		return NULL;
 
-	print_welcome();
+	cfg->server_host = talloc_strdup(cfg, "127.0.0.1");
+	cfg->server_port = 9998;
+	cfg->client_id = -1;
+	cfg->client_slot = -1;
+	cfg->gsmtap_host = talloc_strdup(cfg, "127.0.0.1");
+	cfg->keep_running = false;
+
+	cfg->usb.vendor_id = -1;
+	cfg->usb.product_id = -1;
+	cfg->usb.config_id = -1;
+	cfg->usb.if_num = -1;
+	cfg->usb.altsetting = 0;
+	cfg->usb.addr = -1;
+	cfg->usb.path = NULL;
+
+	cfg->atr.data[0] = 0x3B;
+	cfg->atr.data[1] = 0x00; // the shortest simplest ATR possible
+	cfg->atr.len = 2;
+
+	return cfg;
+};
+
+static void handle_options(struct client_config *cfg, int argc, char **argv)
+{
+	const struct option opts[] = {
+		{ "server-host", 1, 0, 's' },
+		{ "server-port", 1, 0, 'p' },
+		{ "client-id", 1, 0, 'c' },
+		{ "client-slot", 1, 0, 'n' },
+		{ "help", 0, 0, 'h' },
+		{ "version", 0, 0, 'v' },
+		{ "gsmtap-ip", 1, 0, 'i' },
+		{ "keep-running", 0, 0, 'k' },
+		{ "usb-vendor", 1, 0, 'V' },
+		{ "usb-product", 1, 0, 'P' },
+		{ "usb-config", 1, 0, 'C' },
+		{ "usb-interface", 1, 0, 'I' },
+		{ "usb-altsetting", 1, 0, 'S' },
+		{ "usb-address", 1, 0, 'A' },
+		{ "usb-path", 1, 0, 'H' },
+		{ "atr", 1, 0, 'a' },
+		{ NULL, 0, 0, 0 }
+	};
+	int c, rc;
 
 	while (1) {
 		int option_index = 0;
@@ -887,16 +926,16 @@ int main(int argc, char **argv)
 			break;
 		switch (c) {
 		case 's':
-			server_host = optarg;
+			osmo_talloc_replace_string(cfg, &cfg->server_host, optarg);
 			break;
 		case 'p':
-			server_port = atoi(optarg);
+			cfg->server_port = atoi(optarg);
 			break;
 		case 'c':
-			client_id = atoi(optarg);
+			cfg->client_id = atoi(optarg);
 			break;
 		case 'n':
-			client_slot = atoi(optarg);
+			cfg->client_slot = atoi(optarg);
 			break;
 		case 'h':
 			print_help();
@@ -907,54 +946,74 @@ int main(int argc, char **argv)
 			exit(0);
 			break;
 		case 'i':
-			gsmtap_host = optarg;
+			osmo_talloc_replace_string(cfg, &cfg->gsmtap_host, optarg);
 			break;
 		case 'k':
-			keep_running = 1;
+			cfg->keep_running = 1;
 			break;
 		case 'V':
-			vendor_id = strtol(optarg, NULL, 16);
+			cfg->usb.vendor_id = strtol(optarg, NULL, 16);
 			break;
 		case 'P':
-			product_id = strtol(optarg, NULL, 16);
+			cfg->usb.product_id = strtol(optarg, NULL, 16);
 			break;
 		case 'C':
-			config_id = atoi(optarg);
+			cfg->usb.config_id = atoi(optarg);
 			break;
 		case 'I':
-			if_num = atoi(optarg);
+			cfg->usb.if_num = atoi(optarg);
 			break;
 		case 'S':
-			altsetting = atoi(optarg);
+			cfg->usb.altsetting = atoi(optarg);
 			break;
 		case 'A':
-			addr = atoi(optarg);
+			cfg->usb.addr = atoi(optarg);
 			break;
 		case 'H':
-			path = optarg;
+			cfg->usb.path = optarg;
 			break;
 		case 'a':
-			rc = osmo_hexparse(optarg, atr_data, ARRAY_SIZE(atr_data));
-			if (rc < 2 || rc > ARRAY_SIZE(atr_data)) {
-				fprintf(stderr, "ATR matlformed\n");
-				goto do_exit;
+			rc = osmo_hexparse(optarg, cfg->atr.data, ARRAY_SIZE(cfg->atr.data));
+			if (rc < 2 || rc > ARRAY_SIZE(cfg->atr.data)) {
+				fprintf(stderr, "ATR malformed\n");
+				exit(2);
 			}
-			atr_len = rc;
+			cfg->atr.len = rc;
 			break;
 		}
 	}
 
-	if (vendor_id < 0 || product_id < 0) {
-		fprintf(stderr, "You have to specify the vendor and product ID\n");
-		goto do_exit;
+	if (argc > optind) {
+		fprintf(stderr, "Unsupported positional arguments on command line\n");
+		exit(2);
 	}
+}
 
-	signal(SIGUSR1, handle_sig_usr1);
+
+int main(int argc, char **argv)
+{
+	struct rspro_server_conn *srvc, *bankdc;
+	struct st_transport *transp = ci->slot->transp;
+	struct client_config *cfg;
+	int rc;
+	int ret = 1;
+
+	print_welcome();
 
 	g_tall_ctx = talloc_named_const(NULL, 0, "global");
 	talloc_asn1_ctx = talloc_named_const(g_tall_ctx, 0, "asn1");
 	msgb_talloc_ctx_init(g_tall_ctx, 0);
 	osmo_init_logging2(g_tall_ctx, &log_info);
+
+	cfg = client_config_init(g_tall_ctx);
+	handle_options(cfg, argc, argv);
+
+	if (cfg->usb.vendor_id < 0 || cfg->usb.product_id < 0) {
+		fprintf(stderr, "You have to specify the vendor and product ID\n");
+		goto do_exit;
+	}
+
+	signal(SIGUSR1, handle_sig_usr1);
 
 	rc = osmo_libusb_init(NULL);
 	if (rc < 0) {
@@ -962,7 +1021,7 @@ int main(int argc, char **argv)
 		goto do_exit;
 	}
 
-	g_gti = gsmtap_source_init(gsmtap_host, GSMTAP_UDP_PORT, 0);
+	g_gti = gsmtap_source_init(cfg->gsmtap_host, GSMTAP_UDP_PORT, 0);
 	if (!g_gti) {
 		perror("unable to open GSMTAP");
 		goto close_exit;
@@ -975,20 +1034,22 @@ int main(int argc, char **argv)
 
 	g_client = talloc_zero(g_tall_ctx, struct bankd_client);
 
-	if (client_id != -1) {
-		/* default to client slot 0 */
-		if (client_slot == -1)
-			client_slot = 0;
+	if (cfg->client_id != -1) {
 		g_client->srv_conn.clslot = talloc_zero(g_client, ClientSlot_t);
-		g_client->srv_conn.clslot->clientId = client_id;
-		g_client->srv_conn.clslot->slotNr = client_slot;
+		g_client->srv_conn.clslot->clientId = cfg->client_id;
+		/* default to client slot 0 */
+		if (cfg->client_slot == -1)
+			g_client->srv_conn.clslot->slotNr = 0;
+		else
+			g_client->srv_conn.clslot->slotNr = cfg->client_slot;
 		g_client->bankd_conn.clslot = talloc_zero(g_client, ClientSlot_t);
 		*g_client->bankd_conn.clslot = *g_client->srv_conn.clslot;
 	}
 
+	/* create and [attempt to] establish connection to remsim-server */
 	srvc = &g_client->srv_conn;
-	srvc->server_host = server_host;
-	srvc->server_port = server_port;
+	srvc->server_host = cfg->server_host;
+	srvc->server_port = cfg->server_port;
 	srvc->handle_rx = srvc_handle_rx;
 	srvc->own_comp_id.type = ComponentType_remsimClient;
 	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.name, "simtrace2-remsim-client");
@@ -1001,6 +1062,8 @@ int main(int argc, char **argv)
 	}
 	osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_ESTABLISH, NULL);
 
+	/* create and not yet establish connection to remsim-bankd */
+	srvc = &g_client->srv_conn;
 	bankdc = &g_client->bankd_conn;
 	/* server_host / server_port are configured from remsim-server */
 	bankdc->handle_rx = bankd_handle_rx;
@@ -1017,27 +1080,27 @@ int main(int argc, char **argv)
 	// connect to SIMtrace2 cardem
 	do {
 		struct usb_interface_match _ifm, *ifm = &_ifm;
-		ifm->vendor = vendor_id;
-		ifm->product = product_id;
-		ifm->configuration = config_id;
-		ifm->interface = if_num;
-		ifm->altsetting = altsetting;
-		ifm->addr = addr;
-		if (path)
-			osmo_strlcpy(ifm->path, path, sizeof(ifm->path));
+		ifm->vendor = cfg->usb.vendor_id;
+		ifm->product = cfg->usb.product_id;
+		ifm->configuration = cfg->usb.config_id;
+		ifm->interface = cfg->usb.if_num;
+		ifm->altsetting = cfg->usb.altsetting;
+		ifm->addr = cfg->usb.addr;
+		if (cfg->usb.path)
+			osmo_strlcpy(ifm->path, cfg->usb.path, sizeof(ifm->path));
 		transp->usb_devh = osmo_libusb_open_claim_interface(NULL, NULL, ifm);
 		if (!transp->usb_devh) {
 			fprintf(stderr, "can't open USB device\n");
 			goto close_exit;
 		}
 
-		rc = libusb_claim_interface(transp->usb_devh, if_num);
+		rc = libusb_claim_interface(transp->usb_devh, cfg->usb.if_num);
 		if (rc < 0) {
-			fprintf(stderr, "can't claim interface %d; rc=%d\n", if_num, rc);
+			fprintf(stderr, "can't claim interface %d; rc=%d\n", cfg->usb.if_num, rc);
 			goto close_exit;
 		}
 
-		rc = osmo_libusb_get_ep_addrs(transp->usb_devh, if_num, &transp->usb_ep.out,
+		rc = osmo_libusb_get_ep_addrs(transp->usb_devh, cfg->usb.if_num, &transp->usb_ep.out,
 						&transp->usb_ep.in, &transp->usb_ep.irq_in);
 		if (rc < 0) {
 			fprintf(stderr, "can't obtain EP addrs; rc=%d\n", rc);
@@ -1101,7 +1164,7 @@ int main(int argc, char **argv)
 
 		/* set the ATR */
 		//atr_update_csum(real_atr, sizeof(real_atr));
-		cardem_request_set_atr(ci, atr_data, atr_len);
+		cardem_request_set_atr(ci, cfg->atr.data, cfg->atr.len);
 
 		/* select remote (forwarded) SIM */
 		st_modem_reset_pulse(ci->slot, 300);
@@ -1121,9 +1184,9 @@ int main(int argc, char **argv)
 close_exit:
 		if (transp->usb_devh)
 			libusb_close(transp->usb_devh);
-		if (keep_running)
+		if (cfg->keep_running)
 			sleep(1);
-	} while (keep_running);
+	} while (cfg->keep_running);
 
 	libusb_exit(NULL);
 do_exit:
