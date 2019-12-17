@@ -844,33 +844,6 @@ static void print_help(void)
 		);
 }
 
-#define ATR_SIZE_MAX            55
-struct client_config {
-	char *server_host;
-	int server_port;
-
-	int client_id;
-	int client_slot;
-
-	char *gsmtap_host;
-	bool keep_running;
-
-	struct {
-		uint8_t data[ATR_SIZE_MAX];
-		uint8_t len;
-	} atr;
-
-	struct {
-		int vendor_id;
-		int product_id;
-		int config_id;
-		int if_num;
-		int altsetting;
-		int addr;
-		char *path;
-	} usb;
-};
-
 static struct client_config *client_config_init(void *ctx)
 {
 	struct client_config *cfg = talloc_zero(ctx, struct client_config);
@@ -1152,6 +1125,7 @@ int main(int argc, char **argv)
 	// initialize remote SIM client
 
 	g_client = talloc_zero(g_tall_ctx, struct bankd_client);
+	g_client->cfg = cfg;
 	g_client->cardem = g_ci;
 
 	if (cfg->client_id != -1) {
