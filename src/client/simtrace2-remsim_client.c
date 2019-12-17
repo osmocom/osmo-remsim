@@ -86,6 +86,7 @@ struct st_slot {
 struct cardem_inst {
 	/* slot on which this card emulation instance runs */
 	struct st_slot *slot;
+	struct cardemu_usb_msg_status last_status;
 };
 
 /* global GSMTAP instance */
@@ -543,6 +544,11 @@ static int process_irq_status(struct cardem_inst *ci, const uint8_t *buf, int le
 							status->flags & CEMU_STATUS_F_CLK_ACTIVE,
 							-1 /* FIXME: make this dependent on board */);
 	server_conn_send_rspro(&g_client->bankd_conn, pdu);
+
+	if (ci->last_status.flags != status->flags) {
+		ci->last_status = *status;
+	} else
+		ci->last_status = *status;
 
 	return 0;
 }
