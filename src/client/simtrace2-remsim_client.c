@@ -87,6 +87,7 @@ struct cardem_inst {
 	/* slot on which this card emulation instance runs */
 	struct st_slot *slot;
 	struct cardemu_usb_msg_status last_status;
+	char *usb_path;
 };
 
 /* global GSMTAP instance */
@@ -992,6 +993,10 @@ static void main_body(struct cardem_inst *ci, struct client_config *cfg)
 		fprintf(stderr, "can't open USB device\n");
 		return;
 	}
+
+	/* (re)determine the USB path of the opened device */
+	talloc_free(ci->usb_path);
+	ci->usb_path = osmo_libusb_dev_get_path_c(ci, libusb_get_device(transp->usb_devh));
 
 	rc = libusb_claim_interface(transp->usb_devh, cfg->usb.if_num);
 	if (rc < 0) {
