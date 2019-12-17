@@ -82,6 +82,10 @@ osmo-remsim-client-st2 currently has the following command-line options:
   Specify the initial ATR to be communicated to the modem/phone.  Can
   and will later be overridden by the ATR as specified by
   `osmo-remsim-bankd` once a card has been mapped to this client.
+*-e, --event-script COMMAND*::
+  Specify the shell command to be execute when the client wants to call its
+  helper script
+
 
 ==== Examples
 .remsim-server is on 10.2.3.4, sysmoQMOD on usb bus, all 4 modems:
@@ -97,3 +101,55 @@ osmo-remsim-client-st2 -s 10.2.3.4 -V 1d50 -P 4004 -C 1 -I 1 -H 2-1.4 -c 0 -n 3
 `osmo-remsim-client` currently logs to stdout only, and the logging
 verbosity is not yet configurable.  However, as the libosmocore logging
 framework is used, extending this is an easy modification.
+
+=== Helper Script
+
+`osmo-remsim-client` can call an external shell command / script / program at specific
+instances of time.  This serves two purposes:
+
+* To keep external system integration posted about the overall status of remsim-client,
+  such as whether or not it is connected to a server and/or bankd.
+* To request the external system to perform specific actions, such as triggering the reset
+  of the modem - in case the hardware doesn't allow the simtrace2 firmware to do that itself.
+
+==== Script Environment Variables
+
+The environment passed to the helper script contains a number of variables to provide inormation
+to the external script:
+
+.Environment Variables
+[options="header",cols="27%,18%,55%"]
+|===
+| Name | Example Value | Description
+| REMSIM_CLIENT_VERSION | 0.2.2.37-5406a | Compile version of the software
+| REMSIM_SERVER_ADDR | 1.2.3.4:1234 | Address and port of the remsim-server
+| REMSIM_SERVER_STATE | CONNECTED | FSM state of the connection to remsim-server
+| REMSIM_BANKD_ADDR | 1.2.3.4:1234 | Address and port of the remsim-bankd
+| REMSIM_BANKD_STATE | CONNECTED | FSM state of the connection to remsim-bankd
+| REMSIM_CLIENT_SLOT | 23:42 | Client ID and Client Slot Number
+| REMSIM_BANKD_SLOT | 55:33 | Bank ID and Bank Slot Number
+| REMSIM_USB_PATH | 2-1.1 | USB path of the USB device with simtrace2 cardem firmware
+| REMSIM_USB_INTERFACE | 1 | Interface number of the USB device with simtrace2 cardem firmware
+| REMSIM_SIM_VCC | 1 | Whether or not the modem currently applies SIM VCC (0/1)
+| REMSIM_SIM_RST | 1 | Whether or not the modem currently asserts SIM RST (0=inactive, 1=active)
+| REMSIM_CAUSE | request-card-insert | The cause why this script has been called
+|===
+
+==== REMSIM_CAUSE values
+
+The REMSIM_CAUSE environment variable (as well as the first argument) passed to the helper
+script indicated why the script has been called.
+
+[options="header",cols="25%,75%"]
+|===
+| Name | Description
+| event-modem-status | The SIM card interface status has changed (e.g. VCC/RST change)
+| event-bankd-connect | A logical RSPRO connection to a bankd has been established
+| event-server-connect | A logical RSPRO connection to a server has been established
+| event-config-bankd | The server has instructed the client of the bankd address
+| request-card-insert | The client asks the system to simulate SIM card insertion to the modem
+| request-card-remove | The client asks the system to simulate SIM card removal from the modem
+| request-sim-remote | The client asks the system to switch to remote SIM
+| request-sim-local | The client asks the system to switch to local SIM
+| request-modem-reset | The client asks the system to perform a modem reset
+|===

@@ -32,6 +32,7 @@
 #include <osmocom/core/utils.h>
 #include <osmocom/core/logging.h>
 #include <osmocom/core/application.h>
+#include <osmocom/core/exec.h>
 
 #include <osmocom/abis/ipa.h>
 #include <osmocom/gsm/protocol/ipaccess.h>
@@ -128,6 +129,77 @@ __attribute__((unused)) static int gsmtap_send_sim(const uint8_t *apdu, unsigned
 
 	free(buf);
 	return 0;
+}
+
+/* build the (additional) environment for executing a script */
+static char **build_script_env(struct bankd_client *clnt, const char *cause)
+{
+	struct cardem_inst *ci = clnt->cardem;
+	char **env = talloc_zero_size(clnt, 256*sizeof(char *));
+	int i = 0;
+
+	if (!env)
+		return NULL;
+
+	env[i++] = talloc_asprintf(env, "REMSIM_CLIENT_VERSION=%s", VERSION);
+
+	env[i++] = talloc_asprintf(env, "REMSIM_SERVER_ADDR=%s:%u",
+				   clnt->srv_conn.server_host, clnt->srv_conn.server_port);
+	env[i++] = talloc_asprintf(env, "REMSIM_SERVER_STATE=%s",
+				   osmo_fsm_inst_state_name(clnt->srv_conn.fi));
+
+	env[i++] = talloc_asprintf(env, "REMSIM_BANKD_ADDR=%s:%u",
+				   clnt->bankd_conn.server_host, clnt->bankd_conn.server_port);
+	env[i++] = talloc_asprintf(env, "REMSIM_BANKD_STATE=%s",
+				   osmo_fsm_inst_state_name(clnt->bankd_conn.fi));
+
+
+	if (clnt->srv_conn.clslot) {
+		env[i++] = talloc_asprintf(env, "REMSIM_CLIENT_SLOT=%lu:%lu",
+					   g_client->srv_conn.clslot->clientId,
+					   g_client->srv_conn.clslot->slotNr);
+	}
+	env[i++] = talloc_asprintf(env, "REMSIM_BANKD_SLOT=%u:%u",
+				   clnt->bankd_slot.bank_id, clnt->bankd_slot.slot_nr);
+
+	env[i++] = talloc_asprintf(env, "REMSIM_USB_PATH=%s", ci->usb_path);
+	env[i++] = talloc_asprintf(env, "REMSIM_USB_INTERFACE=%u", clnt->cfg->usb.if_num);
+
+	/* TODO: SIM card state VCC/CLK/RST */
+	env[i++] = talloc_asprintf(env, "REMSIM_SIM_VCC=%u",
+				   !!(ci->last_status.flags & CEMU_STATUS_F_VCC_PRESENT));
+	env[i++] = talloc_asprintf(env, "REMSIM_SIM_RST=%u",
+				   !!(ci->last_status.flags & CEMU_STATUS_F_RESET_ACTIVE));
+
+	env[i++] = talloc_asprintf(env, "REMSIM_CAUSE=%s", cause);
+
+	/* terminate last entry */
+	env[i++] = NULL;
+	return env;
+}
+
+static int call_script(struct bankd_client *clnt, const char *cause)
+{
+	char **env, *cmd;
+	int rc;
+
+	if (!clnt->cfg->event_script)
+		return 0;
+
+	env = build_script_env(clnt, cause);
+	if (!env)
+		return -ENOMEM;
+
+	cmd = talloc_asprintf(env, "%s %s", clnt->cfg->event_script, cause);
+	if (!cmd) {
+		talloc_free(env);
+		return -ENOMEM;
+	}
+
+	rc = osmo_system_nowait(cmd, osmo_environment_whitelist, env);
+	talloc_free(env);
+
+	return rc;
 }
 
 /***********************************************************************
@@ -548,6 +620,7 @@ static int process_irq_status(struct cardem_inst *ci, const uint8_t *buf, int le
 
 	if (ci->last_status.flags != status->flags) {
 		ci->last_status = *status;
+		call_script(g_client, "event-modem-status");
 	} else
 		ci->last_status = *status;
 
@@ -754,6 +827,7 @@ static int bankd_handle_rx(struct rspro_server_conn *bankdc, const RsproPDU_t *p
 		/* Store 'identity' of bankd to in peer_comp_id */
 		rspro_comp_id_retrieve(&bankdc->peer_comp_id, &pdu->msg.choice.connectClientRes.identity);
 		osmo_fsm_inst_dispatch(bankdc->fi, SRVC_E_CLIENT_CONN_RES, (void *) pdu);
+		call_script(g_client, "event-bankd-connect");
 		break;
 	case RsproPDUchoice_PR_tpduCardToModem: // APDU response from card received
 		bankd_handle_tpduCardToModem(g_client, pdu);
@@ -780,6 +854,7 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 		/* Store 'identity' of server in srvc->peer_comp_id */
 		rspro_comp_id_retrieve(&srvc->peer_comp_id, &pdu->msg.choice.connectClientRes.identity);
 		osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_CLIENT_CONN_RES, (void *) pdu);
+		call_script(g_client, "event-server-connect");
 		break;
 	case RsproPDUchoice_PR_configClientIdReq:
 		/* store/set the clientID as instructed by the server */
@@ -804,6 +879,7 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 		/* send response to server */
 		resp = rspro_gen_ConfigClientBankRes(ResultCode_ok);
 		server_conn_send_rspro(srvc, resp);
+		call_script(g_client, "event-config-bankd");
 		break;
 	default:
 		LOGPFSML(srvc->fi, LOGL_ERROR, "Unknown/Unsupported RSPRO PDU type: %s\n",
@@ -847,6 +923,7 @@ static void print_help(void)
 		"\t-A\t--usb-address\tADDRESS\n"
 		"\t-H\t--usb-path\tPATH\n"
 		"\t-a\t--atr\tATR\n"
+		"\t-e\t--event-script\tPATH\n"
 		"\n"
 		);
 }
@@ -898,6 +975,7 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 		{ "usb-address", 1, 0, 'A' },
 		{ "usb-path", 1, 0, 'H' },
 		{ "atr", 1, 0, 'a' },
+		{ "event-script", 1, 0, 'e' },
 		{ NULL, 0, 0, 0 }
 	};
 	int c, rc;
@@ -905,7 +983,7 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 	while (1) {
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "s:p:c:n:hvi:kV:P:C:I:S:A:H:a:", opts, &option_index);
+		c = getopt_long(argc, argv, "s:p:c:n:hvi:kV:P:C:I:S:A:H:a:e:", opts, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -963,6 +1041,9 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 				exit(2);
 			}
 			cfg->atr.len = rc;
+			break;
+		case 'e':
+			osmo_talloc_replace_string(cfg, &cfg->event_script, optarg);
 			break;
 		}
 	}
@@ -1062,9 +1143,11 @@ static void main_body(struct cardem_inst *ci, struct client_config *cfg)
 
 	/* simulate card-insert to modem (owhw, not qmod) */
 	cardem_request_card_insert(ci, true);
+	call_script(g_client, "request-card-insert");
 
 	/* select remote (forwarded) SIM */
 	st_modem_sim_select_remote(ci->slot);
+	call_script(g_client, "request-sim-remote");
 
 	/* set the ATR */
 	//atr_update_csum(real_atr, sizeof(real_atr));
@@ -1072,6 +1155,7 @@ static void main_body(struct cardem_inst *ci, struct client_config *cfg)
 
 	/* select remote (forwarded) SIM */
 	st_modem_reset_pulse(ci->slot, 300);
+	call_script(g_client, "request-modem-reset");
 
 	printf("Entering main loop\n");
 
