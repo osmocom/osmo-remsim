@@ -1,3 +1,10 @@
+osmo-remsim (0.2.3) unstable; urgency=medium
+
+  [ Harald Welte ]
+  * add missing debian/libosmo-rspro1.install
+
+ -- Pau Espin Pedrol <pespin@sysmocom.de>  Thu, 09 Jan 2020 16:47:52 +0100
+
 osmo-remsim (0.2.2) unstable; urgency=medium
 
   [ Harald Welte ]
