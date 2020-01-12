@@ -35,7 +35,7 @@ PKG_PROG_PKG_CONFIG([0.20])
 AC_CHECK_LIB(csv, csv_init, LIBS="$LIBS -lcsv", [AC_MSG_ERROR([*** libcsv library not found!])])
 AC_CHECK_HEADERS([csv.h])
 
-PKG_CHECK_MODULES(OSMOCORE, libosmocore >= 0.11.0)
+PKG_CHECK_MODULES(OSMOCORE, libosmocore >= 1.3.0)
 PKG_CHECK_MODULES(OSMOGSM, libosmogsm >= 0.11.0)
 PKG_CHECK_MODULES(OSMOABIS, libosmoabis)
 PKG_CHECK_MODULES(OSMOSIM, libosmosim)
