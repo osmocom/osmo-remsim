@@ -56,3 +56,10 @@ struct bankd_client {
 	struct client_config *cfg;
 	struct cardem_inst *cardem;
 };
+
+
+extern struct bankd_client *g_client;
+
+extern int client_user_bankd_handle_rx(struct rspro_server_conn *bankdc, const RsproPDU_t *pdu);
+
+extern int client_user_main(struct bankd_client *g_client);

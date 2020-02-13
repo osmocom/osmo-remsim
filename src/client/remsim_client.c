@@ -52,6 +52,7 @@ static int bankd_handle_rx(struct rspro_server_conn *bankdc, const RsproPDU_t *p
 		break;
 	case RsproPDUchoice_PR_tpduCardToModem:
 	case RsproPDUchoice_PR_setAtrReq:
+		return client_user_bankd_handle_rx(bankdc, pdu);
 	default:
 		LOGPFSML(bankdc->fi, LOGL_ERROR, "Unknown/Unsupported RSPRO PDU %s\n",
 			 rspro_msgt_name(pdu));
@@ -61,7 +62,7 @@ static int bankd_handle_rx(struct rspro_server_conn *bankdc, const RsproPDU_t *p
 	return 0;
 }
 
-static struct bankd_client *g_client;
+struct bankd_client *g_client;
 static void *g_tall_ctx;
 void __thread *talloc_asn1_ctx;
 int asn_debug;
@@ -161,7 +162,7 @@ static void handle_options(int argc, char **argv)
 				g_client->srv_conn.clslot = talloc_zero(g_client, ClientSlot_t);
 			g_client->srv_conn.clslot->clientId = atoi(optarg);
 			break;
-		case 's':
+		case 'n':
 			if (!g_client->srv_conn.clslot)
 				g_client->srv_conn.clslot = talloc_zero(g_client, ClientSlot_t);
 			g_client->srv_conn.clslot->slotNr = atoi(optarg);
@@ -185,6 +186,7 @@ int main(int argc, char **argv)
 
 	g_client = talloc_zero(g_tall_ctx, struct bankd_client);
 
+	/* create and [attempt to] establish connection to remsim-server */
 	srvc = &g_client->srv_conn;
 	srvc->server_host = "localhost";
 	srvc->server_port = 9998;
@@ -208,6 +210,11 @@ int main(int argc, char **argv)
 	asn_debug = 0;
 
 	bankdc = &g_client->bankd_conn;
+	if (srvc->clslot) {
+		bankdc->clslot = talloc_zero(g_client, ClientSlot_t);
+		*bankdc->clslot = *srvc->clslot;
+	}
+
 	/* server_host / server_port are configured from remsim-server */
 	bankdc->handle_rx = bankd_handle_rx;
 	memcpy(&bankdc->own_comp_id, &srvc->own_comp_id, sizeof(bankdc->own_comp_id));
@@ -216,8 +223,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Unable to connect bankd conn FSM: %s\n", strerror(errno));
 		exit(1);
 	}
+	osmo_fsm_inst_update_id(bankdc->fi, "bankd");
 
-	while (1) {
-		osmo_select_main(0);
-	}
+	client_user_main(g_client);
 }

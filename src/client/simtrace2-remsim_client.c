@@ -94,7 +94,7 @@ struct cardem_inst {
 /* global GSMTAP instance */
 static struct gsmtap_inst *g_gti;
 
-static struct bankd_client *g_client;
+struct bankd_client *g_client;
 static void *g_tall_ctx;
 void __thread *talloc_asn1_ctx;
 int asn_debug;
