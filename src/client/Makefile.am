@@ -4,7 +4,7 @@ AM_CFLAGS = -Wall -I$(top_srcdir)/include -I/$(top_builddir)/include -I$(top_src
 	    $(OSMOSIMTRACE2_CFLAGS) \
 	    -I$(top_srcdir)/include/osmocom/rspro
 
-bin_PROGRAMS = osmo-remsim-client-st2
+bin_PROGRAMS = osmo-remsim-client-st2 remsim-client
 
 remsim_client_SOURCES = remsim_client.c ../rspro_client_fsm.c ../debug.c
 remsim_client_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
