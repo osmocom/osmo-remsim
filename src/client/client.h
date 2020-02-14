@@ -56,6 +56,7 @@ struct bankd_client {
 
 	struct client_config *cfg;
 	struct cardem_inst *cardem;
+	void *data;
 };
 
 #define srvc2bankd_client(srvc)		container_of(srvc, struct bankd_client, srv_conn)

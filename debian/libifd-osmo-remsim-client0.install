@@ -1,0 +1,2 @@
+usr/lib/pcsc/drivers/libifd-osmo-remsim-client.bundle/*
+etc/reader.conf.d/*

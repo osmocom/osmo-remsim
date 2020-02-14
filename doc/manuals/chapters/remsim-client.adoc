@@ -258,3 +258,123 @@ R-APDU: 9f 17
 
 The program continues in this loop (read command APDU as hex-dump from stdin; provide response on stdout)
 until it is terminated by Ctrl+C or by other means.
+
+== libifd_remsim_client
+
+This is a remsim-client implemented as so-called `ifd_handler`, i.e. a card reader driver
+that plugs into the bottom side of the PC/SC daemon of pcsc-lite.
+
+Using this library, you can use normal smart card application programs with remote smart
+cards managed by osmo-remsim.  The setup looks like this:
+
+[graphviz]
+.Overall osmo-remsim architecture using libifd_remsim_client
+----
+graph G {
+  rankdir = LR;
+
+  subgraph cluster_0 {
+    label = "Client";
+    application [label="Any application\nusing PC/SC"];
+    pcscd [label="PC/SC Daemon\nlibifd_remsim_client driver"];
+    application -- pcscd;
+  }
+
+  subgraph cluster_2 {
+    label = "SIM Bank";
+    bankd [label="remsim-bankd"];
+    reader [label="Card Reader\ne.g. sysmoOCTSIM",shape="rectangle"];
+    b_pcscd [label="PC/SC Daemon\nlibccid driver"];
+    bankd -- b_pcscd;
+    b_pcscd -- reader [label = "USB CCID"];
+  }
+
+  subgraph cluster_1 {
+    label = "Server/Backend";
+    server [label="remsim-server"];
+    backend [label="Back-End Application"];
+    server -- backend [label="REST Interface"];
+  }
+
+  pcscd -- bankd [label="RSPRO Data"];
+  pcscd -- server [label="RSPRO Control"];
+  bankd -- server [label="RSPRO Control"];
+}
+----
+
+
+=== Configuration
+
+Like all non-USB PC/SC reader drivers, this is happening in `/etc/reader.conf` or, at
+least on Debian GNU/Linux based systems via files in `/etc/reader.conf.d`.  The
+osmo-remsim software includes an example configuration file and installs it as
+`osmo-remsim-client-reader_conf` in that directory.
+
+.contents of the configuration example provided by osmo-remsim-client
+----
+#FRIENDLYNAME "osmo-remsim-client"
+#DEVICENAME   0:0:192.168.11.10:9998
+#LIBPATH /usr/lib/pcsc/drivers/libifd-osmo-remsim-client.bundle/Contents/Linux/libifd_remsim_client.so
+----
+
+As you can see, all lines are commented out by default.  In order to enable the
+remsim-client virtual reader, you need to
+
+* remove the `#` character on all three lines
+* configure the DEVICNAME according to your local configuration. It is a string with
+  fields separated by colons, in the form of CLIENT_ID:CLIENT_SLOT:SERVER_IP:SERVER_PORRT
+** First part is the Client ID (default: 0)
+** Second part is the Client SlotNumbera (default: 0)
+** Third part is the IP address of the `osmo-resim-server` (default: localhost)
+** Last part is the RSPRO TCP port of the `osmo-remsim-server` (default: 9998)
+
+Once the configuration file has been updated, you should re-start pcscd by issuing
+`systemctl restart pcscd` or whatever command your Linux distribution uses for restarting
+services.
+
+You can check if the driver is loaded by using the `pcsc_scan` tool included with `pcscd`:
+
+----
+$ pcsc_scan
+Using reader plug'n play mechanism
+Scanning present readers...
+0: osmo-remsim-client 00 00
+
+Wed Mar  4 13:31:42 2020
+ Reader 0: osmo-remsim-client 00 00
+  Event number: 0
+  Card state: Card removed,
+ -
+----
+
+Once a proper slotmap to an existing SIM card in a remote bank daemon has been installed
+in the server, you should see something like this:
+
+----
+$ pcsc_scan
+Using reader plug'n play mechanism
+Scanning present readers...
+0: osmo-remsim-client 00 00
+
+Wed Mar  4 13:35:18 2020
+ Reader 0: osmo-remsim-client 00 00
+  Event number: 1
+  Card state: Card inserted,
+  ATR: 3B 7D 94 00 00 55 55 53 0A 74 86 93 0B 24 7C 4D 54 68
+
+ATR: 3B 7D 94 00 00 55 55 53 0A 74 86 93 0B 24 7C 4D 54 68
++ TS = 3B --> Direct Convention
++ T0 = 7D, Y(1): 0111, K: 13 (historical bytes)
+  TA(1) = 94 --> Fi=512, Di=8, 64 cycles/ETU
+    62500 bits/s at 4 MHz, fMax for Fi = 5 MHz => 78125 bits/s
+  TB(1) = 00 --> VPP is not electrically connected
+  TC(1) = 00 --> Extra guard time: 0
++ Historical bytes: 55 55 53 0A 74 86 93 0B 24 7C 4D 54 68
+  Category indicator byte: 55 (proprietary format)
+
+Possibly identified card (using /home/laforge/.cache/smartcard_list.txt):
+        NONE
+----
+
+From now on, you can use any application using PC/SC, whether C, Python or Java with a
+remote SIM card managed by osmo-remsim.

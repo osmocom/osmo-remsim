@@ -68,6 +68,14 @@ if test "$osmo_ac_build_client" = "yes"; then
 	PKG_CHECK_MODULES(OSMOUSB, libosmousb)
 	PKG_CHECK_MODULES(OSMOSIMTRACE2, libosmo-simtrace2)
 	PKG_CHECK_MODULES(USB, libusb-1.0)
+
+	serialconfdir=`pkg-config --variable=serialconfdir libpcsclite`
+	AC_SUBST(serialconfdir)
+	ifd_dropdir=`pkg-config --variable=usbdropdir libpcsclite`
+	# allow user to override the dropdir for the PCSC driver bundle
+	AC_ARG_WITH(usbdropdir, [--with-usbdropdir	PCSC bundle location],
+				[usbdropdir="${withval}"], [usbdropdir="${ifd_dropdir}"])
+	AC_SUBST(usbdropdir)
 fi
 AM_CONDITIONAL(BUILD_CLIENT, test "x$osmo_ac_build_client" = "xyes")
 AC_SUBST(BUILD_CLIENT)
@@ -165,6 +173,7 @@ AC_OUTPUT(
 	src/rspro/Makefile
 	src/bankd/Makefile
 	src/client/Makefile
+	src/client/osmo-remsim-client-reader_conf
 	src/server/Makefile
 	include/Makefile
 	include/osmocom/Makefile

@@ -71,6 +71,17 @@ Description: Osmocom Remote SIM - Client
  hardware and forwards the SIM card communication to a remsim-bankd,
  under the control of remsim-server.
 
+Package: libifd-osmo-remsim-client0
+Architecture: any
+Multi-Arch: same
+Depends: pcscd, ${shlibs:Depends}, ${misc:Depends}
+Provides: pcsc-ifd-handler
+Suggests: pcsc-tools
+Description: Osmocom Remote SIM Client - PC/SC driver
+ This is an incarnation of osmo-remsim-client which can plug as ifd_handler
+ driver into pcscd.  This means you can use remote smart cards managed
+ by osmo-remsim-server via normal PC/SC applications.
+
 package: osmo-remsim-doc
 Architecture: all
 Section: doc
