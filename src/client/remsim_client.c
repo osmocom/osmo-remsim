@@ -62,7 +62,7 @@ static int bankd_handle_rx(struct rspro_server_conn *bankdc, const RsproPDU_t *p
 	return 0;
 }
 
-struct bankd_client *g_client;
+static struct bankd_client *g_client;
 static void *g_tall_ctx;
 void __thread *talloc_asn1_ctx;
 int asn_debug;
@@ -70,6 +70,7 @@ int asn_debug;
 /* handle incoming messages from server */
 static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 {
+	struct bankd_client *bc = srvc2bankd_client(srvc);
 	RsproPDU_t  *resp;
 
 	switch (pdu->msg.present) {
@@ -80,24 +81,24 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 		break;
 	case RsproPDUchoice_PR_configClientIdReq:
 		/* store/set the clientID as instructed by the server */
-		if (!g_client->srv_conn.clslot)
-			g_client->srv_conn.clslot = talloc_zero(g_client, ClientSlot_t);
-		*g_client->srv_conn.clslot = pdu->msg.choice.configClientIdReq.clientSlot;
-		if (!g_client->bankd_conn.clslot)
-			g_client->bankd_conn.clslot = talloc_zero(g_client, ClientSlot_t);
-		*g_client->bankd_conn.clslot = *g_client->srv_conn.clslot;
+		if (!srvc->clslot)
+			srvc->clslot = talloc_zero(srvc, ClientSlot_t);
+		*srvc->clslot = pdu->msg.choice.configClientIdReq.clientSlot;
+		if (!bc->bankd_conn.clslot)
+			bc->bankd_conn.clslot = talloc_zero(bc, ClientSlot_t);
+		*bc->bankd_conn.clslot = *bc->srv_conn.clslot;
 		/* send response to server */
 		resp = rspro_gen_ConfigClientIdRes(ResultCode_ok);
 		server_conn_send_rspro(srvc, resp);
 		break;
 	case RsproPDUchoice_PR_configClientBankReq:
 		/* store/set the bankd ip/port as instructed by the server */
-		osmo_talloc_replace_string(g_client, &g_client->bankd_conn.server_host,
+		osmo_talloc_replace_string(bc, &bc->bankd_conn.server_host,
 					   rspro_IpAddr2str(&pdu->msg.choice.configClientBankReq.bankd.ip));
-		rspro2bank_slot(&g_client->bankd_slot, &pdu->msg.choice.configClientBankReq.bankSlot);
-		g_client->bankd_conn.server_port = pdu->msg.choice.configClientBankReq.bankd.port;
+		rspro2bank_slot(&bc->bankd_slot, &pdu->msg.choice.configClientBankReq.bankSlot);
+		bc->bankd_conn.server_port = pdu->msg.choice.configClientBankReq.bankd.port;
 		/* instruct bankd FSM to connect */
-		osmo_fsm_inst_dispatch(g_client->bankd_conn.fi, SRVC_E_ESTABLISH, NULL);
+		osmo_fsm_inst_dispatch(bc->bankd_conn.fi, SRVC_E_ESTABLISH, NULL);
 		/* send response to server */
 		resp = rspro_gen_ConfigClientBankRes(ResultCode_ok);
 		server_conn_send_rspro(srvc, resp);

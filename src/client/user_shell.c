@@ -48,12 +48,13 @@ static int bankd_handle_setAtrReq(struct bankd_client *bc, const RsproPDU_t *pdu
 
 int client_user_bankd_handle_rx(struct rspro_server_conn *bankdc, const RsproPDU_t *pdu)
 {
+	struct bankd_client *client = bankdc2bankd_client(bankdc);
 	switch (pdu->msg.present) {
 	case RsproPDUchoice_PR_tpduCardToModem:
-		bankd_handle_tpduCardToModem(g_client, pdu);
+		bankd_handle_tpduCardToModem(client, pdu);
 		break;
 	case RsproPDUchoice_PR_setAtrReq:
-		bankd_handle_setAtrReq(g_client, pdu);
+		bankd_handle_setAtrReq(client, pdu);
 		break;
 	default:
 		OSMO_ASSERT(0);
@@ -68,17 +69,19 @@ int client_user_bankd_handle_rx(struct rspro_server_conn *bankdc, const RsproPDU
 struct stdin_state {
 	struct osmo_fd ofd;
 	struct msgb *rx_msg;
+	struct bankd_client *bc;
 };
 
 /* called every time a command on stdin was received */
 static void handle_stdin_command(struct stdin_state *ss, char *cmd)
 {
+	struct bankd_client *bc = ss->bc;
 	RsproPDU_t *pdu;
 	BankSlot_t bslot;
 	uint8_t buf[1024];
 	int rc;
 
-	bank_slot2rspro(&bslot, &g_client->bankd_slot);
+	bank_slot2rspro(&bslot, &bc->bankd_slot);
 
 	OSMO_ASSERT(ss->rx_msg);
 
@@ -86,9 +89,9 @@ static void handle_stdin_command(struct stdin_state *ss, char *cmd)
 
 	if (!strcasecmp(cmd, "RESET")) {
 		/* reset the [remote] card */
-		pdu = rspro_gen_ClientSlotStatusInd(g_client->srv_conn.clslot, &bslot,
+		pdu = rspro_gen_ClientSlotStatusInd(bc->srv_conn.clslot, &bslot,
 						    true, false, false, true);
-		server_conn_send_rspro(&g_client->bankd_conn, pdu);
+		server_conn_send_rspro(&bc->bankd_conn, pdu);
 	} else {
 		/* we assume the user has entered a C-APDU as hex string. parse + send */
 		rc = osmo_hexparse(cmd, buf, sizeof(buf));
@@ -96,14 +99,14 @@ static void handle_stdin_command(struct stdin_state *ss, char *cmd)
 			fprintf(stderr, "ERROR parsing C-APDU `%s'!\n", cmd);
 			return;
 		}
-		if (!g_client->srv_conn.clslot) {
+		if (!bc->srv_conn.clslot) {
 			fprintf(stderr, "Cannot send command; no client slot\n");
 			return;
 		}
 
 		/* Send CMD APDU to [remote] card */
-		pdu = rspro_gen_TpduModem2Card(g_client->srv_conn.clslot, &bslot, buf, rc);
-		server_conn_send_rspro(&g_client->bankd_conn, pdu);
+		pdu = rspro_gen_TpduModem2Card(bc->srv_conn.clslot, &bslot, buf, rc);
+		server_conn_send_rspro(&bc->bankd_conn, pdu);
 	}
 }
 
@@ -144,7 +147,7 @@ static int stdin_fd_cb(struct osmo_fd *ofd, unsigned int what)
 
 
 /* main function */
-int client_user_main(struct bankd_client *g_client)
+int client_user_main(struct bankd_client *bc)
 {
 	struct stdin_state ss;
 
@@ -152,6 +155,7 @@ int client_user_main(struct bankd_client *g_client)
 	memset(&ss, 0, sizeof(ss));
 	osmo_fd_setup(&ss.ofd, fileno(stdin), OSMO_FD_READ, &stdin_fd_cb, &ss, 0);
 	osmo_fd_register(&ss.ofd);
+	ss.bc = bc;
 
 	while (1) {
 		osmo_select_main(0);
