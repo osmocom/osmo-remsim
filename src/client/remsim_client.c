@@ -1,4 +1,4 @@
-/* (C) 2018-2019 by Harald Welte <laforge@gnumonks.org>
+/* (C) 2018-2020 by Harald Welte <laforge@gnumonks.org>
  *
  * All Rights Reserved
  *
@@ -22,21 +22,12 @@
 
 #include <errno.h>
 #include <string.h>
-#include <signal.h>
-
-#define _GNU_SOURCE
-#include <getopt.h>
 
 #include <talloc.h>
 
-#include <osmocom/core/msgb.h>
 #include <osmocom/core/fsm.h>
 #include <osmocom/core/utils.h>
 #include <osmocom/core/logging.h>
-#include <osmocom/core/application.h>
-
-#include <osmocom/abis/ipa.h>
-#include <osmocom/gsm/protocol/ipaccess.h>
 
 #include "rspro_util.h"
 #include "client.h"
@@ -61,11 +52,6 @@ static int bankd_handle_rx(struct rspro_server_conn *bankdc, const RsproPDU_t *p
 
 	return 0;
 }
-
-static struct bankd_client *g_client;
-static void *g_tall_ctx;
-void __thread *talloc_asn1_ctx;
-int asn_debug;
 
 /* handle incoming messages from server */
 static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
@@ -112,6 +98,82 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 	return 0;
 }
 
+struct bankd_client *remsim_client_create(void *ctx, const char *name, const char *software)
+{
+	struct bankd_client *bc = talloc_zero(ctx, struct bankd_client);
+	struct rspro_server_conn *srvc, *bankdc;
+	int rc;
+
+	if (!bc)
+		return NULL;
+
+	/* create and [attempt to] establish connection to remsim-server */
+	srvc = &bc->srv_conn;
+	srvc->server_host = "localhost";
+	srvc->server_port = 9998;
+	srvc->handle_rx = srvc_handle_rx;
+	srvc->own_comp_id.type = ComponentType_remsimClient;
+	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.name, name);
+	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.software, software);
+	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.sw_version, PACKAGE_VERSION);
+
+	rc = server_conn_fsm_alloc(bc, srvc);
+	if (rc < 0) {
+		fprintf(stderr, "Unable to create Server conn FSM: %s\n", strerror(errno));
+		exit(1);
+	}
+
+	bankdc = &bc->bankd_conn;
+	/* server_host / server_port are configured from remsim-server */
+	bankdc->handle_rx = bankd_handle_rx;
+	memcpy(&bankdc->own_comp_id, &srvc->own_comp_id, sizeof(bankdc->own_comp_id));
+	rc = server_conn_fsm_alloc(bc, bankdc);
+	if (rc < 0) {
+		fprintf(stderr, "Unable to connect bankd conn FSM: %s\n", strerror(errno));
+		exit(1);
+	}
+	osmo_fsm_inst_update_id(bankdc->fi, "bankd");
+
+	return bc;
+}
+
+void remsim_client_set_clslot(struct bankd_client *bc, int client_id, int slot_nr)
+{
+	if (!bc->srv_conn.clslot) {
+		bc->srv_conn.clslot = talloc_zero(bc, ClientSlot_t);
+		OSMO_ASSERT(bc->srv_conn.clslot);
+	}
+
+	if (!bc->bankd_conn.clslot) {
+		bc->bankd_conn.clslot = talloc_zero(bc, ClientSlot_t);
+		OSMO_ASSERT(bc->bankd_conn.clslot);
+	}
+
+	if (client_id >= 0) {
+		bc->srv_conn.clslot->clientId = client_id;
+		bc->bankd_conn.clslot->clientId = client_id;
+	}
+
+	if (slot_nr >= 0) {
+		bc->srv_conn.clslot->slotNr = slot_nr;
+		bc->bankd_conn.clslot->slotNr = slot_nr;
+	}
+}
+
+
+
+#include <signal.h>
+#include <unistd.h>
+#define _GNU_SOURCE
+#include <getopt.h>
+
+#include <osmocom/core/msgb.h>
+#include <osmocom/core/application.h>
+
+static void *g_tall_ctx;
+void __thread *talloc_asn1_ctx;
+int asn_debug;
+
 static void handle_sig_usr1(int signal)
 {
 	OSMO_ASSERT(signal == SIGUSR1);
@@ -129,7 +191,7 @@ static void printf_help()
 	      );
 }
 
-static void handle_options(int argc, char **argv)
+static void handle_options(struct bankd_client *bc, int argc, char **argv)
 {
 	while (1) {
 		int option_index = 0, c;
@@ -153,20 +215,16 @@ static void handle_options(int argc, char **argv)
 			exit(0);
 			break;
 		case 'i':
-			g_client->srv_conn.server_host = optarg;
+			bc->srv_conn.server_host = optarg;
 			break;
 		case 'p':
-			g_client->srv_conn.server_port = atoi(optarg);
+			bc->srv_conn.server_port = atoi(optarg);
 			break;
 		case 'c':
-			if (!g_client->srv_conn.clslot)
-				g_client->srv_conn.clslot = talloc_zero(g_client, ClientSlot_t);
-			g_client->srv_conn.clslot->clientId = atoi(optarg);
+			remsim_client_set_clslot(bc, atoi(optarg), -1);
 			break;
 		case 'n':
-			if (!g_client->srv_conn.clslot)
-				g_client->srv_conn.clslot = talloc_zero(g_client, ClientSlot_t);
-			g_client->srv_conn.clslot->slotNr = atoi(optarg);
+			remsim_client_set_clslot(bc, -1, atoi(optarg));
 			break;
 		default:
 			break;
@@ -176,8 +234,10 @@ static void handle_options(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-	struct rspro_server_conn *srvc, *bankdc;
-	int rc;
+	struct bankd_client *g_client;
+	char hostname[256];
+
+	gethostname(hostname, sizeof(hostname));
 
 	g_tall_ctx = talloc_named_const(NULL, 0, "global");
 	talloc_asn1_ctx = talloc_named_const(g_tall_ctx, 0, "asn1");
@@ -185,46 +245,15 @@ int main(int argc, char **argv)
 
 	osmo_init_logging2(g_tall_ctx, &log_info);
 
-	g_client = talloc_zero(g_tall_ctx, struct bankd_client);
+	g_client = remsim_client_create(g_tall_ctx, hostname, "remsim-client");
 
-	/* create and [attempt to] establish connection to remsim-server */
-	srvc = &g_client->srv_conn;
-	srvc->server_host = "localhost";
-	srvc->server_port = 9998;
-	srvc->handle_rx = srvc_handle_rx;
-	srvc->own_comp_id.type = ComponentType_remsimClient;
-	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.name, "fixme-name");
-	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.software, "remsim-client");
-	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.sw_version, PACKAGE_VERSION);
+	handle_options(g_client, argc, argv);
 
-	handle_options(argc, argv);
+	osmo_fsm_inst_dispatch(g_client->srv_conn.fi, SRVC_E_ESTABLISH, NULL);
 
 	signal(SIGUSR1, handle_sig_usr1);
 
-	rc = server_conn_fsm_alloc(g_client, srvc);
-	if (rc < 0) {
-		fprintf(stderr, "Unable to create Server conn FSM: %s\n", strerror(errno));
-		exit(1);
-	}
-	osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_ESTABLISH, NULL);
-
 	asn_debug = 0;
-
-	bankdc = &g_client->bankd_conn;
-	if (srvc->clslot) {
-		bankdc->clslot = talloc_zero(g_client, ClientSlot_t);
-		*bankdc->clslot = *srvc->clslot;
-	}
-
-	/* server_host / server_port are configured from remsim-server */
-	bankdc->handle_rx = bankd_handle_rx;
-	memcpy(&bankdc->own_comp_id, &srvc->own_comp_id, sizeof(bankdc->own_comp_id));
-	rc = server_conn_fsm_alloc(g_client, bankdc);
-	if (rc < 0) {
-		fprintf(stderr, "Unable to connect bankd conn FSM: %s\n", strerror(errno));
-		exit(1);
-	}
-	osmo_fsm_inst_update_id(bankdc->fi, "bankd");
 
 	client_user_main(g_client);
 }

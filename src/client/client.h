@@ -61,6 +61,9 @@ struct bankd_client {
 #define srvc2bankd_client(srvc)		container_of(srvc, struct bankd_client, srv_conn)
 #define bankdc2bankd_client(bdc)	container_of(bdc, struct bankd_client, bankd_conn)
 
+struct bankd_client *remsim_client_create(void *ctx, const char *name, const char *software);
+void remsim_client_set_clslot(struct bankd_client *bc, int client_id, int slot_nr);
+
 
 extern int client_user_bankd_handle_rx(struct rspro_server_conn *bankdc, const RsproPDU_t *pdu);
 
