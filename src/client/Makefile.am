@@ -6,7 +6,7 @@ AM_CFLAGS = -Wall -I$(top_srcdir)/include -I/$(top_builddir)/include -I$(top_src
 
 bin_PROGRAMS = osmo-remsim-client-st2 osmo-remsim-client-shell
 
-osmo_remsim_client_shell_SOURCES = user_shell.c \
+osmo_remsim_client_shell_SOURCES = user_shell.c remsim_client_main.c \
 				   remsim_client.c ../rspro_client_fsm.c ../debug.c
 osmo_remsim_client_shell_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
 		      $(top_builddir)/src/libosmo-rspro.la
