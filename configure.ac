@@ -37,7 +37,7 @@ AC_CHECK_HEADERS([csv.h])
 
 PKG_CHECK_MODULES(OSMOCORE, libosmocore >= 1.3.0)
 PKG_CHECK_MODULES(OSMOGSM, libosmogsm >= 0.11.0)
-PKG_CHECK_MODULES(OSMOABIS, libosmoabis)
+PKG_CHECK_MODULES(OSMOABIS, libosmoabis >= 0.8.0)
 
 AC_ARG_ENABLE([remsim-server],[AS_HELP_STRING([--disable-remsim-server], [Build osmo-remsim-server])],
 	[osmo_ac_build_server="$enableval"],[osmo_ac_build_server="yes"])

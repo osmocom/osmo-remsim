@@ -289,7 +289,7 @@ static void srvc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 	}
 	LOGPFSML(fi, LOGL_INFO, "Creating TCP connection to server at %s:%u\n",
 		 srvc->server_host, srvc->server_port);
-	srvc->conn = ipa_client_conn_create(fi, NULL, 0, srvc->server_host, srvc->server_port,
+	srvc->conn = ipa_client_conn_create2(fi, NULL, 0, NULL, 0, srvc->server_host, srvc->server_port,
 						srvc_updown_cb, srvc_read_cb, NULL, srvc);
 	if (!srvc->conn) {
 		LOGPFSML(fi, LOGL_FATAL, "Unable to create socket: %s\n", strerror(errno));
