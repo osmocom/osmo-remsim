@@ -250,20 +250,25 @@ static void _update_client_for_slotmap(struct slot_mapping *map, struct rspro_se
 	/* if caller didn't provide bankd_conn, resolve it from map */
 	if (!bankd_conn)
 		bankd_conn = bankd_conn_by_id(srv, map->bank.bank_id);
-	if (!bankd_conn)
-		return;
-
-	/* obtain IP and port of bankd */
-	rc = osmo_sock_get_ip_and_port(bankd_conn->peer->ofd.fd, ip_str, sizeof(ip_str),
-					port_str, sizeof(port_str), false);
-	if (rc < 0) {
-		LOGPFSM(bankd_conn->fi, "Error during getpeername\n");
-		return;
+	if (map->state == SLMAP_S_DELETING || !bankd_conn) {
+		bankd_ip = 0;
+		bankd_port = 0;
+	} else {
+		/* obtain IP and port of bankd */
+		rc = osmo_sock_get_ip_and_port(bankd_conn->peer->ofd.fd, ip_str, sizeof(ip_str),
+						port_str, sizeof(port_str), false);
+		if (rc < 0) {
+			LOGPFSM(bankd_conn->fi, "Error during getpeername\n");
+			return;
+		}
+		bankd_ip = ntohl(inet_addr(ip_str));
+		bankd_port = 9999; /* TODO: configurable */
 	}
-	bankd_ip = ntohl(inet_addr(ip_str));
-	bankd_port = 9999; /* TODO: configurable */
+
+	/* determine if IP/port of bankd have changed */
 	if (conn->client.bankd.port != bankd_port || conn->client.bankd.ip != bankd_ip) {
-		LOGPFSM(conn->fi, "Bankd IP/Port changed to %s:%s\n", ip_str, port_str);
+		struct in_addr ia = { .s_addr = bankd_ip };
+		LOGPFSM(conn->fi, "Bankd IP/Port changed to %s:%u\n", inet_ntoa(ia), bankd_port);
 		conn->client.bankd.ip = bankd_ip;
 		conn->client.bankd.port = bankd_port;
 		changed = true;
@@ -371,9 +376,11 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 			break;
 		}
 		slotmaps_unlock(slotmaps);
+		/* update client! */
+		OSMO_ASSERT(map->state == SLMAP_S_DELETING);
+		_update_client_for_slotmap(map, conn->srv, conn);
 		/* slotmap_del() will remove it from both global and bank list */
 		slotmap_del(map->maps, map);
-		/* FIXME: update client! */
 		break;
 	case CLNTC_E_PUSH: /* check if any create or delete requests are pending */
 		slotmaps_wrlock(slotmaps);
