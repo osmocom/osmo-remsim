@@ -96,6 +96,9 @@ static void *g_tall_ctx;
 void __thread *talloc_asn1_ctx;
 int asn_debug;
 
+/* should we leave main loop processing? */
+bool g_leave_main = false;
+
 __attribute__((unused)) static int gsmtap_send_sim(const uint8_t *apdu, unsigned int len)
 {
 	struct gsmtap_hdr *gh;
@@ -152,10 +155,11 @@ static void usb_out_xfer_cb(struct libusb_transfer *xfer)
 		break;
 	case LIBUSB_TRANSFER_NO_DEVICE:
 		fprintf(stderr, "USB device disappeared\n");
-		exit(23);
+		g_leave_main = true;
 		break;
 	default:
-		osmo_panic("USB OUT transfer failed, status=%u\n", xfer->status);
+		fprintf(stderr, "USB OUT transfer failed, status=%u\n", xfer->status);
+		g_leave_main = true;
 		break;
 	}
 
@@ -577,10 +581,11 @@ static void usb_in_xfer_cb(struct libusb_transfer *xfer)
 		break;
 	case LIBUSB_TRANSFER_NO_DEVICE:
 		fprintf(stderr, "USB device disappeared\n");
-		exit(23);
+		g_leave_main = true;
 		break;
 	default:
-		osmo_panic("USB IN transfer failed, status=%u\n", xfer->status);
+		fprintf(stderr, "USB IN transfer failed, status=%u\n", xfer->status);
+		g_leave_main = true;
 		break;
 	}
 
@@ -627,10 +632,11 @@ static void usb_irq_xfer_cb(struct libusb_transfer *xfer)
 		break;
 	case LIBUSB_TRANSFER_NO_DEVICE:
 		fprintf(stderr, "USB device disappeared\n");
-		exit(23);
+		g_leave_main = true;
 		break;
 	default:
-		osmo_panic("USB IRQ transfer failed, status=%u\n", xfer->status);
+		fprintf(stderr, "USB IRQ transfer failed, status=%u\n", xfer->status);
+		g_leave_main = true;
 		break;
 	}
 
@@ -1092,9 +1098,10 @@ static void main_body(struct client_config *cfg)
 	allocate_and_submit_irq(ci);
 	allocate_and_submit_in(ci);
 
-	while (1) {
+	while (!g_leave_main) {
 		osmo_select_main(false);
 	}
+	g_leave_main = false;
 
 	libusb_release_interface(transp->usb_devh, 0);
 
