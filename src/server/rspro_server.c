@@ -219,7 +219,7 @@ static void clnt_st_wait_cl_conf_res(struct osmo_fsm_inst *fi, uint32_t event, v
 static void _update_client_for_slotmap(struct slot_mapping *map, struct rspro_server *srv,
 					struct rspro_client_conn *bankd_conn)
 {
-	struct rspro_client_conn *conn = client_conn_by_slot(srv, &map->client);
+	struct rspro_client_conn *conn;
 	char ip_str[INET6_ADDRSTRLEN];
 	char port_str[6];
 	uint32_t bankd_ip;
@@ -230,6 +230,7 @@ static void _update_client_for_slotmap(struct slot_mapping *map, struct rspro_se
 	OSMO_ASSERT(map);
 	OSMO_ASSERT(srv);
 
+	conn = client_conn_by_slot(srv, &map->client);
 	if (!conn)
 		LOGP(DMAIN, LOGL_DEBUG, "%s\n", __func__);
 	else
