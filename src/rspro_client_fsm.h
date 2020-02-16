@@ -8,6 +8,7 @@
 
 enum server_conn_fsm_event {
 	SRVC_E_ESTABLISH,	/* instruct SRVC to (re)etablish TCP connection to bankd */
+	SRVC_E_DISCONNECT,	/* instruct SRVC to disconnect TCP connection to bankd */
 	SRVC_E_TCP_UP,
 	SRVC_E_TCP_DOWN,
 	SRVC_E_KA_TIMEOUT,

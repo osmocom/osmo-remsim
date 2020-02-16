@@ -110,6 +110,7 @@ enum server_conn_fsm_state {
 
 static const struct value_string server_conn_fsm_event_names[] = {
 	OSMO_VALUE_STRING(SRVC_E_ESTABLISH),
+	OSMO_VALUE_STRING(SRVC_E_DISCONNECT),
 	OSMO_VALUE_STRING(SRVC_E_TCP_UP),
 	OSMO_VALUE_STRING(SRVC_E_TCP_DOWN),
 	OSMO_VALUE_STRING(SRVC_E_KA_TIMEOUT),
@@ -330,9 +331,25 @@ static void srvc_st_reestablish(struct osmo_fsm_inst *fi, uint32_t event, void *
 
 static void srvc_allstate_action(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
+	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
+
 	switch (event) {
 	case SRVC_E_ESTABLISH:
 		osmo_fsm_inst_state_chg(fi, SRVC_ST_REESTABLISH, T2_RECONNECT, 2);
+		break;
+	case SRVC_E_DISCONNECT:
+		if (srvc->keepalive_fi) {
+			ipa_keepalive_fsm_stop(srvc->keepalive_fi);
+			osmo_fsm_inst_term(srvc->keepalive_fi, OSMO_FSM_TERM_REGULAR, NULL);
+			srvc->keepalive_fi = NULL;
+		}
+		if (srvc->conn) {
+			LOGPFSML(fi, LOGL_INFO, "Destroying existing connection to server\n");
+			ipa_client_conn_close(srvc->conn);
+			ipa_client_conn_destroy(srvc->conn);
+			srvc->conn = NULL;
+		}
+		osmo_fsm_inst_state_chg(fi, SRVC_ST_INIT, 0, 0);
 		break;
 	default:
 		OSMO_ASSERT(0);
@@ -370,20 +387,20 @@ static const struct osmo_fsm_state server_conn_fsm_states[] = {
 	[SRVC_ST_ESTABLISHED] = {
 		.name = "ESTABLISHED",
 		.in_event_mask = S(SRVC_E_TCP_DOWN) | S(SRVC_E_KA_TIMEOUT) | S(SRVC_E_CLIENT_CONN_RES),
-		.out_state_mask = S(SRVC_ST_CONNECTED) | S(SRVC_ST_REESTABLISH),
+		.out_state_mask = S(SRVC_ST_CONNECTED) | S(SRVC_ST_REESTABLISH) | S(SRVC_ST_INIT),
 		.action = srvc_st_established,
 		.onenter = srvc_st_established_onenter,
 	},
 	[SRVC_ST_CONNECTED] = {
 		.name = "CONNECTED",
 		.in_event_mask = S(SRVC_E_TCP_DOWN) | S(SRVC_E_KA_TIMEOUT) | S(SRVC_E_RSPRO_TX),
-		.out_state_mask = S(SRVC_ST_REESTABLISH),
+		.out_state_mask = S(SRVC_ST_REESTABLISH) | S(SRVC_ST_INIT),
 		.action = srvc_st_connected,
 	},
 	[SRVC_ST_REESTABLISH] = {
 		.name = "REESTABLISH",
 		.in_event_mask = S(SRVC_E_TCP_UP) | S(SRVC_E_TCP_DOWN),
-		.out_state_mask = S(SRVC_ST_ESTABLISHED) | S(SRVC_ST_REESTABLISH),
+		.out_state_mask = S(SRVC_ST_ESTABLISHED) | S(SRVC_ST_REESTABLISH) | S(SRVC_ST_INIT),
 		.action = srvc_st_reestablish,
 		.onenter = srvc_st_reestablish_onenter,
 	},
@@ -393,7 +410,7 @@ struct osmo_fsm rspro_client_server_fsm = {
 	.name = "RSPRO_CLIENT",
 	.states = server_conn_fsm_states,
 	.num_states = ARRAY_SIZE(server_conn_fsm_states),
-	.allstate_event_mask = S(SRVC_E_ESTABLISH),
+	.allstate_event_mask = S(SRVC_E_ESTABLISH) | S(SRVC_E_DISCONNECT),
 	.allstate_action = srvc_allstate_action,
 	.timer_cb = server_conn_fsm_timer_cb,
 	.log_subsys = DMAIN,
