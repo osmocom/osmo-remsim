@@ -83,8 +83,11 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 					   rspro_IpAddr2str(&pdu->msg.choice.configClientBankReq.bankd.ip));
 		rspro2bank_slot(&bc->bankd_slot, &pdu->msg.choice.configClientBankReq.bankSlot);
 		bc->bankd_conn.server_port = pdu->msg.choice.configClientBankReq.bankd.port;
-		/* instruct bankd FSM to connect */
-		osmo_fsm_inst_dispatch(bc->bankd_conn.fi, SRVC_E_ESTABLISH, NULL);
+		/* bankd port 0 is a magic value to indicate "no bankd" */
+		if (bc->bankd_conn.server_port == 0)
+			osmo_fsm_inst_dispatch(bc->bankd_conn.fi, SRVC_E_DISCONNECT, NULL);
+		else
+			osmo_fsm_inst_dispatch(bc->bankd_conn.fi, SRVC_E_ESTABLISH, NULL);
 		/* send response to server */
 		resp = rspro_gen_ConfigClientBankRes(ResultCode_ok);
 		server_conn_send_rspro(srvc, resp);

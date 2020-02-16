@@ -1,4 +1,4 @@
-/* (C) 2018-2019 by Harald Welte <laforge@gnumonks.org>
+/* (C) 2018-2020 by Harald Welte <laforge@gnumonks.org>
  * (C) 2018 by sysmocom - s.f.m.c. GmbH, Author: Kevin Redon
  *
  * All Rights Reserved
@@ -874,8 +874,11 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 					   rspro_IpAddr2str(&pdu->msg.choice.configClientBankReq.bankd.ip));
 		rspro2bank_slot(&g_client->bankd_slot, &pdu->msg.choice.configClientBankReq.bankSlot);
 		g_client->bankd_conn.server_port = pdu->msg.choice.configClientBankReq.bankd.port;
-		/* instruct bankd FSM to connect */
-		osmo_fsm_inst_dispatch(g_client->bankd_conn.fi, SRVC_E_ESTABLISH, NULL);
+		/* bankd port 0 is a magic value to indicate "no bankd" */
+		if (g_client->bankd_conn.server_port == 0)
+			osmo_fsm_inst_dispatch(g_client->bankd_conn.fi, SRVC_E_DISCONNECT, NULL);
+		else
+			osmo_fsm_inst_dispatch(g_client->bankd_conn.fi, SRVC_E_ESTABLISH, NULL);
 		/* send response to server */
 		resp = rspro_gen_ConfigClientBankRes(ResultCode_ok);
 		server_conn_send_rspro(srvc, resp);
@@ -901,7 +904,7 @@ static void handle_sig_usr1(int signal)
 static void print_welcome(void)
 {
 	printf("simtrace2-remsim-client - Remote SIM card client for SIMtrace\n"
-	       "(C) 2010-2019, Harald Welte <laforge@gnumonks.org>\n"
+	       "(C) 2010-2020, Harald Welte <laforge@gnumonks.org>\n"
 	       "(C) 2018, sysmocom -s.f.m.c. GmbH, Author: Kevin Redon <kredon@sysmocom.de>\n\n");
 }
 
