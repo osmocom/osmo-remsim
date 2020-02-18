@@ -23,6 +23,7 @@ static int bankd_handle_tpduCardToModem(struct bankd_client *bc, const RsproPDU_
 	const struct TpduCardToModem *card2modem = &pdu->msg.choice.tpduCardToModem;
 
 	printf("R-APDU: %s\n", osmo_hexdump(card2modem->data.buf, card2modem->data.size));
+	fflush(stdout);
 
 	return 0;
 }
@@ -36,6 +37,7 @@ static int bankd_handle_setAtrReq(struct bankd_client *bc, const RsproPDU_t *pdu
 
 	printf("SET_ATR: %s\n", osmo_hexdump(pdu->msg.choice.setAtrReq.atr.buf,
 					     pdu->msg.choice.setAtrReq.atr.size));
+	fflush(stdout);
 
 	resp = rspro_gen_SetAtrRes(ResultCode_ok);
 	if (!resp)
