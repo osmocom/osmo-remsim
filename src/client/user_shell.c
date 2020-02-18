@@ -87,8 +87,6 @@ static void handle_stdin_command(struct stdin_state *ss, char *cmd)
 
 	OSMO_ASSERT(ss->rx_msg);
 
-	printf("stdin: `%s'\n", cmd);
-
 	if (!strcasecmp(cmd, "RESET")) {
 		/* reset the [remote] card */
 		pdu = rspro_gen_ClientSlotStatusInd(bc->srv_conn.clslot, &bslot,
