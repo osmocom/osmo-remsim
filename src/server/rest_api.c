@@ -86,6 +86,8 @@ static int json2bank_slot(struct bank_slot *bslot, json_t *in)
 		return -EINVAL;
 	bslot->bank_id = json_integer_value(jbank_id);
 	bslot->slot_nr = json_integer_value(jslot_nr);
+	if (bslot->bank_id > 1023 || bslot->slot_nr > 1023)
+		return -EINVAL;
 	return 0;
 }
 
@@ -110,6 +112,8 @@ static int json2client_slot(struct client_slot *cslot, json_t *in)
 		return -EINVAL;
 	cslot->client_id = json_integer_value(jclient_id);
 	cslot->slot_nr = json_integer_value(jslot_nr);
+	if (cslot->client_id > 1023 || cslot->slot_nr > 1023)
+		return -EINVAL;
 	return 0;
 }
 
