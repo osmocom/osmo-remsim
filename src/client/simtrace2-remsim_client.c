@@ -1062,7 +1062,7 @@ static void main_body(struct cardem_inst *ci, struct client_config *cfg)
 {
 	struct st_transport *transp = ci->slot->transp;
 	struct usb_interface_match _ifm, *ifm = &_ifm;
-	int rc;
+	int rc, i;
 
 	ifm->vendor = cfg->usb.vendor_id;
 	ifm->product = cfg->usb.product_id;
@@ -1163,7 +1163,9 @@ static void main_body(struct cardem_inst *ci, struct client_config *cfg)
 	printf("Entering main loop\n");
 
 	allocate_and_submit_irq(ci);
-	allocate_and_submit_in(ci);
+	/* submit multiple IN URB in order to work around OS#4409 */
+	for (i = 0; i < 4; i++)
+		allocate_and_submit_in(ci);
 
 	while (!g_leave_main) {
 		osmo_select_main(false);
