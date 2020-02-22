@@ -30,8 +30,8 @@ tags
 m4
 gen_rspro.stamp
 
-src/osmo-remsim-client
-src/osmo-remsim-client-st2
+src/client/osmo-remsim-client-shell
+src/client/osmo-remsim-client-st2
 src/bankd/pcsc_test
 src/bankd/osmo-remsim-bankd
 src/server/osmo-remsim-server
