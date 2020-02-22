@@ -41,6 +41,10 @@ struct rspro_server_conn {
 	char *server_host;
 	uint16_t server_port;
 
+	/* FSM events we are to sent to the parent FSM on connect / disconnect */
+	uint32_t parent_conn_evt;
+	uint32_t parent_disc_evt;
+
 	/* only in case we are representing a bankd client */
 	struct {
 		uint16_t bank_id;

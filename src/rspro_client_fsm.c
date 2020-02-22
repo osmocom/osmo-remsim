@@ -244,6 +244,14 @@ static void srvc_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 	}
 }
 
+static void srvc_st_connected_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
+{
+	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
+
+	if (fi->proc.parent)
+		osmo_fsm_inst_dispatch(fi->proc.parent, srvc->parent_conn_evt, NULL);
+}
+
 static void srvc_st_connected(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
 	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
@@ -261,6 +269,14 @@ static void srvc_st_connected(struct osmo_fsm_inst *fi, uint32_t event, void *da
 	default:
 		OSMO_ASSERT(0);
 	}
+}
+
+static void srvc_st_connected_onleave(struct osmo_fsm_inst *fi, uint32_t next_state)
+{
+	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
+
+	if (fi->proc.parent)
+		osmo_fsm_inst_dispatch(fi->proc.parent, srvc->parent_disc_evt, NULL);
 }
 
 static int ipa_kaepalive_timeout_cb(struct osmo_fsm_inst *ka_fi, void *conn)
@@ -396,6 +412,8 @@ static const struct osmo_fsm_state server_conn_fsm_states[] = {
 		.in_event_mask = S(SRVC_E_TCP_DOWN) | S(SRVC_E_KA_TIMEOUT) | S(SRVC_E_RSPRO_TX),
 		.out_state_mask = S(SRVC_ST_REESTABLISH) | S(SRVC_ST_INIT),
 		.action = srvc_st_connected,
+		.onenter = srvc_st_connected_onenter,
+		.onleave = srvc_st_connected_onleave,
 	},
 	[SRVC_ST_REESTABLISH] = {
 		.name = "REESTABLISH",
