@@ -397,7 +397,7 @@ static const struct osmo_fsm_state server_conn_fsm_states[] = {
 	[SRVC_ST_INIT] = {
 		.name = "INIT",
 		.in_event_mask = 0, /* S(SRVC_E_ESTABLISH) via allstate */
-		.out_state_mask = S(SRVC_ST_REESTABLISH),
+		.out_state_mask = S(SRVC_ST_INIT) | S(SRVC_ST_REESTABLISH),
 		.action = srvc_st_init,
 	},
 	[SRVC_ST_ESTABLISHED] = {

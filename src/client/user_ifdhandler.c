@@ -148,70 +148,66 @@ static void enqueue_to_ifd(struct client_thread *ct, struct msgb *msg)
 }
 
 /***********************************************************************
- * Incoming RSPRO messages from bank-daemon (SIM card)
+ * frontend to remsim-client main FSM code
  ***********************************************************************/
 
-static int bankd_handle_tpduCardToModem(struct bankd_client *bc, const RsproPDU_t *pdu)
+int frontend_request_card_insert(struct bankd_client *bc)
 {
-	const struct TpduCardToModem *card2modem;
+	return 0;
+}
+
+int frontend_request_sim_remote(struct bankd_client *bc)
+{
+	return 0;
+}
+
+int frontend_request_modem_reset(struct bankd_client *bc)
+{
+	return 0;
+}
+
+int frontend_handle_card2modem(struct bankd_client *bc, const uint8_t *data, size_t len)
+{
 	struct client_thread *ct = bc->data;
 	struct msgb *msg;
 
-	OSMO_ASSERT(pdu);
-	OSMO_ASSERT(RsproPDUchoice_PR_tpduCardToModem == pdu->msg.present);
+	OSMO_ASSERT(data);
 
-	card2modem = &pdu->msg.choice.tpduCardToModem;
-	DEBUGP(DMAIN, "R-APDU: %s\n", osmo_hexdump(card2modem->data.buf, card2modem->data.size));
+	DEBUGP(DMAIN, "R-APDU: %s\n", osmo_hexdump(data, len));
 	/* enqueue towards IFD thread */
-	msg = itmsg_alloc(ITMSG_TYPE_R_APDU_IND, 0, card2modem->data.buf, card2modem->data.size);
+	msg = itmsg_alloc(ITMSG_TYPE_R_APDU_IND, 0, data, len);
 	OSMO_ASSERT(msg);
 	enqueue_to_ifd(ct, msg);
 
 	return 0;
 }
 
-static int bankd_handle_setAtrReq(struct bankd_client *bc, const RsproPDU_t *pdu)
+int frontend_handle_set_atr(struct bankd_client *bc, const uint8_t *data, size_t len)
 {
 	struct client_thread *ct = bc->data;
-	RsproPDU_t *resp;
 	unsigned int atr_len;
 
-	OSMO_ASSERT(pdu);
-	OSMO_ASSERT(RsproPDUchoice_PR_setAtrReq == pdu->msg.present);
+	OSMO_ASSERT(data);
 
-	DEBUGP(DMAIN, "SET_ATR: %s\n", osmo_hexdump(pdu->msg.choice.setAtrReq.atr.buf,
-						     pdu->msg.choice.setAtrReq.atr.size));
+	DEBUGP(DMAIN, "SET_ATR: %s\n", osmo_hexdump(data, len));
 
 	/* store ATR in local data structure until somebody needs it */
-	atr_len = pdu->msg.choice.setAtrReq.atr.size;
+	atr_len = len;
 	if (atr_len > sizeof(ct->atr))
 		atr_len = sizeof(ct->atr);
-	memcpy(ct->atr, pdu->msg.choice.setAtrReq.atr.buf, atr_len);
+	memcpy(ct->atr, data, atr_len);
 	ct->atr_len = atr_len;
-
-	resp = rspro_gen_SetAtrRes(ResultCode_ok);
-	if (!resp)
-		return -ENOMEM;
-	server_conn_send_rspro(&bc->bankd_conn, resp);
 
 	return 0;
 }
 
-
-int client_user_bankd_handle_rx(struct rspro_server_conn *bankdc, const RsproPDU_t *pdu)
+int frontend_handle_slot_status(struct bankd_client *bc, const SlotPhysStatus_t *sts)
 {
-	struct bankd_client *bc = bankdc2bankd_client(bankdc);
+	return 0;
+}
 
-	switch (pdu->msg.present) {
-	case RsproPDUchoice_PR_tpduCardToModem:
-		bankd_handle_tpduCardToModem(bc, pdu);
-		break;
-	case RsproPDUchoice_PR_setAtrReq:
-		bankd_handle_setAtrReq(bc, pdu);
-		break;
-	default:
-		OSMO_ASSERT(0);
-	}
+int frontend_append_script_env(struct bankd_client *bc, char **env, size_t max_env)
+{
 	return 0;
 }
 
@@ -363,6 +359,7 @@ static void client_pthread_cleanup(void *arg)
 static void *client_pthread_main(void *arg)
 {
 	struct client_thread_cfg *cfg = arg;
+	struct client_config *ccfg;
 	struct client_thread *ct;
 	int rc;
 
@@ -373,17 +370,20 @@ static void *client_pthread_main(void *arg)
 	ct = talloc_zero(OTC_GLOBAL, struct client_thread);
 	OSMO_ASSERT(ct);
 
+	ccfg = client_config_init(ct);
+	OSMO_ASSERT(ccfg);
+	osmo_talloc_replace_string(ccfg, &ccfg->server_host, cfg->server_host);
+	if (cfg->server_port >= 0)
+		ccfg->server_port = cfg->server_port;
+	ccfg->client_id = cfg->client_id;
+	ccfg->client_slot = cfg->client_slot;
+
 	if (!talloc_asn1_ctx)
 	       talloc_asn1_ctx= talloc_named_const(ct, 0, "asn1");
 
-	ct->bc = remsim_client_create(ct, cfg->name, "remsim_ifdhandler");
+	ct->bc = remsim_client_create(ct, cfg->name, "remsim_ifdhandler", ccfg);
 	OSMO_ASSERT(ct->bc);
 	ct->bc->data = ct;
-	remsim_client_set_clslot(ct->bc, cfg->client_id, cfg->client_slot);
-	if (cfg->server_host)
-		ct->bc->srv_conn.server_host = (char *) cfg->server_host;
-	if (cfg->server_port >= 0)
-		ct->bc->srv_conn.server_port = cfg->server_port;
 
 	INIT_LLIST_HEAD(&ct->it_msgq);
 	osmo_fd_setup(&ct->it_ofd, cfg->it_sock_fd, OSMO_FD_READ, &it_sock_fd_cb, ct, 0);

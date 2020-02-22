@@ -20,6 +20,10 @@
  *
  */
 
+/* This file contains code shared among all remsim client applications,
+ * including the ifd-handler, which is not an executable program with a main()
+ * function or command line parsing, but a shared library */
+
 #include <errno.h>
 #include <string.h>
 
@@ -33,8 +37,38 @@
 #include "client.h"
 #include "debug.h"
 
+struct client_config *client_config_init(void *ctx)
+{
+	struct client_config *cfg = talloc_zero(ctx, struct client_config);
+	if (!cfg)
+		return NULL;
+
+	cfg->server_host = talloc_strdup(cfg, "127.0.0.1");
+	cfg->server_port = 9998;
+	cfg->client_id = -1;
+	cfg->client_slot = -1;
+	cfg->gsmtap_host = talloc_strdup(cfg, "127.0.0.1");
+	cfg->keep_running = false;
+
+	cfg->usb.vendor_id = -1;
+	cfg->usb.product_id = -1;
+	cfg->usb.config_id = -1;
+	cfg->usb.if_num = -1;
+	cfg->usb.altsetting = 0;
+	cfg->usb.addr = -1;
+	cfg->usb.path = NULL;
+
+	cfg->atr.data[0] = 0x3B;
+	cfg->atr.data[1] = 0x00; // the shortest simplest ATR possible
+	cfg->atr.len = 2;
+
+	return cfg;
+};
+
 static int bankd_handle_rx(struct rspro_server_conn *bankdc, const RsproPDU_t *pdu)
 {
+	struct bankd_client *bc = bankdc2bankd_client(bankdc);
+
 	switch (pdu->msg.present) {
 	case RsproPDUchoice_PR_connectClientRes:
 		/* Store 'identity' of bankd to in peer_comp_id */
@@ -42,8 +76,11 @@ static int bankd_handle_rx(struct rspro_server_conn *bankdc, const RsproPDU_t *p
 		osmo_fsm_inst_dispatch(bankdc->fi, SRVC_E_CLIENT_CONN_RES, (void *) pdu);
 		break;
 	case RsproPDUchoice_PR_tpduCardToModem:
+		return osmo_fsm_inst_dispatch(bc->main_fi, MF_E_BANKD_TPDU, (void *) pdu);
 	case RsproPDUchoice_PR_setAtrReq:
-		return client_user_bankd_handle_rx(bankdc, pdu);
+		return osmo_fsm_inst_dispatch(bc->main_fi, MF_E_BANKD_ATR, (void *) pdu);
+	case RsproPDUchoice_PR_bankSlotStatusInd:
+		return osmo_fsm_inst_dispatch(bc->main_fi, MF_E_BANKD_SLOT_STATUS, (void *) pdu);
 	default:
 		LOGPFSML(bankdc->fi, LOGL_ERROR, "Unknown/Unsupported RSPRO PDU %s\n",
 			 rspro_msgt_name(pdu));
@@ -78,19 +115,7 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 		server_conn_send_rspro(srvc, resp);
 		break;
 	case RsproPDUchoice_PR_configClientBankReq:
-		/* store/set the bankd ip/port as instructed by the server */
-		osmo_talloc_replace_string(bc, &bc->bankd_conn.server_host,
-					   rspro_IpAddr2str(&pdu->msg.choice.configClientBankReq.bankd.ip));
-		rspro2bank_slot(&bc->bankd_slot, &pdu->msg.choice.configClientBankReq.bankSlot);
-		bc->bankd_conn.server_port = pdu->msg.choice.configClientBankReq.bankd.port;
-		/* bankd port 0 is a magic value to indicate "no bankd" */
-		if (bc->bankd_conn.server_port == 0)
-			osmo_fsm_inst_dispatch(bc->bankd_conn.fi, SRVC_E_DISCONNECT, NULL);
-		else
-			osmo_fsm_inst_dispatch(bc->bankd_conn.fi, SRVC_E_ESTABLISH, NULL);
-		/* send response to server */
-		resp = rspro_gen_ConfigClientBankRes(ResultCode_ok);
-		server_conn_send_rspro(srvc, resp);
+		osmo_fsm_inst_dispatch(bc->main_fi, MF_E_SRVC_CONFIG_BANK, (void *) pdu);
 		break;
 	default:
 		LOGPFSML(srvc->fi, LOGL_ERROR, "Unknown/Unsupported RSPRO PDU type: %s\n",
@@ -101,7 +126,8 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 	return 0;
 }
 
-struct bankd_client *remsim_client_create(void *ctx, const char *name, const char *software)
+struct bankd_client *remsim_client_create(void *ctx, const char *name, const char *software,
+					  struct client_config *cfg)
 {
 	struct bankd_client *bc = talloc_zero(ctx, struct bankd_client);
 	struct rspro_server_conn *srvc, *bankdc;
@@ -110,10 +136,20 @@ struct bankd_client *remsim_client_create(void *ctx, const char *name, const cha
 	if (!bc)
 		return NULL;
 
+	bc->cfg = cfg;
+
+	bc->main_fi = main_fsm_alloc(bc, bc);
+	if (!bc->main_fi) {
+		fprintf(stderr, "Unable to create main client FSM: %s\n", strerror(errno));
+		exit(1);
+	}
+
+	remsim_client_set_clslot(bc, cfg->client_id, cfg->client_slot);
+
 	/* create and [attempt to] establish connection to remsim-server */
 	srvc = &bc->srv_conn;
-	srvc->server_host = "localhost";
-	srvc->server_port = 9998;
+	srvc->server_host = cfg->server_host;
+	srvc->server_port = cfg->server_port;
 	srvc->handle_rx = srvc_handle_rx;
 	srvc->own_comp_id.type = ComponentType_remsimClient;
 	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.name, name);
@@ -125,6 +161,9 @@ struct bankd_client *remsim_client_create(void *ctx, const char *name, const cha
 		fprintf(stderr, "Unable to create Server conn FSM: %s\n", strerror(errno));
 		exit(1);
 	}
+	osmo_fsm_inst_change_parent(srvc->fi, bc->main_fi, MF_E_SRVC_LOST);
+	srvc->parent_conn_evt = MF_E_SRVC_CONNECTED;
+	srvc->parent_disc_evt = MF_E_SRVC_LOST;
 
 	bankdc = &bc->bankd_conn;
 	/* server_host / server_port are configured from remsim-server */
@@ -136,6 +175,9 @@ struct bankd_client *remsim_client_create(void *ctx, const char *name, const cha
 		exit(1);
 	}
 	osmo_fsm_inst_update_id(bankdc->fi, "bankd");
+	osmo_fsm_inst_change_parent(bankdc->fi, bc->main_fi, MF_E_BANKD_LOST);
+	bankdc->parent_conn_evt = MF_E_BANKD_CONNECTED;
+	bankdc->parent_disc_evt = MF_E_BANKD_LOST;
 
 	return bc;
 }

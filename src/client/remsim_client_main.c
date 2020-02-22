@@ -23,27 +23,56 @@ static void printf_help()
 {
 	printf(
 		"  -h --help                  Print this help message\n"
+		"  -v --version               Print program version\n"
 		"  -i --server-ip A.B.C.D     remsim-server IP address\n"
 		"  -p --server-port 13245     remsim-server TCP port\n"
-		"  -i --client-id <0-65535>   RSPRO ClientId of this client\n"
+		"  -c --client-id <0-65535>   RSPRO ClientId of this client\n"
 		"  -n --client-slot <0-65535> RSPRO SlotNr of this client\n"
+		"  -e --event-script <path>   event script to be called by client\n"
+#ifdef USB_SUPPORT
+		"  -V --usb-vendor VENDOR_ID\n"
+		"  -P --usb-product PRODUCT_ID\n"
+		"  -C --usb-config CONFIG_ID\n"
+		"  -I --usb-interface INTERFACE_ID\n"
+		"  -S --usb-altsetting ALTSETTING_ID\n"
+		"  -A --usb-address ADDRESS\n"
+		"  -H --usb-path PATH\n"
+#endif
 	      );
 }
 
-static void handle_options(struct bankd_client *bc, int argc, char **argv)
+static void handle_options(struct client_config *cfg, int argc, char **argv)
 {
+	int rc;
+
 	while (1) {
 		int option_index = 0, c;
 		static const struct option long_options[] = {
 			{ "help", 0, 0, 'h' },
+			{ "version", 0, 0, 'v' },
 			{ "server-ip", 1, 0, 'i' },
 			{ "server-port", 1, 0, 'p' },
 			{ "client-id", 1, 0, 'c' },
 			{ "client-slot", 1, 0, 'n' },
+			{ "atr", 1, 0, 'a' },
+			{ "event-script", 1, 0, 'e' },
+#ifdef USB_SUPPORT
+			{ "usb-vendor", 1, 0, 'V' },
+			{ "usb-product", 1, 0, 'P' },
+			{ "usb-config", 1, 0, 'C' },
+			{ "usb-interface", 1, 0, 'I' },
+			{ "usb-altsetting", 1, 0, 'S' },
+			{ "usb-address", 1, 0, 'A' },
+			{ "usb-path", 1, 0, 'H' },
+#endif
 			{ 0, 0, 0, 0 }
 		};
 
-		c = getopt_long(argc, argv, "hi:p:c:n:",
+		c = getopt_long(argc, argv, "hvi:p:c:n:e:"
+#ifdef USB_SUPPORT
+						"V:P:C:I:S:A:H:"
+#endif
+				,
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -53,18 +82,55 @@ static void handle_options(struct bankd_client *bc, int argc, char **argv)
 			printf_help();
 			exit(0);
 			break;
+		case 'v':
+			printf("osmo-remsim-client version %s\n", VERSION);
+			exit(0);
+			break;
 		case 'i':
-			bc->srv_conn.server_host = optarg;
+			osmo_talloc_replace_string(cfg, &cfg->server_host, optarg);
 			break;
 		case 'p':
-			bc->srv_conn.server_port = atoi(optarg);
+			cfg->server_port = atoi(optarg);
 			break;
 		case 'c':
-			remsim_client_set_clslot(bc, atoi(optarg), -1);
+			cfg->client_id = atoi(optarg);
 			break;
 		case 'n':
-			remsim_client_set_clslot(bc, -1, atoi(optarg));
+			cfg->client_slot = atoi(optarg);
 			break;
+		case 'a':
+			rc = osmo_hexparse(optarg, cfg->atr.data, ARRAY_SIZE(cfg->atr.data));
+			if (rc < 2 || rc > ARRAY_SIZE(cfg->atr.data)) {
+				fprintf(stderr, "ATR malformed\n");
+				exit(2);
+			}
+			break;
+		case 'e':
+			osmo_talloc_replace_string(cfg, &cfg->event_script, optarg);
+			break;
+#ifdef USB_SUPPORT
+		case 'V':
+			cfg->usb.vendor_id = strtol(optarg, NULL, 16);
+			break;
+		case 'P':
+			cfg->usb.product_id = strtol(optarg, NULL, 16);
+			break;
+		case 'C':
+			cfg->usb.config_id = atoi(optarg);
+			break;
+		case 'I':
+			cfg->usb.if_num = atoi(optarg);
+			break;
+		case 'S':
+			cfg->usb.altsetting = atoi(optarg);
+			break;
+		case 'A':
+			cfg->usb.addr = atoi(optarg);
+			break;
+		case 'H':
+			cfg->usb.path = optarg;
+			break;
+#endif
 		default:
 			break;
 		}
@@ -74,6 +140,7 @@ static void handle_options(struct bankd_client *bc, int argc, char **argv)
 int main(int argc, char **argv)
 {
 	struct bankd_client *g_client;
+	struct client_config *cfg;
 	char hostname[256];
 
 	gethostname(hostname, sizeof(hostname));
@@ -84,9 +151,11 @@ int main(int argc, char **argv)
 
 	osmo_init_logging2(g_tall_ctx, &log_info);
 
-	g_client = remsim_client_create(g_tall_ctx, hostname, "remsim-client");
+	cfg = client_config_init(g_tall_ctx);
+	OSMO_ASSERT(cfg);
+	handle_options(cfg, argc, argv);
 
-	handle_options(g_client, argc, argv);
+	g_client = remsim_client_create(g_tall_ctx, hostname, "remsim-client",cfg);
 
 	osmo_fsm_inst_dispatch(g_client->srv_conn.fi, SRVC_E_ESTABLISH, NULL);
 

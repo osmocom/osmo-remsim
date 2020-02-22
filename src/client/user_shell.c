@@ -12,57 +12,53 @@
 
 
 /***********************************************************************
- * Incoming RSPRO messages from bank-daemon (SIM card)
+ * stdin frontend code to remsim-client
  ***********************************************************************/
 
-static int bankd_handle_tpduCardToModem(struct bankd_client *bc, const RsproPDU_t *pdu)
+int frontend_request_card_insert(struct bankd_client *bc)
 {
-	OSMO_ASSERT(pdu);
-	OSMO_ASSERT(RsproPDUchoice_PR_tpduCardToModem == pdu->msg.present);
+	return 0;
+}
 
-	const struct TpduCardToModem *card2modem = &pdu->msg.choice.tpduCardToModem;
+int frontend_request_sim_remote(struct bankd_client *bc)
+{
+	return 0;
+}
 
-	printf("R-APDU: %s\n", osmo_hexdump(card2modem->data.buf, card2modem->data.size));
+int frontend_request_modem_reset(struct bankd_client *bc)
+{
+	return 0;
+}
+
+int frontend_handle_card2modem(struct bankd_client *bc, const uint8_t *data, size_t len)
+{
+	OSMO_ASSERT(data);
+	printf("R-APDU: %s\n", osmo_hexdump(data, len));
 	fflush(stdout);
 
 	return 0;
 }
 
-static int bankd_handle_setAtrReq(struct bankd_client *bc, const RsproPDU_t *pdu)
+int frontend_handle_set_atr(struct bankd_client *bc, const uint8_t *data, size_t len)
 {
-	RsproPDU_t *resp;
+	OSMO_ASSERT(data);
 
-	OSMO_ASSERT(pdu);
-	OSMO_ASSERT(RsproPDUchoice_PR_setAtrReq == pdu->msg.present);
-
-	printf("SET_ATR: %s\n", osmo_hexdump(pdu->msg.choice.setAtrReq.atr.buf,
-					     pdu->msg.choice.setAtrReq.atr.size));
+	printf("SET_ATR: %s\n", osmo_hexdump(data, len));
 	fflush(stdout);
 
-	resp = rspro_gen_SetAtrRes(ResultCode_ok);
-	if (!resp)
-		return -ENOMEM;
-	server_conn_send_rspro(&bc->bankd_conn, resp);
-
 	return 0;
 }
 
-
-int client_user_bankd_handle_rx(struct rspro_server_conn *bankdc, const RsproPDU_t *pdu)
+int frontend_handle_slot_status(struct bankd_client *bc, const SlotPhysStatus_t *sts)
 {
-	struct bankd_client *client = bankdc2bankd_client(bankdc);
-	switch (pdu->msg.present) {
-	case RsproPDUchoice_PR_tpduCardToModem:
-		bankd_handle_tpduCardToModem(client, pdu);
-		break;
-	case RsproPDUchoice_PR_setAtrReq:
-		bankd_handle_setAtrReq(client, pdu);
-		break;
-	default:
-		OSMO_ASSERT(0);
-	}
 	return 0;
 }
+
+int frontend_append_script_env(struct bankd_client *bc, char **env, size_t max_env)
+{
+	return 0;
+}
+
 
 /***********************************************************************
  * Incoming command from the user application (stdin shell in our case)
