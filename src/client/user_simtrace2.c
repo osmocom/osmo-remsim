@@ -37,6 +37,8 @@
 #include "client.h"
 #include "debug.h"
 
+#define LOGCI(ci, lvl, fmt, args ...) \
+	LOGP(DST2, lvl, fmt, ## args)
 
 /***********************************************************************
  * Incoming Messages from cardem firmware
@@ -48,9 +50,8 @@ static int process_do_status(struct osmo_st2_cardem_inst *ci, uint8_t *buf, int 
 	struct cardemu_usb_msg_status *status;
 	status = (struct cardemu_usb_msg_status *) buf;
 
-	printf("SIMtrace => STATUS: flags=0x%x, fi=%u, di=%u, wi=%u wtime=%u\n",
-		status->flags, status->fi, status->di, status->wi,
-		status->waiting_time);
+	LOGCI(ci, LOGL_INFO, "SIMtrace => STATUS: flags=0x%x, fi=%u, di=%u, wi=%u wtime=%u\n",
+		status->flags, status->fi, status->di, status->wi, status->waiting_time);
 
 	return 0;
 }
@@ -65,7 +66,7 @@ static int process_do_pts(struct osmo_st2_cardem_inst *ci, uint8_t *buf, int len
 		.len = sizeof(pts->req),
 	};
 
-	printf("SIMtrace => PTS req: %s\n", osmo_hexdump(pts->req, sizeof(pts->req)));
+	LOGCI(ci, LOGL_INFO, "SIMtrace => PTS req: %s\n", osmo_hexdump(pts->req, sizeof(pts->req)));
 
 	osmo_fsm_inst_dispatch(bc->main_fi, MF_E_MDM_PTS_IND, &fpts);
 
@@ -78,9 +79,8 @@ __attribute__((unused)) static int process_do_error(struct osmo_st2_cardem_inst 
 	struct cardemu_usb_msg_error *err;
 	err = (struct cardemu_usb_msg_error *) buf;
 
-	printf("SIMtrace => ERROR: %u/%u/%u: %s\n",
-		err->severity, err->subsystem, err->code,
-		err->msg_len ? (char *)err->msg : "");
+	LOGCI(ci, LOGL_ERROR, "SIMtrace => ERROR: %u/%u/%u: %s\n",
+		err->severity, err->subsystem, err->code, err->msg_len ? (char *)err->msg : "");
 
 	return 0;
 }
@@ -95,7 +95,7 @@ static int process_do_rx_da(struct osmo_st2_cardem_inst *ci, uint8_t *buf, int l
 	struct frontend_tpdu ftpdu;
 	int rc;
 
-	printf("SIMtrace => DATA: flags=%x, %s: ", data->flags,
+	LOGCI(ci, LOGL_DEBUG, "SIMtrace => DATA: flags=%x, %s: ", data->flags,
 		osmo_hexdump(data->data, data->data_len));
 
  	/* parse the APDU data in the USB message */
@@ -131,7 +131,7 @@ static int process_usb_msg(struct osmo_st2_cardem_inst *ci, uint8_t *buf, int le
 	struct simtrace_msg_hdr *sh = (struct simtrace_msg_hdr *)buf;
 	int rc;
 
-	printf("SIMtrace -> %s\n", osmo_hexdump(buf, len));
+	LOGCI(ci, LOGL_DEBUG, "SIMtrace -> %s\n", osmo_hexdump(buf, len));
 
 	buf += sizeof(*sh);
 
@@ -149,7 +149,7 @@ static int process_usb_msg(struct osmo_st2_cardem_inst *ci, uint8_t *buf, int le
 		/* firmware confirms configuration change; ignore */
 		break;
 	default:
-		printf("unknown simtrace msg type 0x%02x\n", sh->msg_type);
+		LOGCI(ci, LOGL_ERROR, "unknown simtrace msg type 0x%02x\n", sh->msg_type);
 		rc = -1;
 		break;
 	}
@@ -177,7 +177,7 @@ static int process_irq_status(struct osmo_st2_cardem_inst *ci, const uint8_t *bu
 		.waiting_time = status->waiting_time,
 	};
 
-	printf("SIMtrace IRQ STATUS: flags=0x%x, fi=%u, di=%u, wi=%u wtime=%u\n",
+	LOGCI(ci, LOGL_INFO, "SIMtrace IRQ STATUS: flags=0x%x, fi=%u, di=%u, wi=%u wtime=%u\n",
 		status->flags, status->fi, status->di, status->wi,
 		status->waiting_time);
 
@@ -190,7 +190,7 @@ static int process_usb_msg_irq(struct osmo_st2_cardem_inst *ci, const uint8_t *b
 	struct simtrace_msg_hdr *sh = (struct simtrace_msg_hdr *)buf;
 	int rc;
 
-	printf("SIMtrace IRQ %s\n", osmo_hexdump(buf, len));
+	LOGCI(ci, LOGL_INFO, "SIMtrace IRQ %s\n", osmo_hexdump(buf, len));
 
 	buf += sizeof(*sh);
 
@@ -199,7 +199,7 @@ static int process_usb_msg_irq(struct osmo_st2_cardem_inst *ci, const uint8_t *b
 		rc = process_irq_status(ci, buf, len);
 		break;
 	default:
-		printf("unknown simtrace msg type 0x%02x\n", sh->msg_type);
+		LOGCI(ci, LOGL_ERROR, "unknown simtrace msg type 0x%02x\n", sh->msg_type);
 		rc = -1;
 		break;
 	}
@@ -218,11 +218,11 @@ static void usb_in_xfer_cb(struct libusb_transfer *xfer)
 		process_usb_msg(ci, xfer->buffer, xfer->actual_length);
 		break;
 	case LIBUSB_TRANSFER_NO_DEVICE:
-		fprintf(stderr, "USB device disappeared\n");
+		LOGCI(ci, LOGL_FATAL, "USB device disappeared\n");
 		exit(1);
 		break;
 	default:
-		fprintf(stderr, "USB IN transfer failed, status=%u\n", xfer->status);
+		LOGCI(ci, LOGL_FATAL, "USB IN transfer failed, status=%u\n", xfer->status);
 		exit(1);
 		break;
 	}
@@ -269,11 +269,11 @@ static void usb_irq_xfer_cb(struct libusb_transfer *xfer)
 		process_usb_msg_irq(ci, xfer->buffer, xfer->actual_length);
 		break;
 	case LIBUSB_TRANSFER_NO_DEVICE:
-		fprintf(stderr, "USB device disappeared\n");
+		LOGCI(ci, LOGL_FATAL, "USB device disappeared\n");
 		exit(1);
 		break;
 	default:
-		fprintf(stderr, "USB IRQ transfer failed, status=%u\n", xfer->status);
+		LOGCI(ci, LOGL_FATAL, "USB IN transfer failed, status=%u\n", xfer->status);
 		exit(1);
 		break;
 	}
@@ -341,7 +341,7 @@ int frontend_handle_card2modem(struct bankd_client *bc, const uint8_t *data, siz
 	ac.sw[0] = data[len-2];
 	ac.sw[1] = data[len=1];
 
-	printf("SIMtrace <= SW=0x%02x%02x, len_rx=%zu\n", ac.sw[0], ac.sw[1], len-2);
+	LOGCI(ci, LOGL_DEBUG, "SIMtrace <= SW=0x%02x%02x, len_rx=%zu\n", ac.sw[0], ac.sw[1], len-2);
 	if (len > 2) { // send PB and data to modem
 		osmo_st2_cardem_request_pb_and_tx(ci, ac.hdr.ins, data, len-2);
 	}

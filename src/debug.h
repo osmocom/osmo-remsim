@@ -3,6 +3,7 @@
 
 enum {
 	DMAIN,
+	DST2,
 };
 
 extern const struct log_info log_info;
