@@ -70,7 +70,7 @@ static char **build_script_env(struct bankd_client *bc, const char *cause)
 
 	env[i++] = talloc_asprintf(env, "REMSIM_SIM_VCC=%u", bc->last_status.flags.vcc_present);
 	env[i++] = talloc_asprintf(env, "REMSIM_SIM_RST=%u", bc->last_status.flags.reset_active);
-	/* TODO: SIM card state CLK */
+	env[i++] = talloc_asprintf(env, "REMSIM_SIM_CLK=%u", bc->last_status.flags.clk_active);
 
 	env[i++] = talloc_asprintf(env, "REMSIM_CAUSE=%s", cause);
 
