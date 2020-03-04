@@ -1,1 +1,2 @@
 usr/bin/osmo-remsim-server
+lib/systemd/system/osmo-remsim-server.service

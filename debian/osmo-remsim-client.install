@@ -1,1 +1,2 @@
 usr/bin/osmo-remsim-client*
+lib/systemd/system/osmo-remsim-client*
