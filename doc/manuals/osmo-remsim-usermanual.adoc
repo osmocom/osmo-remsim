@@ -10,6 +10,8 @@ include::{srcdir}/chapters/overview.adoc[]
 
 include::{srcdir}/chapters/remsim-server.adoc[]
 
+include::{srcdir}/chapters/remsim-apitool.adoc[]
+
 include::{srcdir}/chapters/remsim-client.adoc[]
 
 include::{srcdir}/chapters/remsim-bankd.adoc[]

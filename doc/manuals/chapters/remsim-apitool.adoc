@@ -1,0 +1,85 @@
+[[remsim-apitool]]
+== remsim-apitool.py
+
+`remsim-apitool.py` is a small python script whic can be used to manually
+control `osmo-remsim-server` via its RESTful interface in setups where
+no external back-end application is controlling this interface.
+
+For more information about The RESTful inteface, see <<RSRES>>.
+
+=== Usage
+
+Common command line arguments that can be used with any of the commands below:
+
+*-H, --host HOST*::
+  Specify the hostname / IP of the `osmo-remsim-server` to connect to. Default: localhost
+*-P, --port PORT*::
+  Specify the remote TCP port of the RSRES interface of `osmo-remsim-server`. Default: 9997
+*-v, --verbose*
+  Increase verbosity of output: Show the GET request generated, not just the response.
+
+==== Listing connected clients
+
+The command `remsim-apitool.py -c` can be used to list all currently connected clients.
+
+----
+$ remsim-apitool.py -c
+/clients: {'clients': [{'peer': 'C23:0', 'state': 'CONNECTED_CLIENT', 'component_id': {'type_': 'remsimClient', 'name': 'nataraja', 'software': 'remsim-client', 'swVersion': '0.2.2.63-844b'}}]}
+----
+
+==== Listing connected bankds
+
+The command `remsim-apitool.py -b` can be used to list all currently connected bankds.
+
+----
+$ remsim-apitool.py -b
+/banks: {'banks': [{'peer': 'B1', 'state': 'CONNECTED_BANKD', 'component_id': {'type_': 'remsimBankd', 'name': 'fixme-name', 'software': 'remsim-bankd', 'swVersion': '0.2.2.46-3598'}, 'bankId': 1, 'numberOfSlots': 5}]}
+----
+
+==== Listing installed slotmaps
+
+The command `remsim-apitool.py -s` can be used to list all currently installed slotmaps.
+
+----
+$ remsim-apitool.py -s
+/slotmaps: {'slotmaps': [{'bank': {'bankId': 1, 'slotNr': 1}, 'client': {'clientId': 23, 'slotNr': 0}, 'state': 'ACTIVE'}]}
+----
+
+==== Listing all information
+
+The command `remsim-apitool.py -a` can be used to list all information (clients, bankds, slotmaps).
+
+----
+$ remsim-apitool.py -a
+/clients: {'clients': [{'peer': 'C23:0', 'state': 'CONNECTED_CLIENT', 'component_id': {'type_': 'remsimClient', 'name': 'nataraja', 'software': 'remsim-client', 'swVersion': '0.2.2.63-844b'}}]}
+/banks: {'banks': [{'peer': 'B1', 'state': 'CONNECTED_BANKD', 'component_id': {'type_': 'remsimBankd', 'name': 'fixme-name', 'software': 'remsim-bankd', 'swVersion': '0.2.2.46-3598'}, 'bankId': 1, 'numberOfSlots': 5}]}
+/slotmaps: {'slotmaps': [{'bank': {'bankId': 1, 'slotNr': 1}, 'client': {'clientId': 23, 'slotNr': 0}, 'state': 'ACTIVE'}]}
+----
+
+==== Creating a slotmap
+
+The command `remsim-apitool.py -m bank_id bankd_slot client_id client_slot` can be used to create a new slotmap.
+
+.Create a slotmap between Bankd 1 Slot a (B1:1) and Client 23 Slot 0 (C23:0)
+----
+$ remsim-apitool.py -m 1 1 23 0
+----
+
+==== Deleting a slotmap
+
+The command `remsim-apitool.py -d bank_id bank_slot` can be used to create a new slotmap.
+
+.Remove a slotmap for Bankd 1 Slot a (B1:1)
+----
+$ remsim-apitool.py -m 1 1
+----
+
+==== Reset all state
+
+The command `remsim-apitool.py -r` can be used to reset all state in bankd, including all slotmaps.
+
+----
+$ remsim-apitool.py -r
+----
+
+WARNING: Use with extreme caution, particularly in production environments.

@@ -96,6 +96,14 @@ The tasks of `osmo-remsim-bankd` include:
 
 For more information, please see <<remsim-bankd>>.
 
+=== remsim-apitool.py
+
+The `remsim-apitool.py` utility is an optional tool that can be used to
+manually interface with the RSRES interface of `osmo-remsim-server` in
+absence of a back-end system managing this.
+
+For more information, please see <<remsim-apitool>>.
+
 === RSPRO
 
 RSPRO is the *R*emote *S*IM *PRO*tocol.  It is a binary protocol
