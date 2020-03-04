@@ -61,15 +61,23 @@ Description: Osmocom Remote SIM - Bank Daemon
  respective cards.  It establishes a control connection to remsim-server
  and receives inbound connections from remsim-clients.
 
-Package: osmo-remsim-client
+Package: osmo-remsim-client-st2
 Architecture: any
 Multi-Arch: same
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Osmocom Remote SIM - Client
+Description: Osmocom Remote SIM - Client for SIMtrace2 cardem firmware
  The remsim-client is managing a given phone/modem.  It attaches to the
  'cardem' firmware of a SIMtrcace2 (or compatible, such as sysmoQMOD)
  hardware and forwards the SIM card communication to a remsim-bankd,
  under the control of remsim-server.
+
+Package: osmo-remsim-client-shell
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Osmocom Remote SIM - Interactive Client
+ The remsim-client-shell is for manually interacting with a remote SIM
+ card via remsim-bankd + remsim-server.  It's mostly a test/debug tool.
 
 Package: libifd-osmo-remsim-client0
 Architecture: any
