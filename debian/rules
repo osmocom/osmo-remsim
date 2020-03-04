@@ -15,7 +15,6 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 
 override_dh_auto_configure:
 	dh_auto_configure --	--with-systemdsystemunitdir=/lib/systemd/system \
-				--with-usbdropdir=$(USBDROPDIR) \
 				--enable-manuals
 
 #override_dh_clean:

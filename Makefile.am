@@ -7,6 +7,11 @@ pkgconfig_DATA = libosmo-rspro.pc
 
 EXTRA_DIST = asn1 .version README.md contrib/remsim-apitool.py
 
+AM_DISTCHECK_CONFIGURE_FLAGS = \
+	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) \
+	--with-usbdropdir=$$dc_install_base/$(usbdropdir) \
+	--with-serialconfdir=$$dc_install_base/$(serialconfdir)
+
 pkgcofigdir = $(libdir)/pkgconfig
 
 @RELMAKE@
