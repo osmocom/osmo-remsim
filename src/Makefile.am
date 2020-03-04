@@ -1,4 +1,4 @@
-SUBDIRS = rspro
+SUBDIRS = rspro .
 if BUILD_BANKD
 SUBDIRS += bankd
 endif
