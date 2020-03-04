@@ -20,6 +20,45 @@ per slot, we can implement the client in blocking mode, i.e. use
 blocking I/O on the TCP/RSPRO side.  This simplifies the code compared
 to a more complex async implementation.
 
+[graphviz]
+.Overall osmo-remsim architecture using osmo-remsim-client-st2
+----
+graph G {
+  rankdir = LR;
+
+  subgraph cluster_0 {
+    label = "Client";
+    modem [label="Phone/Modem",shape="rectangle"];
+    cardem [label="cardem firmware\ne.g. on sysmoQMOD",shape="rectangle"];
+    client [label="remsim-client-st2"];
+    modem -- cardem [label="ISO 7816-3"];
+    cardem -- client [label="USB ST2"];
+  }
+
+  subgraph cluster_2 {
+    label = "SIM Bank";
+    bankd [label="remsim-bankd"];
+    reader [label="Card Reader\ne.g. sysmoOCTSIM",shape="rectangle"];
+    b_pcscd [label="PC/SC Daemon\nlibccid driver"];
+    bankd -- b_pcscd;
+    b_pcscd -- reader [label = "USB CCID"];
+  }
+
+  subgraph cluster_1 {
+    label = "Server/Backend";
+    server [label="remsim-server"];
+    backend [label="Back-End Application"];
+    server -- backend [label="REST Interface"];
+  }
+
+  client -- bankd [label="RSPRO Data"];
+  client -- server [label="RSPRO Control"];
+  bankd -- server [label="RSPRO Control"];
+}
+----
+
+
+
 === Running
 
 osmo-remsim-client-st2 currently has the following command-line options:
