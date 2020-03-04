@@ -69,13 +69,17 @@ if test "$osmo_ac_build_client" = "yes"; then
 	PKG_CHECK_MODULES(OSMOSIMTRACE2, libosmo-simtrace2)
 	PKG_CHECK_MODULES(USB, libusb-1.0)
 
-	serialconfdir=`pkg-config --variable=serialconfdir libpcsclite`
-	AC_SUBST(serialconfdir)
-	ifd_dropdir=`pkg-config --variable=usbdropdir libpcsclite`
+	# we cannot use the below command, as 'make distcheck' would fail due to the lack
+	# of ${prefix} being involved :(
+	#ifd_dropdir=`pkg-config --variable=usbdropdir libpcsclite`
+	#serialconfdir=`pkg-config --variable=serialconfdir libpcsclite`
+	ifd_dropdir="${libdir}/pcsc"
+	serialconfdir="${sysconfdir}/reader.conf.d"
 	# allow user to override the dropdir for the PCSC driver bundle
 	AC_ARG_WITH(usbdropdir, [--with-usbdropdir	PCSC bundle location],
 				[usbdropdir="${withval}"], [usbdropdir="${ifd_dropdir}"])
 	AC_SUBST(usbdropdir)
+	AC_SUBST(serialconfdir)
 fi
 AM_CONDITIONAL(BUILD_CLIENT, test "x$osmo_ac_build_client" = "xyes")
 AC_SUBST(BUILD_CLIENT)
