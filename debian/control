@@ -90,7 +90,7 @@ Description: Osmocom Remote SIM Client - PC/SC driver
  driver into pcscd.  This means you can use remote smart cards managed
  by osmo-remsim-server via normal PC/SC applications.
 
-package: osmo-remsim-doc
+Package: osmo-remsim-doc
 Architecture: all
 Section: doc
 Priority: optional
