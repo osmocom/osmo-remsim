@@ -8,6 +8,11 @@ It is specified in ASN.1 syntax (see `asn1/RSPRO.asn` in the
 `osmo-remsim` source code) and uses BER (Basic Encoding Rules) on the
 transport level.
 
+WARNING: RSPRO and its underlying transport layer both operate in plain-text,
+There is no authentication or encryption built into the protocol.  It is
+assumed that the protocol is only spoken over trusted, controlled IP
+networks, such as inside a VPN or a closed / private corporate network.
+
 === Underlying Transport Layer
 
 RSPRO uses TCP as an underlying transport protocol.  As TCP doesn't

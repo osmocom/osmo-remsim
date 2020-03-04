@@ -26,6 +26,11 @@ and monitoring of the entire osmo-remsim system.
 
 The API currently has version 1, and the URL prefix is /api/backend/v1
 
+WARNING: The RESTful/JSON Web API operates in plain-text,
+There is no authentication or encryption built into the protocol.  It is
+assumed that the protocol is only spoken over trusted, controlled IP
+networks, such as inside a VPN or a closed / private corporate network.
+
 ==== /api/backend/v1/clients
 
 *GET* obtains a JSON list where each element represents one currently
