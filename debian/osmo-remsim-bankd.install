@@ -1,2 +1,3 @@
 usr/bin/osmo-remsim-bankd
 lib/systemd/system/osmo-remsim-bankd.service
+etc/default/osmo-remsim-bankd
