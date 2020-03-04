@@ -15,7 +15,7 @@ pcsc_test_LDADD = $(OSMOCORE_LIBS) \
 osmo_remsim_bankd_SOURCES = ../slotmap.c ../rspro_client_fsm.c ../debug.c \
 			  bankd_main.c bankd_pcsc.c
 osmo_remsim_bankd_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) $(OSMOSIM_LIBS) \
-			  $(PCSC_LIBS) $(top_builddir)/src/libosmo-rspro.la -lcsv
+			  $(PCSC_LIBS) $(CSV_LIBS) $(top_builddir)/src/libosmo-rspro.la
 
 # as suggested in http://lists.gnu.org/archive/html/automake/2009-03/msg00011.html
 FORCE:
