@@ -29,7 +29,6 @@
 
 #include <talloc.h>
 #include <osmocom/core/linuxlist.h>
-#include <osmocom/sim/sim.h>
 
 #include <wintypes.h>
 #include <winscard.h>
