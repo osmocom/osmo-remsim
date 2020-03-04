@@ -1,3 +1,4 @@
+[[remsim-bankd]]
 == osmo-remsim-bankd
 
 The `osmo-remsim-bankd` (SIM Bank Daemon) manages one given SIM bank.

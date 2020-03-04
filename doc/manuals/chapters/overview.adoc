@@ -50,6 +50,8 @@ The tasks of `osmo-remsim-server` include:
   `osmo-remsim-bankd` instances
 * providing a RESTful JSON interface for external application logic to
 
+For more information, please see <<remsim-server>>.
+
 === osmo-remsim-client
 
 The `osmo-remsim-client` software is co-located next to the _user of the card_
@@ -77,6 +79,8 @@ The tasks of `osmo-remsim-client` include:
 multiple phones/modems at one location, you can simply run multiple
 instances of `osmo-remsim-client` on the same system, one for each phone/modem.
 
+For more information, please see <<remsim-client>>.
+
 === osmo-remsim-bankd
 
 The `osmo-remsim-bankd` software is co-located next to a bank of SIM cards.
@@ -90,4 +94,28 @@ The tasks of `osmo-remsim-bankd` include:
 * running a TCP server where TCP connections from `osmo-remsim-client`
   instances are accepted and handled.
 
+For more information, please see <<remsim-bankd>>.
 
+=== RSPRO
+
+RSPRO is the *R*emote *S*IM *PRO*tocol.  It is a binary protocol
+specified in ASN.1 which is spoken on any of the internal connections
+between `osmo-remsim-client`, `osmo-remsim-bankd` and
+`osmo-remsim-server`.
+
+You can find more information about RSPRO in <<rspro>>.
+
+=== RSRES
+
+RSRES is the *R*emote *S*IM *RES*T protocol.  It is an interface offered
+by `osmo-remsim-server` towards external back-end application logic of
+the operator of an osmo-remsim network.
+
+You can find more information about RSRES in <<rsres>>.
+
+=== Security
+
+WARNING: RSPRO, RSRES and their underlying transport layer both operate in plain-text,
+There is no authentication or encryption built into the protocol.  It is
+assumed that the protocols are only spoken over trusted, controlled IP
+networks, such as inside a VPN or a closed / private corporate network.

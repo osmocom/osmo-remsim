@@ -1,3 +1,4 @@
+[[rspro]]
 == RSPRO
 
 *RSPRO*, the *Remote SIM Protocol*, is an osmo-remsim specific,
