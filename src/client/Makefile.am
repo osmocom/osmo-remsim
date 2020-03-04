@@ -1,6 +1,6 @@
 AM_CFLAGS = -Wall -I$(top_srcdir)/include -I/$(top_builddir)/include -I$(top_srcdir)/src \
 	    $(OSMOCORE_CFLAGS) $(OSMOGSM_CFLAGS) $(OSMOABIS_CFLAGS) \
-	    $(PCSC_CFLAGS) $(USB_CFLAGS) $(OSMOSIM_CFLAGS) \
+	    $(PCSC_CFLAGS) $(USB_CFLAGS) \
 	    $(OSMOSIMTRACE2_CFLAGS) \
 	    -I$(top_srcdir)/include/osmocom/rspro
 
@@ -32,7 +32,7 @@ osmo_remsim_client_st2_CPPFLAGS = -DUSB_SUPPORT
 osmo_remsim_client_st2_CFLAGS = $(AM_CFLAGS)
 osmo_remsim_client_st2_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
 			       $(OSMOUSB_LIBS) $(OSMOSIMTRACE2_LIBS) \
-			       $(USB_LIBS) $(OSMOSIM_LIBS) \
+			       $(USB_LIBS) \
 			       $(top_builddir)/src/libosmo-rspro.la
 
 noinst_HEADERS = client.h 
