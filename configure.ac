@@ -169,6 +169,9 @@ AC_MSG_RESULT([CPPFLAGS="$CPPFLAGS"])
 AC_OUTPUT(
 	Makefile
 	libosmo-rspro.pc
+	contrib/Makefile
+	contrib/etc_default/Makefile
+	contrib/systemd/Makefile
 	doc/Makefile
 	doc/manuals/Makefile
 	src/Makefile
