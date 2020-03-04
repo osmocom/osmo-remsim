@@ -153,3 +153,69 @@ script indicated why the script has been called.
 | request-sim-local | The client asks the system to switch to local SIM
 | request-modem-reset | The client asks the system to perform a modem reset
 |===
+
+== osmo-remsim-client-shell
+
+This is a remsim-client that's mostly useful for manual debugging/testing or automatic testing.
+
+Instead of using hardware like the SIMtrace with cardem firmware to interface a virtual SIM card
+to a real phone or modem, it simply offers and interactive way to exchange APDUs with a remote
+SIM card via STDIO of the process.
+
+This allows testing of large parts of the osmo-remsim-client code as well as the integration with
+the overall osmo-remsim network including osmo-remsim-server, osmo-remsim-bankd and any external
+backend application driving the REST interface.
+
+=== Running
+
+osmo-remsim-client-shell currently has the following command-line options:
+
+==== SYNOPSIS
+
+*osmo-remsim-client-shell* [...]
+
+==== OPTIONS
+
+*-h, --help*::
+  Print a short help message about the supported options
+*-v, --version*::
+  Print the compile-time version information
+*-i, --server-ip A.B.C.D*::
+  Specify the remote IP address / hostname of the `osmo-remsim-server` to
+  which this client shall establish its RSPRO control connection
+*-p, --server-port <1-65535>*::
+  Specify the remote TCP port number of the `osmo-remsim-server` to which
+  this client shall establish its RSPRO control connection
+*-c, --client-id <1-65535>*::
+  Specify the numeric client identifier of the SIM bank this bankd
+  instance operates.  The tuple of client-id and client-slot must be
+  unique among all clients connecting to the same `osmo-remsim-server`.
+*-n, --client-slot <0-65535>*::
+  Specify the slot number served within this client.  The tuple of
+  client-id and client-slot must be unique among all clients connecting
+  to the same `osmo-remsim-server`.
+ `osmo-remsim-bankd` once a card has been mapped to this client.
+*-e, --event-script COMMAND*::
+  Specify the shell command to be execute when the client wants to call its
+  helper script
+
+==== Examples
+
+The below example uses stderr-redirection to avoid the log output cluttering the console.
+
+.remsim-server is at 192.168.11.10; we are client 23 slot 0
+----
+./osmo-remsim-client-shell -i 192.168.11.10 -c 23  2>/dev/null
+SET_ATR: 3b 00
+SET_ATR: 3b 7d 94 00 00 55 55 53 0a 74 86 93 0b 24 7c 4d 54 68
+a0a40000023f00
+R-APDU: 9f 17
+----
+
+* The first SET_ATR is performed by osmo-remsim-client locally using a default ATR
+* The second SET_ATR is performed by osmo-remsim-bankd to inform us about the ATR of the real remote card
+* The `a0a40000023f00` is a command TPDU entered on STDIN by the suer
+* The `9f17` is a response TPDU provided by the remote card in response to the command
+
+The program continues in this loop (read command APDU as hex-dump from stdin; provide response on stdout)
+until it is terminated by Ctrl+C or by other means.
