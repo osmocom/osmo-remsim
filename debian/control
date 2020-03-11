@@ -62,6 +62,8 @@ Description: Osmocom Remote SIM - Bank Daemon
  and receives inbound connections from remsim-clients.
 
 Package: osmo-remsim-client-st2
+Replaces: osmo-remsim-client
+Breaks: osmo-remsim-client
 Architecture: any
 Multi-Arch: same
 Depends: ${shlibs:Depends}, ${misc:Depends}
