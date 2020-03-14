@@ -55,20 +55,28 @@ AC_ARG_ENABLE([remsim-bankd],[AS_HELP_STRING([--disable-remsim-bankd], [Build os
 	[osmo_ac_build_bankd="$enableval"],[osmo_ac_build_bankd="yes"])
 if test "$osmo_ac_build_bankd" = "yes"; then
 	AC_DEFINE(BUILD_BANKD, 1, [Define if we want to build osmo-remsim-bankd])
-	PKG_CHECK_MODULES(OSMOSIM, libosmosim)
 	PKG_CHECK_MODULES(PCSC, libpcsclite)
 fi
 AM_CONDITIONAL(BUILD_BANKD, test "x$osmo_ac_build_bankd" = "xyes")
 AC_SUBST(BUILD_BANKD)
 
-AC_ARG_ENABLE([remsim-client],[AS_HELP_STRING([--disable-remsim-client], [Build osmo-remsim-client])],
-	[osmo_ac_build_client="$enableval"],[osmo_ac_build_client="yes"])
-if test "$osmo_ac_build_client" = "yes"; then
-	AC_DEFINE(BUILD_CLIENT, 1, [Define if we want to build osmo-remsim-client])
-	PKG_CHECK_MODULES(OSMOSIM, libosmosim)
+AC_ARG_ENABLE([remsim-client-st2],[AS_HELP_STRING([--disable-remsim-client-st2], [Build osmo-remsim-client-st2])],
+	[osmo_ac_build_client_st2="$enableval"],[osmo_ac_build_client_st2="yes"])
+if test "$osmo_ac_build_client_st2" = "yes"; then
+	AC_DEFINE(BUILD_CLIENT_ST2, 1, [Define if we want to build osmo-remsim-client-st2])
 	PKG_CHECK_MODULES(OSMOUSB, libosmousb)
 	PKG_CHECK_MODULES(OSMOSIMTRACE2, libosmo-simtrace2)
 	PKG_CHECK_MODULES(USB, libusb-1.0)
+fi
+AM_CONDITIONAL(BUILD_CLIENT_ST2, test "x$osmo_ac_build_client_st2" = "xyes")
+AC_SUBST(BUILD_CLIENT_ST2)
+
+AC_ARG_ENABLE([remsim-client-ifdhandler],[AS_HELP_STRING([--disable-remsim-client-ifdhandler],
+							 [Build osmo-remsim-client-ifdhandler])],
+	[osmo_ac_build_client_ifdhandler="$enableval"],[osmo_ac_build_client_ifdhandler="yes"])
+if test "$osmo_ac_build_client_ifdhandler" = "yes"; then
+	AC_DEFINE(BUILD_CLIENT_IFDHANDLER, 1, [Define if we want to build osmo-remsim-client-ifdhandler])
+	PKG_CHECK_MODULES(PCSC, libpcsclite)
 
 	ifd_dropdir=`pkg-config --variable=usbdropdir libpcsclite`
 	# allow user to override the dropdir for the PCSC driver bundle
@@ -80,8 +88,8 @@ if test "$osmo_ac_build_client" = "yes"; then
 				[serialconfdir="${withval}"], [serialconfdir="${_serialconfdir}"])
 	AC_SUBST(serialconfdir)
 fi
-AM_CONDITIONAL(BUILD_CLIENT, test "x$osmo_ac_build_client" = "xyes")
-AC_SUBST(BUILD_CLIENT)
+AM_CONDITIONAL(BUILD_CLIENT_IFDHANDLER, test "x$osmo_ac_build_client_ifdhandler" = "xyes")
+AC_SUBST(BUILD_CLIENT_IFDHANDLER)
 
 
 AC_CONFIG_MACRO_DIR([m4])
