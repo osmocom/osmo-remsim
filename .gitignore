@@ -49,3 +49,5 @@ debian/autoreconf.*
 debian/.debhelper
 debian/debhelper*
 debian/files
+
+contrib/osmo-remsim.spec
