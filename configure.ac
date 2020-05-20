@@ -32,10 +32,6 @@ if test "x$PKG_CONFIG_INSTALLED" = "xno"; then
 fi
 PKG_PROG_PKG_CONFIG([0.20])
 
-AC_CHECK_LIB(csv, csv_init, CSV_LIBS="-lcsv", [AC_MSG_ERROR([*** libcsv library not found!])])
-AC_CHECK_HEADERS([csv.h])
-AC_SUBST(CSV_LIBS)
-
 PKG_CHECK_MODULES(OSMOCORE, libosmocore >= 1.3.0)
 PKG_CHECK_MODULES(OSMOGSM, libosmogsm >= 0.11.0)
 PKG_CHECK_MODULES(OSMOABIS, libosmoabis >= 0.8.0)
@@ -56,6 +52,9 @@ AC_ARG_ENABLE([remsim-bankd],[AS_HELP_STRING([--disable-remsim-bankd], [Build os
 if test "$osmo_ac_build_bankd" = "yes"; then
 	AC_DEFINE(BUILD_BANKD, 1, [Define if we want to build osmo-remsim-bankd])
 	PKG_CHECK_MODULES(PCSC, libpcsclite)
+	AC_CHECK_LIB(csv, csv_init, CSV_LIBS="-lcsv", [AC_MSG_ERROR([*** libcsv library not found!])])
+	AC_CHECK_HEADERS([csv.h])
+	AC_SUBST(CSV_LIBS)
 fi
 AM_CONDITIONAL(BUILD_BANKD, test "x$osmo_ac_build_bankd" = "xyes")
 AC_SUBST(BUILD_BANKD)
