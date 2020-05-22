@@ -5,7 +5,14 @@ SUBDIRS = contrib src include doc
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libosmo-rspro.pc
 
-EXTRA_DIST = asn1 .version README.md contrib/remsim-apitool.py
+EXTRA_DIST = \
+	     .version \
+	     README.md \
+	     asn1 \
+	     contrib/osmo-remsim.spec.in \
+	     contrib/remsim-apitool.py \
+	     debian \
+	     $(NULL)
 
 AM_DISTCHECK_CONFIGURE_FLAGS = \
 	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) \
