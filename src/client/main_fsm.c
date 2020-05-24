@@ -75,9 +75,9 @@ static char **build_script_env(struct bankd_client *bc, const char *cause)
 	env[i++] = talloc_asprintf(env, "REMSIM_CAUSE=%s", cause);
 
 	/* ask frontend to append any frontend-speccific additional environment vars */
-	rc = frontend_append_script_env(bc, env+i, 256-i);
+	rc = frontend_append_script_env(bc, env, i, 256-i-1);
 	if (rc > 0)
-		i += rc;
+		i = rc;
 
 	/* terminate last entry */
 	env[i++] = NULL;

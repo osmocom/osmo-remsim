@@ -48,7 +48,7 @@ int frontend_request_modem_reset(struct bankd_client *bc);
 int frontend_handle_card2modem(struct bankd_client *bc, const uint8_t *data, size_t len);
 int frontend_handle_set_atr(struct bankd_client *bc, const uint8_t *data, size_t len);
 int frontend_handle_slot_status(struct bankd_client *bc, const SlotPhysStatus_t *sts);
-int frontend_append_script_env(struct bankd_client *bc, char **env, size_t max_env);
+int frontend_append_script_env(struct bankd_client *bc, char **env, int idx, size_t max_env);
 
 /* main.c */
 

@@ -361,10 +361,9 @@ int frontend_handle_slot_status(struct bankd_client *bc, const SlotPhysStatus_t 
 	return 0;
 }
 
-int frontend_append_script_env(struct bankd_client *bc, char **env, size_t max_env)
+int frontend_append_script_env(struct bankd_client *bc, char **env, int i, size_t max_env)
 {
 	struct osmo_st2_cardem_inst *ci = bc->cardem;
-	int i = 0;
 
 	if (max_env < 4)
 		return -ENOSPC;

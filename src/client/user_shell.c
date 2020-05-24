@@ -54,9 +54,9 @@ int frontend_handle_slot_status(struct bankd_client *bc, const SlotPhysStatus_t 
 	return 0;
 }
 
-int frontend_append_script_env(struct bankd_client *bc, char **env, size_t max_env)
+int frontend_append_script_env(struct bankd_client *bc, char **env, int idx, size_t max_env)
 {
-	return 0;
+	return idx;
 }
 
 
