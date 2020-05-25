@@ -33,6 +33,7 @@ static void print_help()
 	printf( "  Some useful help...\n"
 		"  -h --help			This text\n"
 		"  -V --version			Print version of the program\n"
+		"  -d --debug option		Enable debug logging (e.g. DMAIN:DST2)\n"
 		);
 }
 
@@ -43,10 +44,11 @@ static void handle_options(int argc, char **argv)
 		static struct option long_options[] = {
 			{ "help", 0, 0, 'h' },
 			{ "version", 0, 0, 'V' },
+			{ "debug", 1, 0, 'd' },
 			{0, 0, 0, 0}
 		};
 
-		c = getopt_long(argc, argv, "hV", long_options, &option_index);
+		c = getopt_long(argc, argv, "hVd:", long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -54,6 +56,9 @@ static void handle_options(int argc, char **argv)
 		case 'h':
 			print_help();
 			exit(0);
+			break;
+		case 'd':
+			log_parse_category_mask(osmo_stderr_target, optarg);
 			break;
 		case 'V':
 			printf("osmo-resmim-server version %s\n", VERSION);

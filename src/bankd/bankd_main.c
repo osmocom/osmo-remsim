@@ -271,6 +271,7 @@ static void printf_help()
 	printf(
 "  -h --help			Print this help message\n"
 "  -V --version			Print the version of the program\n"
+"  -d --debug option		Enable debug logging (e.g. DMAIN:DST2)\n"
 "  -i --server-host A.B.C.D	remsim-server IP address (default: 127.0.0.1)\n"
 "  -p --server-port <1-65535>	remsim-server TCP port (default: 9998)\n"
 "  -b --bank-id <1-65535>	Bank Identifier of this SIM bank (default: 1)\n"
@@ -292,6 +293,7 @@ void handle_options(int argc, char **argv)
 		static const struct option long_options[] = {
 			{ "help", 0, 0, 'h' },
 			{ "version", 0, 0, 'V' },
+			{ "debug", 1, 0, 'd' },
 			{ "server-host", 1, 0, 'i' },
 			{ "server-port", 1, 0, 'p' },
 			{ "bank-id", 1, 0, 'b' },
@@ -302,7 +304,7 @@ void handle_options(int argc, char **argv)
 			{ 0, 0, 0, 0 }
 		};
 
-		c = getopt_long(argc, argv, "hVi:o:b:n:N:I:P:", long_options, &option_index);
+		c = getopt_long(argc, argv, "hVd:i:o:b:n:N:I:P:", long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -314,6 +316,9 @@ void handle_options(int argc, char **argv)
 		case 'V':
 			printf("osmo-remsim-bankd version %s\n", VERSION);
 			exit(0);
+			break;
+		case 'd':
+			log_parse_category_mask(osmo_stderr_target, optarg);
 			break;
 		case 'i':
 			g_bankd->srvc.server_host = optarg;

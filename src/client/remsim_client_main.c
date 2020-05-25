@@ -24,6 +24,7 @@ static void printf_help()
 	printf(
 		"  -h --help                  Print this help message\n"
 		"  -v --version               Print program version\n"
+		"  -d --debug option          Enable debug logging (e.g. DMAIN:DST2)\n"
 		"  -i --server-ip A.B.C.D     remsim-server IP address\n"
 		"  -p --server-port 13245     remsim-server TCP port\n"
 		"  -c --client-id <0-65535>   RSPRO ClientId of this client\n"
@@ -50,6 +51,7 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 		static const struct option long_options[] = {
 			{ "help", 0, 0, 'h' },
 			{ "version", 0, 0, 'v' },
+			{ "debug", 1, 0, 'd' },
 			{ "server-ip", 1, 0, 'i' },
 			{ "server-port", 1, 0, 'p' },
 			{ "client-id", 1, 0, 'c' },
@@ -68,7 +70,7 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 			{ 0, 0, 0, 0 }
 		};
 
-		c = getopt_long(argc, argv, "hvi:p:c:n:e:"
+		c = getopt_long(argc, argv, "hvd:i:p:c:n:e:"
 #ifdef USB_SUPPORT
 						"V:P:C:I:S:A:H:"
 #endif
@@ -85,6 +87,9 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 		case 'v':
 			printf("osmo-remsim-client version %s\n", VERSION);
 			exit(0);
+			break;
+		case 'd':
+			log_parse_category_mask(osmo_stderr_target, optarg);
 			break;
 		case 'i':
 			osmo_talloc_replace_string(cfg, &cfg->server_host, optarg);
