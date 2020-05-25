@@ -111,7 +111,7 @@ static int process_do_rx_da(struct osmo_st2_cardem_inst *ci, uint8_t *buf, int l
 		/* send APDU to card */
 		ftpdu.buf = apdu_command;
 		ftpdu.len = sizeof(ac.hdr) + ac.lc.tot;
-		osmo_fsm_inst_dispatch(bc->main_fi, MF_E_BANKD_TPDU, &ftpdu);
+		osmo_fsm_inst_dispatch(bc->main_fi, MF_E_MDM_TPDU, &ftpdu);
 	} else if (ac.lc.tot > ac.lc.cur) {
 		/* there is pending data from the modem: send procedure byte to get remaining data */
 		osmo_st2_cardem_request_pb_and_rx(ci, ac.hdr.ins, ac.lc.tot - ac.lc.cur);
