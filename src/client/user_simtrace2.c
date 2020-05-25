@@ -412,6 +412,7 @@ int client_user_main(struct bankd_client *bc)
 	if (cfg->usb.path)
 		osmo_strlcpy(ifm->path, cfg->usb.path, sizeof(ifm->path));
 	transp->udp_fd = -1;
+	transp->usb_async = true;
 	transp->usb_devh = osmo_libusb_open_claim_interface(NULL, NULL, ifm);
 	if (!transp->usb_devh) {
 		fprintf(stderr, "can't open USB device\n");
