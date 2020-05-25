@@ -95,7 +95,7 @@ static int process_do_rx_da(struct osmo_st2_cardem_inst *ci, uint8_t *buf, int l
 	struct frontend_tpdu ftpdu;
 	int rc;
 
-	LOGCI(ci, LOGL_DEBUG, "SIMtrace => DATA: flags=%x, %s: ", data->flags,
+	LOGCI(ci, LOGL_DEBUG, "SIMtrace => DATA: flags=%x, %s\n", data->flags,
 		osmo_hexdump(data->data, data->data_len));
 
  	/* parse the APDU data in the USB message */
