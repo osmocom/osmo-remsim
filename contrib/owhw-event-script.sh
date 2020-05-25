@@ -46,17 +46,32 @@ case "${CAUSE}" in
 		;;
 	request-card-insert)
 		echo "Enabling Remote SIM for ${MODEM}"
-		echo "1" > "/dev/gpio/connect_st_usim${MODEM}/value"
+		echo -n "1" > "/dev/gpio/connect_st_usim${MODEM}/value"
 		;;
 	request-card-remove)
 		echo "Disabling Remote SIM for ${MODEM}"
-		echo "0" > "/dev/gpio/connect_st_usim${MODEM}/value"
+		echo -n "0" > "/dev/gpio/connect_st_usim${MODEM}/value"
 		;;
 	request-modem-reset)
 		echo "Resetting Modem ${MODEM}"
-		echo "1" > "/dev/gpio/mdm${MODEM}_rst/value"
+		echo -n "1" > "/dev/gpio/mdm${MODEM}_rst/value"
 		sleep 1
-		echo "0" > "/dev/gpio/mdm${MODEM}_rst/value"
+		echo -n "0" > "/dev/gpio/mdm${MODEM}_rst/value"
+		# for v5 no effect on v4
+		case "${MODEM}" in
+			1)
+				gpioset gpiochip6 1=1
+				sleep 1
+				gpioset gpiochip6 1=0
+				;;
+			2)
+				gpioset gpiochip6 3=1
+				sleep 1
+				gpioset gpiochip6 3=0
+				;;
+		esac
+		;;
+	request-sim-remote)
 		;;
 	*)
 		echo "Unknown CAUSE ${CAUSE}: ignoring"
