@@ -74,21 +74,30 @@ struct stdin_state {
 static void handle_stdin_command(struct stdin_state *ss, char *cmd)
 {
 	struct bankd_client *bc = ss->bc;
-	RsproPDU_t *pdu;
-	BankSlot_t bslot;
-	uint8_t buf[1024];
 	int rc;
-
-	bank_slot2rspro(&bslot, &bc->bankd_slot);
 
 	OSMO_ASSERT(ss->rx_msg);
 
 	if (!strcasecmp(cmd, "RESET")) {
 		/* reset the [remote] card */
-		pdu = rspro_gen_ClientSlotStatusInd(bc->srv_conn.clslot, &bslot,
-						    true, false, false, true);
-		server_conn_send_rspro(&bc->bankd_conn, pdu);
+		struct frontend_phys_status pstatus = {
+			.flags = {
+				.reset_active = true,
+				.vcc_present = false,
+				.clk_active = false,
+				.card_present = true,
+			},
+			.voltage_mv = 0,
+			.fi = 0,
+			.di = 0,
+			.wi = 0,
+			.waiting_time = 0,
+		};
+		osmo_fsm_inst_dispatch(bc->main_fi, MF_E_MDM_STATUS_IND, &pstatus);
 	} else {
+		struct frontend_tpdu ftpdu;
+		uint8_t buf[1024];
+
 		/* we assume the user has entered a C-APDU as hex string. parse + send */
 		rc = osmo_hexparse(cmd, buf, sizeof(buf));
 		if (rc < 0) {
@@ -101,8 +110,9 @@ static void handle_stdin_command(struct stdin_state *ss, char *cmd)
 		}
 
 		/* Send CMD APDU to [remote] card */
-		pdu = rspro_gen_TpduModem2Card(bc->srv_conn.clslot, &bslot, buf, rc);
-		server_conn_send_rspro(&bc->bankd_conn, pdu);
+		ftpdu.buf = buf;
+		ftpdu.len = rc;
+		osmo_fsm_inst_dispatch(bc->main_fi, MF_E_MDM_TPDU, &ftpdu);
 	}
 }
 
