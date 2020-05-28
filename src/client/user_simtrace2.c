@@ -339,7 +339,7 @@ int frontend_handle_card2modem(struct bankd_client *bc, const uint8_t *data, siz
 	struct osmo_st2_cardem_inst *ci = bc->cardem;
 	// save SW to our current APDU context
 	ac.sw[0] = data[len-2];
-	ac.sw[1] = data[len=1];
+	ac.sw[1] = data[len-1];
 
 	LOGCI(ci, LOGL_DEBUG, "SIMtrace <= SW=0x%02x%02x, len_rx=%zu\n", ac.sw[0], ac.sw[1], len-2);
 	if (len > 2) { // send PB and data to modem
