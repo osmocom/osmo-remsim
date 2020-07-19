@@ -134,6 +134,10 @@ static int stdin_fd_cb(struct osmo_fd *ofd, unsigned int what)
 	rc = read(ofd->fd, cur, msgb_tailroom(ss->rx_msg));
 	if (rc < 0)
 		return rc;
+	if (rc == 0) {
+		fprintf(stderr, "STDIN was closed, terminating");
+		exit(0);
+	}
 	msgb_put(ss->rx_msg, rc);
 
 	for (i = 0; i < rc; i++) {
