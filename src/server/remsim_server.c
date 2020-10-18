@@ -106,7 +106,7 @@ int main(int argc, char **argv)
 	rc = eventfd(0, 0);
 	if (rc < 0)
 		goto out_rps;
-	osmo_fd_setup(&g_event_ofd, rc, BSC_FD_READ, event_fd_cb, g_rps, 0);
+	osmo_fd_setup(&g_event_ofd, rc, OSMO_FD_READ, event_fd_cb, g_rps, 0);
 	osmo_fd_register(&g_event_ofd);
 
 	signal(SIGUSR1, handle_sig_usr1);
