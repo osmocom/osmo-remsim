@@ -1,4 +1,5 @@
 
+#include <errno.h>
 #include <signal.h>
 #include <unistd.h>
 #define _GNU_SOURCE
@@ -142,6 +143,19 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 	}
 }
 
+
+static int avoid_zombies(void)
+{
+	static struct sigaction sa_chld;
+
+	sa_chld.sa_handler = SIG_IGN;
+	sigemptyset(&sa_chld.sa_mask);
+	sa_chld.sa_flags = SA_NOCLDWAIT;
+	sa_chld.sa_restorer = NULL;
+
+	return sigaction(SIGCHLD, &sa_chld, NULL);
+}
+
 int main(int argc, char **argv)
 {
 	struct bankd_client *g_client;
@@ -165,6 +179,12 @@ int main(int argc, char **argv)
 	osmo_fsm_inst_dispatch(g_client->srv_conn.fi, SRVC_E_ESTABLISH, NULL);
 
 	signal(SIGUSR1, handle_sig_usr1);
+
+	/* Silently (and portably) reap children. */
+	if (avoid_zombies() < 0) {
+		fprintf(stderr, "Unable to silently reap children: %s\n", strerror(errno));
+		exit(1);
+	}
 
 	asn_debug = 0;
 
