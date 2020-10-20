@@ -1,4 +1,4 @@
-/* (C) 2018-2019 by Harald Welte <laforge@gnumonks.org>
+/* (C) 2018-2020 by Harald Welte <laforge@gnumonks.org>
  *
  * All Rights Reserved
  *
@@ -26,6 +26,8 @@
 #include <osmocom/core/utils.h>
 
 #include <csv.h>
+#include <regex.h>
+#include <errno.h>
 
 #include "bankd.h"
 
@@ -34,8 +36,18 @@ struct pcsc_slot_name {
 	/* RSPRO bank slot number */
 	struct bank_slot slot;
 	/* String name of the reader in PC/SC world */
-	const char *name;
+	const char *name_regex;
 };
+
+/* return a talloc-allocated string containing human-readable POSIX regex error */
+static char *get_regerror(void *ctx, int errcode, regex_t *compiled)
+{
+	size_t len = regerror(errcode, compiled, NULL, 0);
+	char *buffer = talloc_size(ctx, len);
+	OSMO_ASSERT(buffer);
+	regerror(errcode, compiled, buffer, len);
+	return buffer;
+}
 
 enum parser_state_name {
 	ST_NONE,
@@ -76,7 +88,7 @@ static void cb1(void *s, size_t len, void *data)
 		break;
 	case ST_PCSC_NAME:
 		OSMO_ASSERT(ps->cur);
-		ps->cur->name = talloc_strdup(ps->cur, field);
+		ps->cur->name_regex = talloc_strdup(ps->cur, field);
 		break;
 	default:
 		OSMO_ASSERT(0);
@@ -87,9 +99,23 @@ static void cb2(int c, void *data)
 {
 	struct parser_state *ps = data;
 	struct pcsc_slot_name *sn = ps->cur;
+	regex_t compiled_name;
+	int rc;
 
-	printf("PC/SC slot name: %u/%u -> '%s'\n", sn->slot.bank_id, sn->slot.slot_nr, sn->name);
-	llist_add_tail(&sn->list, &ps->bankd->pcsc_slot_names);
+	printf("PC/SC slot name: %u/%u -> regex '%s'\n", sn->slot.bank_id, sn->slot.slot_nr, sn->name_regex);
+
+	memset(&compiled_name, 0, sizeof(compiled_name));
+
+	rc = regcomp(&compiled_name, sn->name_regex, REG_EXTENDED);
+	if (rc != 0) {
+		char *errmsg = get_regerror(sn, rc, &compiled_name);
+		fprintf(stderr, "Error compiling regex '%s': %s - Ignoring\n", sn->name_regex, errmsg);
+		talloc_free(errmsg);
+		talloc_free(sn);
+	} else {
+		llist_add_tail(&sn->list, &ps->bankd->pcsc_slot_names);
+	}
+	regfree(&compiled_name);
 
 	ps->state = ST_BANK_NR;
 	ps->cur = NULL;
@@ -134,7 +160,7 @@ const char *bankd_pcsc_get_slot_name(struct bankd *bankd, const struct bank_slot
 
 	llist_for_each_entry(cur, &bankd->pcsc_slot_names, list) {
 		if (bank_slot_equals(&cur->slot, slot))
-			return cur->name;
+			return cur->name_regex;
 	}
 	return NULL;
 }
@@ -144,9 +170,12 @@ const char *bankd_pcsc_get_slot_name(struct bankd *bankd, const struct bank_slot
 #include <winscard.h>
 #include <pcsclite.h>
 
+#define LOGW_PCSC_ERROR(w, rv, text) \
+	LOGW((w), text ": %s (0x%lX)\n", pcsc_stringify_error(rv), rv)
+
 #define PCSC_ERROR(w, rv, text) \
 if (rv != SCARD_S_SUCCESS) { \
-	LOGW((w), text ": %s (0x%lX)\n", pcsc_stringify_error(rv), rv); \
+	LOGW_PCSC_ERROR(w, rv, text); \
 	goto end; \
 } else { \
         LOGW((w), ": OK\n"); \
@@ -170,6 +199,57 @@ end:
 	return rc;
 }
 
+
+static int pcsc_connect_slot_regex(struct bankd_worker *worker)
+{
+	DWORD dwReaders = SCARD_AUTOALLOCATE;
+	LPSTR mszReaders = NULL;
+	regex_t compiled_name;
+	int result = -1;
+	LONG rc;
+	char *p;
+
+	LOGW(worker, "Attempting to find card/slot using regex '%s'\n", worker->reader.name);
+
+	rc = regcomp(&compiled_name, worker->reader.name, REG_EXTENDED);
+	if (rc != 0) {
+		LOGW(worker, "Error compiling RegEx over name '%s'\n", worker->reader.name);
+		return -EINVAL;
+	}
+
+	rc = SCardListReaders(worker->reader.pcsc.hContext, NULL, (LPSTR)&mszReaders, &dwReaders);
+	if (rc != SCARD_S_SUCCESS) {
+		LOGW_PCSC_ERROR(worker, rc, "SCardListReaders");
+		goto out_regfree;
+	}
+
+	p = mszReaders;
+	while (*p) {
+		DWORD dwActiveProtocol;
+		int r = regexec(&compiled_name, p, 0, NULL, 0);
+		if (r == 0) {
+			LOGW(worker, "Attempting to open card/slot '%s'\n", p);
+			rc = SCardConnect(worker->reader.pcsc.hContext, p, SCARD_SHARE_SHARED,
+					  SCARD_PROTOCOL_T0, &worker->reader.pcsc.hCard,
+					  &dwActiveProtocol);
+			if (rc == SCARD_S_SUCCESS)
+				result = 0;
+			else
+				LOGW_PCSC_ERROR(worker, rc, "SCardConnect");
+			break;
+		}
+		p += strlen(p) + 1;
+	}
+
+	SCardFreeMemory(worker->reader.pcsc.hContext, mszReaders);
+
+out_regfree:
+	regfree(&compiled_name);
+
+	return result;
+}
+
+
 static int pcsc_open_card(struct bankd_worker *worker)
 {
 	long rc;
@@ -182,14 +262,13 @@ static int pcsc_open_card(struct bankd_worker *worker)
 	}
 
 	if (!worker->reader.pcsc.hCard) {
-		LOGW(worker, "Attempting to open card/slot '%s'\n", worker->reader.name);
-		DWORD dwActiveProtocol;
-		rc = SCardConnect(worker->reader.pcsc.hContext, worker->reader.name, SCARD_SHARE_SHARED,
-				  SCARD_PROTOCOL_T0, &worker->reader.pcsc.hCard, &dwActiveProtocol);
-		PCSC_ERROR(worker, rc, "SCardConnect")
+		rc = pcsc_connect_slot_regex(worker);
+		if (rc != 0)
+			goto end;
 	}
 
 	rc = pcsc_get_atr(worker);
+
 end:
 	return rc;
 }
