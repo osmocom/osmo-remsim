@@ -11,6 +11,7 @@ AM_INIT_AUTOMAKE([foreign dist-bzip2 no-dist-gzip 1.9 tar-ustar])
 dnl tar-ustar: some asn1 filenames surpass the 99 char limit of tar, so we need
 dnl to make tar allow longer filenames.
 
+CFLAGS="$CFLAGS -std=gnu11"
 
 dnl kernel style compile messages
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
