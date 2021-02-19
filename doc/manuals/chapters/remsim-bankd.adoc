@@ -108,6 +108,7 @@ bankd expects a CSV file `bankd_pcsc_slots.csv` in the current working directory
 
 This CSV file specifies the mapping between the string names of the PCSC
 readers and the RSPRO bandk/slot numbers.  The format is as follows:
+
 * first column: bankd number
 * second column: slot number within bankd
 * third column: extended POSIX regular expression matching the slot
