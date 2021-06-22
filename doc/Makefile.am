@@ -1,4 +1,5 @@
 SUBDIRS = \
+	examples \
 	manuals \
         $(NULL)
 

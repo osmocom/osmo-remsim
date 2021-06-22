@@ -199,6 +199,7 @@ AC_OUTPUT(
 	contrib/systemd/Makefile
 	contrib/osmo-remsim.spec
 	doc/Makefile
+	doc/examples/Makefile
 	doc/manuals/Makefile
 	src/Makefile
 	src/rspro/Makefile

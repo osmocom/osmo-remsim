@@ -194,6 +194,7 @@ make %{?_smp_mflags} check || find . -name testsuite.log -exec cat {} +
 %{_bindir}/osmo-remsim-bankd
 %{_unitdir}/osmo-remsim-bankd.service
 %config(noreplace) %{_sysconfdir}/default/osmo-remsim-bankd
+%config(noreplace) %{_sysconfdir}/osmocom/bankd_pcsc_slots.csv
 
 %files -n osmo-remsim-client-shell
 %{_bindir}/osmo-remsim-client-shell
