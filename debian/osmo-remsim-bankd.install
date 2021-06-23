@@ -2,3 +2,4 @@ usr/bin/osmo-remsim-bankd
 lib/systemd/system/osmo-remsim-bankd.service
 etc/default/osmo-remsim-bankd
 etc/osmocom/bankd_pcsc_slots.csv
+usr/share/doc/osmo-remsim/examples/bankd_pcsc_slots.csv
