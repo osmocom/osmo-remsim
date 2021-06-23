@@ -145,6 +145,7 @@ echo "%{version}" >.tarball-version
 autoreconf -fi
 %configure \
     --disable-static \
+    --docdir=%{_docdir}/osmo-remsim \
     --with-systemdsystemunitdir=%{_unitdir}
 make V=1 %{?_smp_mflags}
 
@@ -194,7 +195,10 @@ make %{?_smp_mflags} check || find . -name testsuite.log -exec cat {} +
 %{_bindir}/osmo-remsim-bankd
 %{_unitdir}/osmo-remsim-bankd.service
 %config(noreplace) %{_sysconfdir}/default/osmo-remsim-bankd
+%dir %{_sysconfdir}/osmocom
 %config(noreplace) %{_sysconfdir}/osmocom/bankd_pcsc_slots.csv
+%dir %{_docdir}/osmo-remsim
+%dir %{_docdir}/osmo-remsim/examples
 %{_docdir}/osmo-remsim/examples/bankd_pcsc_slots.csv
 
 %files -n osmo-remsim-client-shell
