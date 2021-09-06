@@ -1,3 +1,9 @@
+osmo-remsim (0.2.4) unstable; urgency=medium
+
+  * debian/control: remove dh-systemd build-depend
+
+ -- Oliver Smith <osmith@sysmocom.de>  Mon, 06 Sep 2021 17:22:35 +0200
+
 osmo-remsim (0.2.3) unstable; urgency=medium
 
   [ Harald Welte ]
