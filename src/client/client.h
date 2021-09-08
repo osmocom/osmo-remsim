@@ -43,7 +43,9 @@ struct frontend_tpdu {
 
 /* API from generic core to frontend (modem/cardem) */
 int frontend_request_card_insert(struct bankd_client *bc);
+int frontend_request_card_remove(struct bankd_client *bc);
 int frontend_request_sim_remote(struct bankd_client *bc);
+int frontend_request_sim_local(struct bankd_client *bc);
 int frontend_request_modem_reset(struct bankd_client *bc);
 int frontend_handle_card2modem(struct bankd_client *bc, const uint8_t *data, size_t len);
 int frontend_handle_set_atr(struct bankd_client *bc, const uint8_t *data, size_t len);

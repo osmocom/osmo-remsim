@@ -156,7 +156,17 @@ int frontend_request_card_insert(struct bankd_client *bc)
 	return 0;
 }
 
+int frontend_request_card_remove(struct bankd_client *bc)
+{
+	return 0;
+}
+
 int frontend_request_sim_remote(struct bankd_client *bc)
+{
+	return 0;
+}
+
+int frontend_request_sim_local(struct bankd_client *bc)
 {
 	return 0;
 }

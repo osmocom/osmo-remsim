@@ -322,10 +322,22 @@ int frontend_request_card_insert(struct bankd_client *bc)
 	return osmo_st2_cardem_request_card_insert(ci, true);
 }
 
+int frontend_request_card_remove(struct bankd_client *bc)
+{
+	struct osmo_st2_cardem_inst *ci = bc->cardem;
+	return osmo_st2_cardem_request_card_insert(ci, false);
+}
+
 int frontend_request_sim_remote(struct bankd_client *bc)
 {
 	struct osmo_st2_cardem_inst *ci = bc->cardem;
 	return osmo_st2_modem_sim_select_remote(ci->slot);
+}
+
+int frontend_request_sim_local(struct bankd_client *bc)
+{
+	struct osmo_st2_cardem_inst *ci = bc->cardem;
+	return osmo_st2_modem_sim_select_local(ci->slot);
 }
 
 int frontend_request_modem_reset(struct bankd_client *bc)

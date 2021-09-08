@@ -208,6 +208,23 @@ static void main_st_operational_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 	call_script(bc, "request-modem-reset");
 }
 
+static void main_st_operational_onleave(struct osmo_fsm_inst *fi, uint32_t next_state)
+{
+	struct bankd_client *bc = (struct bankd_client *) fi->priv;
+
+	/* Simulate a card-remval to modem */
+	frontend_request_card_remove(bc);
+	call_script(bc, "request-card-remove");
+
+	/* Select local SIM */
+	frontend_request_sim_local(bc);
+	call_script(bc, "request-sim-local");
+
+	/* Reset the modem */
+	frontend_request_modem_reset(bc);
+	call_script(bc, "request-modem-reset");
+}
+
 static void main_st_operational(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
 	struct bankd_client *bc = (struct bankd_client *) fi->priv;
@@ -353,6 +370,7 @@ static const struct osmo_fsm_state main_fsm_states[] = {
 		.out_state_mask = S(MF_ST_INIT) | S(MF_ST_UNCONFIGURED) | S(MF_ST_WAIT_BANKD),
 		.action = main_st_operational,
 		.onenter = main_st_operational_onenter,
+		.onleave = main_st_operational_onleave,
 	},
 };
 
