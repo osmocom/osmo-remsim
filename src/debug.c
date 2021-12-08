@@ -28,7 +28,7 @@
 static const struct log_info_cat default_categories[] = {
 	[DMAIN] = {
 		.name = "DMAIN",
-		.loglevel = LOGL_DEBUG,
+		.loglevel = LOGL_INFO,
 		.enabled = 1,
 	},
 	[DST2] = {
