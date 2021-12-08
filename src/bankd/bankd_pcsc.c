@@ -297,9 +297,10 @@ static int pcsc_transceive(struct bankd_worker *worker, const uint8_t *out, size
 	long rc;
 
 	rc = SCardTransmit(worker->reader.pcsc.hCard, pioSendPci, out, out_len, &pioRecvPci, in, in_len);
-	PCSC_ERROR(worker, rc, "SCardTransmit");
+	/* don't use PCSC_ERROR here as we don't want to log every successful SCardTransmit */
+	if (rc != SCARD_S_SUCCESS)
+		LOGW_PCSC_ERROR(worker, rc, "SCardTransmit");
 
-end:
 	return rc;
 }
 
