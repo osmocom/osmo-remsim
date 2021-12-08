@@ -68,8 +68,8 @@ static int ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *r
 {
 	struct msgb *msg = rspro_enc_msg(rspro);
 	if (!msg) {
-		LOGP(DMAIN, LOGL_ERROR, "Error encoding RSPRO: %s\n", rspro_msgt_name(rspro));
-		osmo_log_backtrace(DMAIN, LOGL_ERROR);
+		LOGP(DRSPRO, LOGL_ERROR, "Error encoding RSPRO: %s\n", rspro_msgt_name(rspro));
+		osmo_log_backtrace(DRSPRO, LOGL_ERROR);
 		ASN_STRUCT_FREE(asn_DEF_RsproPDU, rspro);
 		return -1;
 	}
@@ -87,7 +87,7 @@ int server_conn_send_rspro(struct rspro_server_conn *srvc, RsproPDU_t *rspro)
 {
 	if (!rspro) {
 		LOGPFSML(srvc->fi, LOGL_ERROR, "Attempt to transmit NULL\n");
-		osmo_log_backtrace(DMAIN, LOGL_ERROR);
+		osmo_log_backtrace(DRSPRO, LOGL_ERROR);
 		return -EINVAL;
 	}
 	if (osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_RSPRO_TX, rspro) < 0) {
@@ -432,7 +432,7 @@ struct osmo_fsm rspro_client_server_fsm = {
 	.allstate_event_mask = S(SRVC_E_ESTABLISH) | S(SRVC_E_DISCONNECT),
 	.allstate_action = srvc_allstate_action,
 	.timer_cb = server_conn_fsm_timer_cb,
-	.log_subsys = DMAIN,
+	.log_subsys = DRSPRO,
 	.event_names = server_conn_fsm_event_names,
 };
 
