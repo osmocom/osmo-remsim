@@ -286,7 +286,7 @@ static void printf_help()
 static int g_bind_port = 9999;
 static char *g_bind_ip = NULL;
 
-void handle_options(int argc, char **argv)
+static void handle_options(int argc, char **argv)
 {
 	while (1) {
 		int option_index = 0, c;
