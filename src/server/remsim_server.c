@@ -8,6 +8,8 @@
 
 #include <osmocom/core/utils.h>
 #include <osmocom/core/talloc.h>
+#include <osmocom/core/logging.h>
+#include <osmocom/core/fsm.h>
 #include <osmocom/core/application.h>
 #include <osmocom/core/select.h>
 
@@ -87,6 +89,10 @@ int main(int argc, char **argv)
 	msgb_talloc_ctx_init(g_tall_ctx, 0);
 
 	osmo_init_logging2(g_tall_ctx, &log_info);
+	log_set_print_level(osmo_stderr_target, 1);
+	log_set_print_category(osmo_stderr_target, 1);
+	log_set_print_category_hex(osmo_stderr_target, 0);
+	osmo_fsm_log_addr(0);
 
 	handle_options(argc, argv);
 

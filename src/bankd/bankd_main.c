@@ -39,6 +39,7 @@
 #include <osmocom/core/linuxlist.h>
 #include <osmocom/core/logging.h>
 #include <osmocom/core/application.h>
+#include <osmocom/core/fsm.h>
 
 #include <osmocom/gsm/ipa.h>
 #include <osmocom/gsm/protocol/ipaccess.h>
@@ -75,6 +76,10 @@ static void bankd_init(struct bankd *bankd)
 {
 	g_tall_ctx = talloc_named_const(NULL, 0, "global");
 	osmo_init_logging2(g_tall_ctx, &log_info);
+	log_set_print_level(osmo_stderr_target, 1);
+	log_set_print_category(osmo_stderr_target, 1);
+	log_set_print_category_hex(osmo_stderr_target, 0);
+	osmo_fsm_log_addr(0);
 
 	asn_debug = 0;
 
