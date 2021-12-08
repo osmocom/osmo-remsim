@@ -178,7 +178,7 @@ if (rv != SCARD_S_SUCCESS) { \
 	LOGW_PCSC_ERROR(w, rv, text); \
 	goto end; \
 } else { \
-        LOGW((w), ": OK\n"); \
+	LOGW((w), text ": OK\n"); \
 }
 
 static int pcsc_get_atr(struct bankd_worker *worker)
