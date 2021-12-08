@@ -304,7 +304,7 @@ static void trigger_main_thread_via_eventfd(void)
 
 	rc = write(g_event_ofd.fd, &one, sizeof(one));
 	if (rc < 8)
-		fprintf(stderr, "Error writing to eventfd(): %d\n", rc);
+		LOGP(DREST, LOGL_ERROR, "Error writing to eventfd(): %d\n", rc);
 }
 
 static int api_cb_slotmaps_post(const struct _u_request *req, struct _u_response *resp, void *user_data)
@@ -318,7 +318,7 @@ static int api_cb_slotmaps_post(const struct _u_request *req, struct _u_response
 
 	json_req = ulfius_get_json_body_request(req, &json_err);
 	if (!json_req) {
-		fprintf(stderr, "REST: No JSON Body\n");
+		LOGP(DREST, LOGL_NOTICE, "REST: No JSON Body\n");
 		goto err;
 	}
 
@@ -327,7 +327,7 @@ static int api_cb_slotmaps_post(const struct _u_request *req, struct _u_response
 		goto err;
 	map = slotmap_add(g_rps->slotmaps, &slotmap.bank, &slotmap.client);
 	if (!map) {
-		fprintf(stderr, "REST: Cannot add slotmap\n");
+		LOGP(DREST, LOGL_NOTICE, "REST: Cannot add slotmap\n");
 		goto err;
 	}
 	slotmap_state_change(map, SLMAP_S_NEW, NULL);
@@ -511,7 +511,7 @@ int rest_api_init(void *ctx, uint16_t port)
 		ulfius_add_endpoint(&g_instance, &api_endpoints[i]);
 
 	if (ulfius_start_framework(&g_instance) != U_OK) {
-		fprintf(stderr, "Cannot start REST API on port %u\n", port);
+		LOGP(DREST, LOGL_FATAL, "Cannot start REST API on port %u\n", port);
 		return -1;
 	}
 	return 0;

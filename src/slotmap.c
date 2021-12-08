@@ -103,14 +103,14 @@ struct slot_mapping *slotmap_add(struct slotmaps *maps, const struct bank_slot *
 
 	map = slotmap_by_bank(maps, bank);
 	if (map) {
-		fprintf(stderr, "BANKD %u:%u already in use, cannot add new map\n",
+		LOGP(DSLOTMAP, LOGL_ERROR, "BANKD %u:%u already in use, cannot add new map\n",
 			bank->bank_id, bank->slot_nr);
 		return NULL;
 	}
 
 	map = slotmap_by_client(maps, client);
 	if (map) {
-		fprintf(stderr, "CLIENT %u:%u already in use, cannot add new map\n",
+		LOGP(DSLOTMAP, LOGL_ERROR, "CLIENT %u:%u already in use, cannot add new map\n",
 			client->client_id, client->slot_nr);
 		return NULL;
 	}
@@ -132,7 +132,7 @@ struct slot_mapping *slotmap_add(struct slotmaps *maps, const struct bank_slot *
 #endif
 	slotmaps_unlock(maps);
 
-	printf("Slot Map %s added\n", slotmap_name(mapname, sizeof(mapname), map));
+	LOGP(DSLOTMAP, LOGL_INFO, "Slot Map %s added\n", slotmap_name(mapname, sizeof(mapname), map));
 
 	return map;
 }
@@ -142,7 +142,7 @@ void _slotmap_del(struct slotmaps *maps, struct slot_mapping *map)
 {
 	char mapname[64];
 
-	printf("Slot Map %s deleted\n", slotmap_name(mapname, sizeof(mapname), map));
+	LOGP(DSLOTMAP, LOGL_INFO, "Slot Map %s deleted\n", slotmap_name(mapname, sizeof(mapname), map));
 
 	llist_del(&map->list);
 #ifdef REMSIM_SERVER

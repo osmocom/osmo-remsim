@@ -41,6 +41,21 @@ static const struct log_info_cat default_categories[] = {
 		.loglevel = LOGL_INFO,
 		.enabled = 1,
 	},
+	[DREST] = {
+		.name = "DREST",
+		.loglevel = LOGL_INFO,
+		.enabled = 1,
+	},
+	[DSLOTMAP] = {
+		.name = "DSLOTMAP",
+		.loglevel = LOGL_INFO,
+		.enabled = 1,
+	},
+	[DBANKDW] = {
+		.name = "DBANKDW",
+		.loglevel = LOGL_INFO,
+		.enabled = 1,
+	},
 };
 
 const struct log_info log_info = {

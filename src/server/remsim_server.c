@@ -93,6 +93,8 @@ int main(int argc, char **argv)
 	log_set_print_category(osmo_stderr_target, 1);
 	log_set_print_category_hex(osmo_stderr_target, 0);
 	osmo_fsm_log_addr(0);
+	log_set_print_tid(osmo_stderr_target, 1);
+	log_enable_multithread();
 
 	handle_options(argc, argv);
 

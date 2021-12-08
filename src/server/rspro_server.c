@@ -709,11 +709,11 @@ int event_fd_cb(struct osmo_fd *ofd, unsigned int what)
 	/* read from the socket to "confirm" the event and make it non-readable again */
 	rc = read(ofd->fd, &value, 8);
 	if (rc < 8) {
-		fprintf(stderr, "Error reading eventfd: %d\n", rc);
+		LOGP(DMAIN, LOGL_ERROR, "Error reading eventfd: %d\n", rc);
 		return rc;
 	}
 
-	printf("rspro_server: Event FD arrived, checking for any pending work\n");
+	LOGP(DMAIN, LOGL_INFO, "Event FD arrived, checking for any pending work\n");
 
 	pthread_rwlock_rdlock(&srv->rwlock);
 	llist_for_each_entry(conn, &srv->banks, list) {

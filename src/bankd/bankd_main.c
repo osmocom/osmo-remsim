@@ -80,6 +80,8 @@ static void bankd_init(struct bankd *bankd)
 	log_set_print_category(osmo_stderr_target, 1);
 	log_set_print_category_hex(osmo_stderr_target, 0);
 	osmo_fsm_log_addr(0);
+	log_set_print_tid(osmo_stderr_target, 1);
+	log_enable_multithread();
 
 	asn_debug = 0;
 
