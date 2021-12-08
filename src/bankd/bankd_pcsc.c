@@ -102,14 +102,16 @@ static void cb2(int c, void *data)
 	regex_t compiled_name;
 	int rc;
 
-	printf("PC/SC slot name: %u/%u -> regex '%s'\n", sn->slot.bank_id, sn->slot.slot_nr, sn->name_regex);
+	LOGP(DMAIN, LOGL_INFO, "PC/SC slot name: %u/%u -> regex '%s'\n",
+	     sn->slot.bank_id, sn->slot.slot_nr, sn->name_regex);
 
 	memset(&compiled_name, 0, sizeof(compiled_name));
 
 	rc = regcomp(&compiled_name, sn->name_regex, REG_EXTENDED);
 	if (rc != 0) {
 		char *errmsg = get_regerror(sn, rc, &compiled_name);
-		fprintf(stderr, "Error compiling regex '%s': %s - Ignoring\n", sn->name_regex, errmsg);
+		LOGP(DMAIN, LOGL_ERROR, "Error compiling regex '%s': %s - Ignoring\n",
+		     sn->name_regex, errmsg);
 		talloc_free(errmsg);
 		talloc_free(sn);
 	} else {
@@ -141,7 +143,8 @@ int bankd_pcsc_read_slotnames(struct bankd *bankd, const char *csv_file)
 
 	while ((bytes_read = fread(buf, 1, sizeof(buf), fp)) > 0) {
 		if (csv_parse(&p, buf, bytes_read, cb1, cb2, &ps) != bytes_read) {
-			fprintf(stderr, "Error parsing CSV: %s\n", csv_strerror(csv_error(&p)));
+			LOGP(DMAIN, LOGL_FATAL, "Error parsing bankd PC/SC CSV: %s\n",
+			     csv_strerror(csv_error(&p)));
 			fclose(fp);
 			return -1;
 		}

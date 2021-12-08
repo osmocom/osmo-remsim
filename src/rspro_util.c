@@ -33,6 +33,7 @@
 #include <osmocom/rspro/RsproPDU.h>
 
 #include "rspro_util.h"
+#include "debug.h"
 
 #define ASN_ALLOC_COPY(out, in) \
 do {						\
@@ -69,7 +70,7 @@ struct msgb *rspro_enc_msg(RsproPDU_t *pdu)
 	msg->l2h = msg->data;
 	rval = der_encode_to_buffer(&asn_DEF_RsproPDU, pdu, msgb_data(msg), msgb_tailroom(msg));
 	if (rval.encoded < 0) {
-		fprintf(stderr, "Failed to encode %s\n", rval.failed_type->name);
+		LOGP(DRSPRO, LOGL_ERROR, "Failed to encode %s\n", rval.failed_type->name);
 		msgb_free(msg);
 		return NULL;
 	}
@@ -86,10 +87,10 @@ RsproPDU_t *rspro_dec_msg(struct msgb *msg)
 	RsproPDU_t *pdu = NULL;
 	asn_dec_rval_t rval;
 
-	//printf("decoding %s\n", msgb_hexdump(msg));
+	LOGP(DRSPRO, LOGL_DEBUG, "decoding %s\n", msgb_hexdump(msg));
 	rval = ber_decode(NULL, &asn_DEF_RsproPDU, (void **) &pdu, msgb_l2(msg), msgb_l2len(msg));
 	if (rval.code != RC_OK) {
-		fprintf(stderr, "Failed to decode: %d. Consumed %zu of %u bytes\n",
+		LOGP(DRSPRO, LOGL_ERROR, "Failed to decode: %d. Consumed %zu of %u bytes\n",
 			rval.code, rval.consumed, msgb_length(msg));
 		return NULL;
 	}

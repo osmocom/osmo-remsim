@@ -36,13 +36,14 @@
 #include <winscard.h>
 
 #include "internal.h"
+#include "debug.h"
 
 #define PCSC_ERROR(rv, text) \
 if (rv != SCARD_S_SUCCESS) { \
-	fprintf(stderr, text ": %s (0x%lX)\n", pcsc_stringify_error(rv), rv); \
+	LOGP(DMAIN, LOGL_ERROR, text ": %s (0x%lX)\n", pcsc_stringify_error(rv), rv); \
 	goto end; \
 } else { \
-        printf(text ": OK\n\n"); \
+	LOGP(DMAIN, LOGL_DEBUG, ": OK\n\n"); \
 }
 
 static void pcsc_readers_probe(void *ctx)
@@ -73,7 +74,7 @@ static void pcsc_readers_probe(void *ctx)
 		num_readers++;
 	}
 
-	printf("num_readers=%d\n", num_readers);
+	LOGP(DMAIN, LOGL_DEBUG, "num_readers=%d\n", num_readers);
 
 end:
 	if (mszReaders)

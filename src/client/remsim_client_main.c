@@ -188,7 +188,7 @@ int main(int argc, char **argv)
 
 	/* Silently (and portably) reap children. */
 	if (avoid_zombies() < 0) {
-		fprintf(stderr, "Unable to silently reap children: %s\n", strerror(errno));
+		LOGP(DMAIN, LOGL_FATAL, "Unable to silently reap children: %s\n", strerror(errno));
 		exit(1);
 	}
 

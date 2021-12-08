@@ -404,7 +404,7 @@ int client_user_main(struct bankd_client *bc)
 
 	rc = osmo_libusb_init(NULL);
 	if (rc < 0) {
-		fprintf(stderr, "libusb initialization failed\n");
+		LOGP(DMAIN, LOGL_ERROR, "libusb initialization failed\n");
 		return rc;
 	}
 
@@ -427,7 +427,7 @@ int client_user_main(struct bankd_client *bc)
 	transp->usb_async = true;
 	transp->usb_devh = osmo_libusb_open_claim_interface(NULL, NULL, ifm);
 	if (!transp->usb_devh) {
-		fprintf(stderr, "can't open USB device\n");
+		LOGP(DMAIN, LOGL_ERROR, "can't open USB device\n");
 		return -1;
 	}
 
@@ -437,14 +437,14 @@ int client_user_main(struct bankd_client *bc)
 
 	rc = libusb_claim_interface(transp->usb_devh, cfg->usb.if_num);
 	if (rc < 0) {
-		fprintf(stderr, "can't claim interface %d; rc=%d\n", cfg->usb.if_num, rc);
+		LOGP(DMAIN, LOGL_ERROR, "can't claim interface %d; rc=%d\n", cfg->usb.if_num, rc);
 		goto close_exit;
 	}
 
 	rc = osmo_libusb_get_ep_addrs(transp->usb_devh, cfg->usb.if_num, &transp->usb_ep.out,
 					&transp->usb_ep.in, &transp->usb_ep.irq_in);
 	if (rc < 0) {
-		fprintf(stderr, "can't obtain EP addrs; rc=%d\n", rc);
+		LOGP(DMAIN, LOGL_ERROR, "can't obtain EP addrs; rc=%d\n", rc);
 		goto close_exit;
 	}
 

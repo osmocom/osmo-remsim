@@ -140,7 +140,7 @@ struct bankd_client *remsim_client_create(void *ctx, const char *name, const cha
 
 	bc->main_fi = main_fsm_alloc(bc, bc);
 	if (!bc->main_fi) {
-		fprintf(stderr, "Unable to create main client FSM: %s\n", strerror(errno));
+		LOGP(DMAIN, LOGL_FATAL, "Unable to create main client FSM: %s\n", strerror(errno));
 		exit(1);
 	}
 
@@ -158,7 +158,7 @@ struct bankd_client *remsim_client_create(void *ctx, const char *name, const cha
 
 	rc = server_conn_fsm_alloc(bc, srvc);
 	if (rc < 0) {
-		fprintf(stderr, "Unable to create Server conn FSM: %s\n", strerror(errno));
+		LOGP(DMAIN, LOGL_FATAL, "Unable to create Server conn FSM: %s\n", strerror(errno));
 		exit(1);
 	}
 	osmo_fsm_inst_change_parent(srvc->fi, bc->main_fi, MF_E_SRVC_LOST);
@@ -171,7 +171,7 @@ struct bankd_client *remsim_client_create(void *ctx, const char *name, const cha
 	memcpy(&bankdc->own_comp_id, &srvc->own_comp_id, sizeof(bankdc->own_comp_id));
 	rc = server_conn_fsm_alloc(bc, bankdc);
 	if (rc < 0) {
-		fprintf(stderr, "Unable to connect bankd conn FSM: %s\n", strerror(errno));
+		LOGP(DMAIN, LOGL_FATAL, "Unable to connect bankd conn FSM: %s\n", strerror(errno));
 		exit(1);
 	}
 	osmo_fsm_inst_update_id(bankdc->fi, "bankd");

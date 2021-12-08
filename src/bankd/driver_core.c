@@ -28,6 +28,7 @@
 #include <osmocom/core/linuxlist.h>
 
 #include "internal.h"
+#include "debug.h"
 
 static LLIST_HEAD(g_card_reader_drivers);
 static LLIST_HEAD(g_card_readers);
@@ -46,7 +47,7 @@ struct card_reader *card_reader_alloc(void *ctx, const char *name,
 
 	llist_add(&cr->list, &g_card_readers);
 
-	printf("allocated reader '%s'\n", cr->name);
+	LOGP(DMAIN, LOGL_INFO, "allocated reader '%s'\n", cr->name);
 
 	return cr;
 }
@@ -78,7 +79,7 @@ void card_readers_probe(void *ctx)
 	struct card_reader_driver *drv;
 
 	llist_for_each_entry(drv, &g_card_reader_drivers, list) {
-		printf("probing driver '%s' for drivers\n", drv->name);
+		LOGP(DMAIN, LOGL_INFO, "probing driver '%s' for drivers\n", drv->name);
 		drv->ops->probe(ctx);
 	}
 }
