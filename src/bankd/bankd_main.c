@@ -645,7 +645,7 @@ static int worker_handle_connectClientReq(struct bankd_worker *worker, const Rsp
 
 	OSMO_ASSERT(pdu->msg.present == RsproPDUchoice_PR_connectClientReq);
 
-	LOGW(worker, "connectClientReq(T=%lu, N='%s', SW='%s', VER='%s')\n",
+	LOGW(worker, "Rx RSPRO connectClientReq(T=%lu, N='%s', SW='%s', VER='%s')\n",
 		cid->type, cid->name.buf, cid->software.buf, cid->swVersion.buf);
 	/* FIXME: store somewhere? */
 
@@ -698,7 +698,8 @@ static int worker_handle_tpduModemToCard(struct bankd_worker *worker, const Rspr
 	struct bank_slot bslot;
 	int rc;
 
-	LOGW(worker, "tpduModemToCard(%s)\n", osmo_hexdump_nospc(mdm2sim->data.buf, mdm2sim->data.size));
+	LOGW(worker, "Rx RSPRO tpduModemToCard(%s)\n",
+	     osmo_hexdump_nospc(mdm2sim->data.buf, mdm2sim->data.size));
 
 	if (worker->state != BW_ST_CONN_CLIENT_MAPPED_CARD) {
 		LOGW(worker, "Unexpected tpduModemToCaard\n");
@@ -738,7 +739,7 @@ static int worker_handle_clientSlotStatusInd(struct bankd_worker *worker, const 
 	const struct SlotPhysStatus *sps = &cssi->slotPhysStatus;
 	int rc = 0;
 
-	LOGW(worker, "clientSlotStatusInd(RST=%s, VCC=%s, CLK=%s)\n",
+	LOGW(worker, "Rx RSPRO clientSlotStatusInd(RST=%s, VCC=%s, CLK=%s)\n",
 		sps->resetActive ? "ACTIVE" : "INACTIVE",
 		sps->vccPresent ? *sps->vccPresent ? "PRESENT" : "ABSENT" : "NULL",
 		sps->clkActive ? *sps->clkActive ? "ACTIVE" : "INACTIVE" : "NULL");
@@ -757,8 +758,6 @@ static int worker_handle_rspro(struct bankd_worker *worker, const RsproPDU_t *pd
 {
 	int rc = -100;
 
-	LOGW(worker, "Rx RSPRO %s\n", rspro_msgt_name(pdu));
-
 	switch (pdu->msg.present) {
 	case RsproPDUchoice_PR_connectClientReq:
 		rc = worker_handle_connectClientReq(worker, pdu);
@@ -771,9 +770,11 @@ static int worker_handle_rspro(struct bankd_worker *worker, const RsproPDU_t *pd
 		rc = 0;
 		break;
 	case RsproPDUchoice_PR_setAtrRes:
+		LOGW(worker, "Rx RSPRO %s\n", rspro_msgt_name(pdu));
 		rc = 0;
 		break;
 	default:
+		LOGW(worker, "Rx RSPRO %s (unhandled)\n", rspro_msgt_name(pdu));
 		rc = -101;
 		break;
 	}
