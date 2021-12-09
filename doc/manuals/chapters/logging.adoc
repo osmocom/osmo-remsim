@@ -1,0 +1,58 @@
+[[remsim_logging]]
+== osmo-remsim logging
+
+All programs within the osmo-remsim project use the logging sub-system of `libosmocore`.
+
+Contrary to the larger Osmocom projects with their own VTY + configuration file, the
+logging configuration for osmo-remsim programs must happen via command line arguments.
+
+Also, contrary to the larger Osmocom projects, only logging to `stderr` is supported;
+no direct logging to log files, syslog, systemd, etc. is supported at this point.
+
+=== `-d` command line argument
+
+Every osmo-remsim program like `osmo-remsim-bankd`, `osmo-remsim-server` or
+`osmo-remsim-client-st2` supports a `-d` command line argument.  This argument
+takes one mandatory parameter configuring the log level for each log sub-system
+as follows:
+
+`-d SUBSYS,num_lvl[:SUBSYS,num_lvl[:...]]`
+
+So basically, a colon-separated list of tuples, where each tuple contains the
+sub-system name and the _numeric_ log level.
+
+Below is the list of sub-systems and a table of numerical levels:
+
+.libosmocore log levels and their numeric values
+[options="header",width="30%",cols="1,1"]
+|===
+|Level name|Numeric value
+|DEBUG|1
+|INFO|3
+|NOTICE|5
+|ERROR|7
+|FATAL|8
+|===
+
+.osmo-remsim log sub-system names and their description
+[options="header",width="50%",cols="1,2"]
+|===
+|Sub-System Name|Description
+|DMAIN|respective main program code
+|DST2|SIMtrace2 `cardem` firmware interaction via USB
+|DRSPRO|RSPRO protocol between bankd, server and client
+|DREST|REST interface of `osmo-remsim-server`
+|DSLOTMAP|slotmap code shared by `osmo-remsim-server` and `osmo-remsim-bankd`
+|DBANKDW|worker threads of `osmo-remsim-bankd`
+|===
+
+=== Example
+
+Putting the above in a concrete example:
+
+`-d DMAIN,5:DRSPRO,1`
+
+would perform the following configuration:
+
+* log only NOTICE (or higher) messages in the DMAIN subsystem (low verbosity)
+* log DEBUG (or higher) messages in the DRSPRO subsystem (very high verbosity)

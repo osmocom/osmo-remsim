@@ -16,6 +16,8 @@ include::{srcdir}/chapters/remsim-client.adoc[]
 
 include::{srcdir}/chapters/remsim-bankd.adoc[]
 
+include::{srcdir}/chapters/logging.adoc[]
+
 include::{srcdir}/chapters/rspro.adoc[]
 
 //include::./common/chapters/vty.adoc[]

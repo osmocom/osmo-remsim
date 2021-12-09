@@ -72,7 +72,11 @@ osmo-remsim-client-st2 currently has the following command-line options:
 
 *-h, --help*::
   Print a short help message about the supported options
-*-s, --server-host A.B.C.D*::
+*-V, --version*::
+  Print the software version number
+*-d, --debug LOGOPT*::
+  Configure the logging verbosity, see <<remsim_logging>>.
+*-i, --server-ip A.B.C.D*::
   Specify the remote IP address / hostname of the `osmo-remsim-server` to
   which this client shall establish its RSPRO control connection
 *-p, --server-port <1-65535>*::
@@ -220,6 +224,8 @@ osmo-remsim-client-shell currently has the following command-line options:
   Print a short help message about the supported options
 *-v, --version*::
   Print the compile-time version information
+*-d, --debug LOGOPT*::
+  Configure the logging verbosity, see <<remsim_logging>>.
 *-i, --server-ip A.B.C.D*::
   Specify the remote IP address / hostname of the `osmo-remsim-server` to
   which this client shall establish its RSPRO control connection

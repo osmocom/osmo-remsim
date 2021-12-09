@@ -61,12 +61,16 @@ approach seems to make more sense.
 
 ==== SYNOPSIS
 
-*osmo-remsim-bankd* [-h] [-i A.B.C.D] [-p <1-65535>] [-b <1-65535>] [-n <1-65535>] [-I A.B.C.D] [-P <1-65535> ]
+*osmo-remsim-bankd* [-h] [-V] [-d LOGOPT] [-i A.B.C.D] [-p <1-65535>] [-b <1-65535>] [-n <1-65535>] [-I A.B.C.D] [-P <1-65535> ]
 
 ==== OPTIONS
 
 *-h, --help*::
   Print a short help message about the supported options
+*-V, --version*::
+  Print the software version number
+*-d, --debug LOGOPT*::
+  Configure the logging verbosity, see <<remsim_logging>>.
 *-i, --server-host A.B.C.D*::
   Specify the remote IP address/hostname of the `osmo-remsim-server` to
   which this bankd shall establish its RSPRO control connection
@@ -83,7 +87,7 @@ approach seems to make more sense.
   Specify the local IP address to which the socket for incoming connections
   from `osmo-remsim-clients` is bound to.
 *-P, --bind-port <1-65535>*::
-  Specify the local TCP port to whicc the socket for incoming connections
+  Specify the local TCP port to which the socket for incoming connections
   from `osmo-remsim-client`s is bound to.
 
 ==== Examples

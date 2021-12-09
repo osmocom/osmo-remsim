@@ -13,11 +13,25 @@ bind to INADDR_ANY and offer the following TCP ports:
 It is intended to make these settings (IP addresses, ports) configurable
 in future versions.
 
+==== SYNOPSIS
+
+*osmo-remsim-server* [-h] [-V] [-d LOGOPT]
+
+==== OPTIONS
+
+*-h, --help*::
+  Print a short help message about the supported options
+*-V, --version*::
+  Print the software version number
+*-d, --debug LOGOPT*::
+  Configure the logging verbosity, see <<remsim_logging>>.
+
 === Logging
 
-`osmo-remsim-server` currently logs to stdout only, and the logging
-verbosity is not yet configurable.  However, as the libosmocore logging
-framework is used, extending this is an easy modification.
+`osmo-remsim-server` currently logs to stderr only; the logging
+verbosity is configurable via command line argument only.  However, as
+the libosmocore logging framework is used, extending this is an easy
+modification.
 
 [[rsres]]
 === RESTful/JSON Web API
