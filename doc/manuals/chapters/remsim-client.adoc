@@ -90,13 +90,13 @@ osmo-remsim-client-st2 currently has the following command-line options:
   Specify the slot number served within this client.  The tuple of
   client-id and client-slot must be unique among all clients connecting
   to the same `osmo-remsim-server`.
-*-i, --gsmtap-ip A.B.C.D*::
-  Specify the IP address (if any) to which APDU traces are sent in
-  GSMTAP format (useful for debugging; supported by wireshark).
-*-k, --keep-running*::
-  Specify if the `osmo-remsim-client` should terminate after handling one
-  session, or whether it should keep running.  Fast respawn (i.e. no
-  --keep-running) is probably the more robust option at this point.
+*-a, --atr HEXSTRING*::
+  Specify the initial ATR to be communicated to the modem/phone.  Can
+  and will later be overridden by the ATR as specified by
+  `osmo-remsim-bankd` once a card has been mapped to this client.
+*-e, --event-script COMMAND*::
+  Specify the shell command to be execute when the client wants to call its
+  helper script
 *-V, --usb-vendor*::
   Specify the USB Vendor ID of the USB device served by this client,
   use e.g. 0x1d50 for SIMtrace2, sysmoQMOD and OWHW.
@@ -122,14 +122,6 @@ osmo-remsim-client-st2 currently has the following command-line options:
   usefule to disambiguate between multiple identical USB devices
   attached to the same host.  You don't need this if you have only one
   SIM emulation device attached to your system.
-*-a, --atr HEXSTRING*::
-  Specify the initial ATR to be communicated to the modem/phone.  Can
-  and will later be overridden by the ATR as specified by
-  `osmo-remsim-bankd` once a card has been mapped to this client.
-*-e, --event-script COMMAND*::
-  Specify the shell command to be execute when the client wants to call its
-  helper script
-
 
 ==== Examples
 .remsim-server is on 10.2.3.4, sysmoQMOD on usb bus, all 4 modems:
