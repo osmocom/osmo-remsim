@@ -31,7 +31,7 @@ BuildRequires:  systemd-rpm-macros
 %endif
 BuildRequires:  pkgconfig(libasn1c) >= 0.9.30
 BuildRequires:  pkgconfig(libosmoabis)
-BuildRequires:  pkgconfig(libosmocore) >= 0.11.0
+BuildRequires:  pkgconfig(libosmocore) >= 1.6.0
 BuildRequires:  pkgconfig(libosmogsm) >= 0.11.0
 BuildRequires:  pkgconfig(libosmosim)
 BuildRequires:  pkgconfig(libpcsclite)

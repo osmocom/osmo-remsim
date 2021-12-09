@@ -33,7 +33,7 @@ if test "x$PKG_CONFIG_INSTALLED" = "xno"; then
 fi
 PKG_PROG_PKG_CONFIG([0.20])
 
-PKG_CHECK_MODULES(OSMOCORE, libosmocore >= 1.3.0)
+PKG_CHECK_MODULES(OSMOCORE, libosmocore >= 1.6.0)
 PKG_CHECK_MODULES(OSMOGSM, libosmogsm >= 0.11.0)
 PKG_CHECK_MODULES(OSMOABIS, libosmoabis >= 0.8.0)
 
