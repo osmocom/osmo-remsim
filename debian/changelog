@@ -1,3 +1,139 @@
+osmo-remsim (1.0.0) unstable; urgency=medium
+
+  [ Harald Welte ]
+  * bankd_main: Refactor code: bankd_srvc_remove_mapping()
+  * bankd: Fix log print during removeMapping
+  * bankd: createMapping should implicitly delete existing mappings
+  * bankd: Reject removeSlotmap when ClientID doesn't match
+  * bankd: initialize bank_id/slot_nr to 0xffff for unmapped workers
+  * RSPRO: Add new ResetState{Req,Res}
+  * Add "--version" to all executables to print compile-time version info
+  * bankd: Implement new ResetStateReq
+  * bankd: No need to handle SIGMAPDEL if we're not mapped yet
+  * add missing debian/libosmo-rspro1.install
+  * rspro_client_fsm: Disable automatic connect on FSM allocation
+  * rspro_client_fsm: Make RSPRO transmit use FSM event
+  * Replace bankd_client_fsm with rspro_client_fsm
+  * remsim-client: Differentiate the two rspro_client_fsm instances by name
+  * rspro_client_fsm: Mark ipa_client_conn_send_rspro() as static
+  * rspro_client_fsm(): Remove outdated/wrong comment from code
+  * rspro_client_fsm: Fix uninitialized return variable use
+  * rspro_client_fsm: Fix handling of IPA keepalive
+  * bankd: Factor out signal-sending from bankd_srvc_remove_mapping()
+  * bankd: Introduce SIGMAPADD to tell worker about new mapping
+  * remsim-client: Port from local copy to libosmousb + libosmo-simtrace2
+  * jenkins.sh: don't verify (possibly outdated) deps
+  * remsim_client: Port to async libosmousb select loop
+  * rspro_util: Add functions generating {Bank,Client}SlotStatusInd
+  * client: generate clientSlotStatusInd to bankd
+  * bankd: Implement card reset based on clientSlotStatusInd
+  * debian/control: Add missing Build-Requires libosmo-simtrace2
+  * fix the package we depend on: libosmosimtrace2-dev
+  * require minimum version 1.3.0 of libosmocore
+  * remsim-client: Introduce 'struct client_config'
+  * client: Enable talloc NULL context tracking
+  * remsim_client: Move body of main() loop to separate function
+  * remsim-client: move from common 'src' directory to 'src/client'
+  * remsim-client: Fix the -k/ --keep-running option
+  * remsim-client: Avoid using 'ci' global variable
+  * remsim-client: Move client_config from .c to .h file
+  * remsim-client: store last 'status'
+  * remsim-client: Query + Store the USB device path
+  * remsim-client: Call an external script in specific situations
+  * client: Adjust to API changes; enable build of remsim-client again
+  * client: Add new osmo-remsim-client-shell binary
+  * client: Work without global g_client variable
+  * client: Remove g_client completely; separate 'main' code
+  * client: Split into remsim_client.c and remsim_client_main.c
+  * server: don't dereference map before OSMO_ASSERT() in _update_client_for_slotmap()
+  * server: Send ConfigClientBankReq with bankd_port == 0 on map delete
+  * rspro_client_fsm: Add SRVC_E_DISCONNECT to disconnect from RSPRO server
+  * client: Make ConfigClientBankReq with bankd_port == 0 trigger SRVC_E_DISCONNECT
+  * client: user_shell.c: fflush() after writes to stdout
+  * client: user_shell.c: Don't echo stdin on stdout
+  * server: Don't accept out-of-range bank/client/slot numbers on REST
+  * client: Work around "stock on PTS" problem
+  * update .gitignore
+  * contrib: Add owhw-event-script.sh for osmo-remsim-client
+  * src/Makefile.am: Build src directory (libosmo-rspro) before sub-directories
+  * client: document osmo-remsim-client-shell
+  * client: Add diagram for osmo-remsim-st2 use case
+  * client: ifd_handler (PC/SC reader driver) as remsim-client
+  * client: Fix 'make distcheck' bypassing pkg-config usbdropdir
+  * doc: generalize the remsim-client part in the overview section
+  * doc: Add WARNINGs about lack of security in protocols
+  * doc: More cross-references; Expand overview slightly
+  * doc: Add documentation for remsim-apitool.py
+  * rspro_client_fsm: Migrate to ipa_client_conn_create2()
+  * rspro_client_fsm: Add optional notifiation of parent on connect/disconnect
+  * fix debian build after introducing hack around usbdropdir
+  * configure/automake: Remove work-arounds
+  * client: major restructuring around new main_fsm (Closes: #4414)
+  * client: Fix TODO: add CLK status information to event-script environment
+  * configure/Makefile: Include contrib in "make dist"
+  * configure.ac + debian: Add systemd service file support
+  * Install config files to /etc/default/
+  * contrib/jenkins.sh: Harmonize with what we do in other projects
+  * debian: split osmo-remsim-client into osmo-remsim-client-{shell,st2}
+  * libosmo-rspro: Avoid useless dependency to libosmogsm
+  * Avoid useless dependency on libcsv
+  * libosmo-rspro: Avoid useless dependency to libosmo-abis
+  * bankd: Avoid useless dependency to libosmosim
+  * client: Avoid useless depedency to libosmosim
+  * debian/control: Fix typo (package->Package)
+  * debian: osmo-remsim-client-s2 'Replaces' osmo-remsim-client
+  * debian: Ensure osmo-remsim-client-st2 package only contains st2 binary
+  * rspro_util.c: Use %zu for size_t
+  * introduce --disable-remsim-client-{st2,ifdhanndler}
+  * user_simtrace2: Stop using printf, use libosmocore logging
+  * only depend on libcsv if remsim-bankd is to be built
+  * avoid talloc abort in simtrace2 frontend_append_script_env()
+  * add '-d' command line argument to configure stderr logging verbosity
+  * simtrace2: Fix missing LF at end of log output in process_do_rx_da()
+  * simtrace2: Set transp->udp_fd to -1 to indicate USB transport
+  * contrib/owhw-event-script.sh: Update to working version for OWHWv5
+  * simtrace2: use correct event when dispatching modem data to main_fsm
+  * Enable async use of libosmo-simtrace2
+  * user_shell: Dispatch all events via main_fsm.c
+  * user_simtrace2: Fix typo in frontend_handle_card2modem()
+  * *.spec.in: Use %config(noreplace) to retain current config file
+  * remsim-client-shell: Terminate if STDIN has been closed
+  * Use OSMO_FD_* instead of deprecated BSC_FD_*
+  * remsim-client: Avoid zombies when scripts terminate
+  * bankd: regex matching of reader names
+  * manual: fix formating of a bullet point list in bankd csv file part
+  * client: request card-remove and sim-local when no bankd/slot is set
+  * bankd_pcsc: Improve logging in non-error case
+  * bankd_main: Improve log usefulness
+  * bankd_pcsc: Don't log every successful SCardTransmit
+  * rspro_client_fsm: Differentiate different log levels
+  * Change default log level to INFO
+  * [cosmetic] bankd: mark handle_options() as static
+  * logging: Print category + level, disable category-hex
+  * Add separate log category for RSPRO protocol
+  * switch to libosmocore multihread-logging
+  * logging: Replace remaining fprintf() calls with libosmocore logging
+  * increase required libosmocore version
+  * Depend on libosmo-simtrace >= 0.8.0
+
+  [ Joachim Steiger ]
+  * fix config defaults for systemd startscripts
+
+  [ Oliver Smith ]
+  * contrib: import RPM spec
+  * contrib: integrate RPM spec
+  * Makefile.am: EXTRA_DIST: debian, contrib/*.spec.in
+  * contrib/jenkins: don't build osmo-gsm-manuals
+  * configure.ac: set -std=gnu11
+  * etc_default: change bankd, client ip to 127.0.0.1
+  * doc/examples: install bankd_pcsc_slots.csv
+  * gitignore: add osmo-remsim-client-reader_conf
+  * distro packaging: fix missing path for example
+  * contrib/osmo-remsim.spec.in: fix build on opensuse
+  * debian/control: remove dh-systemd build-depend
+
+ -- Harald Welte <laforge@osmocom.org>  Thu, 09 Dec 2021 09:09:49 +0100
+
 osmo-remsim (0.2.2) unstable; urgency=medium
 
   [ Harald Welte ]

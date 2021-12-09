@@ -12,7 +12,7 @@
 # license that conforms to the Open Source Definition (Version 1.9)
 # published by the Open Source Initiative.
 
-%define sover 1
+%define sover 2
 Name:           osmo-remsim
 Version:        @VERSION@
 Release:        0
