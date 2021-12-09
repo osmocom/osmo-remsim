@@ -38,7 +38,7 @@ BuildRequires:  pkgconfig(libpcsclite)
 BuildRequires:  pkgconfig(libulfius)
 BuildRequires:  pkgconfig(libusb-1.0)
 BuildRequires:  pkgconfig(libosmousb)
-BuildRequires:  pkgconfig(libosmo-simtrace2)
+BuildRequires:  pkgconfig(libosmo-simtrace2) >= 0.8.0
 %{?systemd_requires}
 
 %description
