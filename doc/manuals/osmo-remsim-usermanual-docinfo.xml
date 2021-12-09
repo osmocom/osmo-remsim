@@ -7,6 +7,14 @@
       Initial version.
     </revremark>
   </revision>
+  <revision>
+    <revnumber>2</revnumber>
+    <date>December 2021</date>
+    <authorinitials>HW</authorinitials>
+    <revremark>
+      Update manual to osmo-remsim v1.0.0 (logging, command line arguments)
+    </revremark>
+  </revision>
 </revhistory>
 
 <authorgroup>
@@ -24,7 +32,7 @@
 </authorgroup>
 
 <copyright>
-  <year>2019</year>
+  <year>2019-2021</year>
   <holder>sysmocom - s.f.m.c. GmbH</holder>
 </copyright>
 
