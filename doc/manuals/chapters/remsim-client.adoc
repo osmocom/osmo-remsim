@@ -82,11 +82,11 @@ osmo-remsim-client-st2 currently has the following command-line options:
 *-p, --server-port <1-65535>*::
   Specify the remote TCP port number of the `osmo-remsim-server` to which
   this client shall establish its RSPRO control connection
-*-c, --client-id <1-65535>*::
+*-c, --client-id <1-1023>*::
   Specify the numeric client identifier of the SIM bank this bankd
   instance operates.  The tuple of client-id and client-slot must be
   unique among all clients connecting to the same `osmo-remsim-server`.
-*-n, --client-slot <0-65535>*::
+*-n, --client-slot <0-1023>*::
   Specify the slot number served within this client.  The tuple of
   client-id and client-slot must be unique among all clients connecting
   to the same `osmo-remsim-server`.
@@ -224,11 +224,11 @@ osmo-remsim-client-shell currently has the following command-line options:
 *-p, --server-port <1-65535>*::
   Specify the remote TCP port number of the `osmo-remsim-server` to which
   this client shall establish its RSPRO control connection
-*-c, --client-id <1-65535>*::
+*-c, --client-id <1-1023>*::
   Specify the numeric client identifier of the SIM bank this bankd
   instance operates.  The tuple of client-id and client-slot must be
   unique among all clients connecting to the same `osmo-remsim-server`.
-*-n, --client-slot <0-65535>*::
+*-n, --client-slot <0-1023>*::
   Specify the slot number served within this client.  The tuple of
   client-id and client-slot must be unique among all clients connecting
   to the same `osmo-remsim-server`.

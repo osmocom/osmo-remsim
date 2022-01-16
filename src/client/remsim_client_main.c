@@ -30,8 +30,8 @@ static void printf_help()
 		"  -d --debug option          Enable debug logging (e.g. DMAIN:DST2)\n"
 		"  -i --server-ip A.B.C.D     remsim-server IP address\n"
 		"  -p --server-port 13245     remsim-server TCP port\n"
-		"  -c --client-id <0-65535>   RSPRO ClientId of this client\n"
-		"  -n --client-slot <0-65535> RSPRO SlotNr of this client\n"
+		"  -c --client-id <0-1023>    RSPRO ClientId of this client\n"
+		"  -n --client-slot <0-1023>  RSPRO SlotNr of this client\n"
 		"  -e --event-script <path>   event script to be called by client\n"
 #ifdef USB_SUPPORT
 		"  -V --usb-vendor VENDOR_ID\n"

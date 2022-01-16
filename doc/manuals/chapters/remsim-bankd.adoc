@@ -61,7 +61,7 @@ approach seems to make more sense.
 
 ==== SYNOPSIS
 
-*osmo-remsim-bankd* [-h] [-V] [-d LOGOPT] [-i A.B.C.D] [-p <1-65535>] [-b <1-65535>] [-n <1-65535>] [-I A.B.C.D] [-P <1-65535> ]
+*osmo-remsim-bankd* [-h] [-V] [-d LOGOPT] [-i A.B.C.D] [-p <1-65535>] [-b <1-1023>] [-n <1-1023>] [-I A.B.C.D] [-P <1-65535> ]
 
 ==== OPTIONS
 
@@ -77,11 +77,11 @@ approach seems to make more sense.
 *-p, --server-port <1-65535>*::
   Specify the remote TCP port number of the `osmo-remsim-server` to which
   this bankd shall establish its RSPRO control connection
-*-b, --bank-id <1-65535>*::
+*-b, --bank-id <1-1023>*::
   Specify the numeric bank identifier of the SIM bank this bankd
   instance operates.  Must be unique among all banks connecting to the
   same `osmo-remsim-server`.
-*-n, --num-slots <1-65535>*::
+*-n, --num-slots <1-1023>*::
   Specify the number of slots that this bankd handles.
 *-I, --bind-IP A.B.C.D*::
   Specify the local IP address to which the socket for incoming connections
