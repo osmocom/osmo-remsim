@@ -67,6 +67,13 @@ static int bankd_handle_rx(struct rspro_server_conn *bankdc, const RsproPDU_t *p
 
 	switch (pdu->msg.present) {
 	case RsproPDUchoice_PR_connectClientRes:
+		if (pdu->msg.choice.connectClientRes.identity.type != ComponentType_remsimBankd) {
+			LOGPFSML(bankdc->fi, LOGL_ERROR, "Server connection to a ComponentType(%ld) != RemsimBankd? "
+				 "Check your IP/Port configuration\n",
+				 pdu->msg.choice.connectClientRes.identity.type);
+			osmo_fsm_inst_dispatch(bankdc->fi, SRVC_E_DISCONNECT, NULL);
+			return -1;
+		}
 		/* Store 'identity' of bankd to in peer_comp_id */
 		rspro_comp_id_retrieve(&bankdc->peer_comp_id, &pdu->msg.choice.connectClientRes.identity);
 		osmo_fsm_inst_dispatch(bankdc->fi, SRVC_E_CLIENT_CONN_RES, (void *) pdu);
@@ -94,6 +101,13 @@ static int srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t *pdu)
 
 	switch (pdu->msg.present) {
 	case RsproPDUchoice_PR_connectClientRes:
+		if (pdu->msg.choice.connectClientRes.identity.type != ComponentType_remsimServer) {
+			LOGPFSML(srvc->fi, LOGL_ERROR, "Server connection to a ComponentType(%ld) != RemsimServer? "
+				 "Check your IP/Port configuration\n",
+				 pdu->msg.choice.connectClientRes.identity.type);
+			osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_DISCONNECT, NULL);
+			return -1;
+		}
 		/* Store 'identity' of server in srvc->peer_comp_id */
 		rspro_comp_id_retrieve(&srvc->peer_comp_id, &pdu->msg.choice.connectClientRes.identity);
 		osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_CLIENT_CONN_RES, (void *) pdu);
