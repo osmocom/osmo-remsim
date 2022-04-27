@@ -170,7 +170,7 @@ static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t
 	struct client_slot cs;
 	RsproPDU_t *resp;
 
-	LOGPFSM(srvc->fi, "Rx RSPRO %s\n", rspro_msgt_name(pdu));
+	LOGPFSML(srvc->fi, LOGL_DEBUG, "Rx RSPRO %s\n", rspro_msgt_name(pdu));
 
 	switch (pdu->msg.present) {
 	case RsproPDUchoice_PR_connectBankRes:
@@ -206,7 +206,7 @@ static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t
 					resp = rspro_gen_CreateMappingRes(ResultCode_ok);
 					goto send_resp;
 				} else {
-					LOGPFSM(srvc->fi, "implicitly removing slotmap\n");
+					LOGPFSML(srvc->fi, LOGL_NOTICE, "implicitly removing slotmap\n");
 					bankd_srvc_remove_mapping(map);
 				}
 			}
@@ -243,10 +243,10 @@ send_resp:
 			} else {
 				rspro2client_slot(&cs, &rreq->client);
 				if (!client_slot_equals(&map->client, &cs)) {
-					LOGPFSM(srvc->fi, "ClientId in removeMappingReq != map\n");
+					LOGPFSML(srvc->fi, LOGL_NOTICE, "ClientId in removeMappingReq != map\n");
 					resp = rspro_gen_RemoveMappingRes(ResultCode_unknownSlotmap);
 				} else {
-					LOGPFSM(srvc->fi, "removing slotmap\n");
+					LOGPFSML(srvc->fi, LOGL_INFO, "removing slotmap\n");
 					bankd_srvc_remove_mapping(map);
 					resp = rspro_gen_RemoveMappingRes(ResultCode_ok);
 				}
