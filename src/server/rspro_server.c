@@ -123,6 +123,12 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 	const ConnectClientReq_t *cclreq = NULL;
 	const ConnectBankReq_t *cbreq = NULL;
 	RsproPDU_t *resp = NULL;
+	char ip_str[INET6_ADDRSTRLEN];
+	char port_str[6];
+
+	/* remote IP and port */
+	osmo_sock_get_ip_and_port(conn->peer->ofd.fd, ip_str, sizeof(ip_str),
+				  port_str, sizeof(port_str), false);
 
 	switch (event) {
 	case CLNTC_E_CLIENT_CONN:
@@ -161,6 +167,7 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 			osmo_fsm_inst_update_id_f(conn->keepalive_fi, "C%u:%u",
 						  conn->client.slot.client_id,
 						  conn->client.slot.slot_nr);
+			LOGPFSML(fi, LOGL_INFO, "Client connected from %s:%s\n", ip_str, port_str);
 			resp = rspro_gen_ConnectClientRes(&conn->srv->comp_id, ResultCode_ok);
 			client_conn_send(conn, resp);
 			osmo_fsm_inst_state_chg(fi, CLNTC_ST_CONNECTED_CLIENT, 0, 0);
@@ -179,6 +186,13 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 		conn->bank.num_slots = cbreq->numberOfSlots;
 		osmo_fsm_inst_update_id_f(fi, "B%u", conn->bank.bank_id);
 		osmo_fsm_inst_update_id_f(conn->keepalive_fi, "B%u", conn->bank.bank_id);
+
+		LOGPFSML(fi, LOGL_INFO, "Bankd connected from %s:%s\n", ip_str, port_str);
+		if (!strncmp(ip_str, "127.", 4)) {
+			LOGPFSML(fi, LOGL_NOTICE, "Bankd connected from %s (localhost). "
+				"This only works if your clients also all are on localhost, "
+				"as they must be able to reach the bankd!\n", ip_str);
+		}
 
 		/* reparent us from srv->connections to srv->banks */
 		pthread_rwlock_wrlock(&conn->srv->rwlock);
