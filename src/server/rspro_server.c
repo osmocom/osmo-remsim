@@ -49,7 +49,7 @@ static void client_conn_send(struct rspro_client_conn *conn, RsproPDU_t *pdu)
 		osmo_log_backtrace(DMAIN, LOGL_ERROR);
 		return;
 	}
-	LOGPFSM(conn->fi, "Tx RSPRO %s\n", rspro_msgt_name(pdu));
+	LOGPFSML(conn->fi, LOGL_DEBUG, "Tx RSPRO %s\n", rspro_msgt_name(pdu));
 
 	struct msgb *msg_tx = rspro_enc_msg(pdu);
 	if (!msg_tx) {
@@ -136,7 +136,7 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 		/* save the [remote] component identity in 'conn' */
 		rspro_comp_id_retrieve(&conn->comp_id, &cclreq->identity);
 		if (conn->comp_id.type != ComponentType_remsimClient) {
-			LOGPFSM(fi, "ConnectClientReq from identity != Client ?!?\n");
+			LOGPFSML(fi, LOGL_ERROR, "ConnectClientReq from identity != Client ?!?\n");
 			osmo_fsm_inst_term(fi, OSMO_FSM_TERM_ERROR, NULL);
 		}
 
@@ -156,7 +156,7 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 			/* FIXME: the original plan was to dynamically assign a ClientID
 			 * from server to client here. Send ConfigReq and transition to
 			 * CLNTC_ST_WAIT_CONF_RES */
-			LOGPFSM(fi, "ConnectClientReq without ClientId not supported yet!\n");
+			LOGPFSML(fi, LOGL_ERROR, "ConnectClientReq without ClientId not supported yet!\n");
 			osmo_fsm_inst_term(fi, OSMO_FSM_TERM_ERROR, NULL);
 #endif
 		} else {
@@ -178,7 +178,7 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 		/* save the [remote] component identity in 'conn' */
 		rspro_comp_id_retrieve(&conn->comp_id, &cbreq->identity);
 		if (conn->comp_id.type != ComponentType_remsimBankd) {
-			LOGPFSM(fi, "ConnectBankReq from identity != Bank ?!?\n");
+			LOGPFSML(fi, LOGL_ERROR, "ConnectBankReq from identity != Bank ?!?\n");
 			osmo_fsm_inst_term(fi, OSMO_FSM_TERM_ERROR, NULL);
 		}
 		/* FIXME: check for unique-ness */
@@ -248,13 +248,13 @@ static void _update_client_for_slotmap(struct slot_mapping *map, struct rspro_se
 	if (!conn)
 		LOGP(DMAIN, LOGL_DEBUG, "%s\n", __func__);
 	else
-		LOGPFSM(conn->fi, "%s\n", __func__);
+		LOGPFSML(conn->fi, LOGL_DEBUG, "%s\n", __func__);
 
 	if (!conn)
 		return;
 
 	if (!bank_slot_equals(&conn->client.bankd.slot, &map->bank)) {
-		LOGPFSM(conn->fi, "BankSlot has changed B%u:%u -> B%u:%u\n",
+		LOGPFSML(conn->fi, LOGL_NOTICE, "BankSlot has changed B%u:%u -> B%u:%u\n",
 			conn->client.bankd.slot.bank_id, conn->client.bankd.slot.slot_nr,
 			map->bank.bank_id, map->bank.slot_nr);
 		conn->client.bankd.slot = map->bank;
@@ -272,7 +272,7 @@ static void _update_client_for_slotmap(struct slot_mapping *map, struct rspro_se
 		rc = osmo_sock_get_ip_and_port(bankd_conn->peer->ofd.fd, ip_str, sizeof(ip_str),
 						port_str, sizeof(port_str), false);
 		if (rc < 0) {
-			LOGPFSM(bankd_conn->fi, "Error during getpeername\n");
+			LOGPFSML(bankd_conn->fi, LOGL_ERROR, "Error during getpeername\n");
 			return;
 		}
 		bankd_ip = ntohl(inet_addr(ip_str));
@@ -282,7 +282,7 @@ static void _update_client_for_slotmap(struct slot_mapping *map, struct rspro_se
 	/* determine if IP/port of bankd have changed */
 	if (conn->client.bankd.port != bankd_port || conn->client.bankd.ip != bankd_ip) {
 		struct in_addr ia = { .s_addr = bankd_ip };
-		LOGPFSM(conn->fi, "Bankd IP/Port changed to %s:%u\n", inet_ntoa(ia), bankd_port);
+		LOGPFSML(conn->fi, LOGL_NOTICE, "Bankd IP/Port changed to %s:%u\n", inet_ntoa(ia), bankd_port);
 		conn->client.bankd.ip = bankd_ip;
 		conn->client.bankd.port = bankd_port;
 		changed = true;
@@ -299,7 +299,7 @@ static void clnt_st_connected_client_onenter(struct osmo_fsm_inst *fi, uint32_t 
 	struct slotmaps *slotmaps = conn->srv->slotmaps;
 	struct slot_mapping *map;
 
-	LOGPFSM(fi, "%s\n", __func__);
+	LOGPFSML(fi, LOGL_DEBUG, "%s\n", __func__);
 
 	/* check for an existing slotmap for this client/slot */
 	slotmaps_rdlock(slotmaps);
@@ -327,7 +327,7 @@ static void clnt_st_connected_bankd_onenter(struct osmo_fsm_inst *fi, uint32_t p
 	struct slotmaps *slotmaps = conn->srv->slotmaps;
 	struct slot_mapping *map;
 
-	LOGPFSM(fi, "Associating pre-existing slotmaps (if any)\n");
+	LOGPFSML(fi, LOGL_DEBUG, "Associating pre-existing slotmaps (if any)\n");
 	/* Link all known mappings to this new bank */
 	slotmaps_wrlock(slotmaps);
 	llist_for_each_entry(map, &slotmaps->mappings, list) {
@@ -371,7 +371,7 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 		map = llist_first_entry(&conn->bank.maps_unack, struct slot_mapping, bank_list);
 		if (!map) {
 			slotmaps_unlock(slotmaps);
-			LOGPFSM(fi, "CreateMapRes but no unacknowledged map");
+			LOGPFSML(fi, LOGL_NOTICE, "CreateMapRes but no unacknowledged map");
 			break;
 		}
 		_slotmap_state_change(map, SLMAP_S_ACTIVE, &conn->bank.maps_active);
@@ -386,7 +386,7 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 		map = llist_first_entry(&conn->bank.maps_deleting, struct slot_mapping, bank_list);
 		if (!map) {
 			slotmaps_unlock(slotmaps);
-			LOGPFSM(fi, "RemoveMapRes but no unacknowledged map");
+			LOGPFSML(fi, LOGL_NOTICE, "RemoveMapRes but no unacknowledged map");
 			break;
 		}
 		slotmaps_unlock(slotmaps);
@@ -561,7 +561,7 @@ struct rspro_client_conn *bankd_conn_by_id(struct rspro_server *srv, uint16_t ba
 
 static int handle_rx_rspro(struct rspro_client_conn *conn, const RsproPDU_t *pdu)
 {
-	LOGPFSM(conn->fi, "Rx RSPRO %s\n", rspro_msgt_name(pdu));
+	LOGPFSML(conn->fi, LOGL_DEBUG, "Rx RSPRO %s\n", rspro_msgt_name(pdu));
 
 	switch (pdu->msg.present) {
 	case RsproPDUchoice_PR_connectClientReq:
