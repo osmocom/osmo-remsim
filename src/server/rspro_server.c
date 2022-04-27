@@ -423,9 +423,11 @@ static void clnt_allstate_action(struct osmo_fsm_inst *fi, uint32_t event, void 
 
 	switch (event) {
 	case CLNTC_E_TCP_DOWN:
+		LOGPFSML(fi, LOGL_NOTICE, "Connection lost; terminating FSM\n");
 		osmo_fsm_inst_term(fi, OSMO_FSM_TERM_REGULAR, NULL);
 		break;
 	case CLNTC_E_KA_TIMEOUT:
+		LOGPFSML(fi, LOGL_NOTICE, "IPA keep-alive timeout; terminating FSM\n");
 		osmo_fsm_inst_term(fi, OSMO_FSM_TERM_REGULAR, NULL);
 		break;
 	default:
