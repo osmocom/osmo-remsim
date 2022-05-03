@@ -76,6 +76,7 @@ enum remsim_server_client_fsm_state {
 	CLNTC_ST_WAIT_CONF_RES,		/* waiting for ConfigClientRes */
 	CLNTC_ST_CONNECTED_BANKD,
 	CLNTC_ST_CONNECTED_CLIENT,
+	CLNTC_ST_REJECTED,
 };
 
 enum remsim_server_client_event {
@@ -119,6 +120,7 @@ static void clnt_st_init(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
 	struct rspro_client_conn *conn = fi->priv;
+	struct rspro_client_conn *previous_conn;
 	const RsproPDU_t *pdu = data;
 	const ConnectClientReq_t *cclreq = NULL;
 	const ConnectBankReq_t *cbreq = NULL;
@@ -141,11 +143,6 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 			return;
 		}
 
-		/* reparent us from srv->connections to srv->clients */
-		pthread_rwlock_wrlock(&conn->srv->rwlock);
-		llist_del(&conn->list);
-		llist_add_tail(&conn->list, &conn->srv->clients);
-		pthread_rwlock_unlock(&conn->srv->rwlock);
 
 		if (!cclreq->clientSlot) {
 #if 0
@@ -161,7 +158,6 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 			osmo_fsm_inst_term(fi, OSMO_FSM_TERM_ERROR, NULL);
 #endif
 		} else {
-			/* FIXME: check for unique-ness */
 			rspro2client_slot(&conn->client.slot, cclreq->clientSlot);
 			osmo_fsm_inst_update_id_f(fi, "C%u:%u", conn->client.slot.client_id,
 						  conn->client.slot.slot_nr);
@@ -169,6 +165,30 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 						  conn->client.slot.client_id,
 						  conn->client.slot.slot_nr);
 			LOGPFSML(fi, LOGL_INFO, "Client connected from %s:%s\n", ip_str, port_str);
+
+			/* check for unique-ness */
+			previous_conn = client_conn_by_slot(conn->srv, &conn->client.slot);
+			if (previous_conn && previous_conn != conn) {
+				/* we're dropping the current (new) connection as we don't really know which
+				 * is the "right" one. Dropping the new gives the old connection time to
+				 * timeout, or to continue to operate.  If we were to drop the old
+				 * connection, this could interrupt a perfectly working connection and opens
+				 * some kind of DoS. */
+				LOGPFSML(fi, LOGL_ERROR, "New client connection from %s:%s, but we already "
+					 "have a connection from %s:%u. Dropping new connection.\n",
+					 ip_str, port_str, previous_conn->peer->addr, previous_conn->peer->port);
+				resp = rspro_gen_ConnectClientRes(&conn->srv->comp_id, ResultCode_identityInUse);
+				client_conn_send(conn, resp);
+				osmo_fsm_inst_state_chg(fi, CLNTC_ST_REJECTED, 1, 2);
+				return;
+			}
+
+			/* reparent us from srv->connections to srv->clients */
+			pthread_rwlock_wrlock(&conn->srv->rwlock);
+			llist_del(&conn->list);
+			llist_add_tail(&conn->list, &conn->srv->clients);
+			pthread_rwlock_unlock(&conn->srv->rwlock);
+
 			resp = rspro_gen_ConnectClientRes(&conn->srv->comp_id, ResultCode_ok);
 			client_conn_send(conn, resp);
 			osmo_fsm_inst_state_chg(fi, CLNTC_ST_CONNECTED_CLIENT, 0, 0);
@@ -183,7 +203,6 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 			osmo_fsm_inst_term(fi, OSMO_FSM_TERM_ERROR, NULL);
 			return;
 		}
-		/* FIXME: check for unique-ness */
 		conn->bank.bank_id = cbreq->bankId;
 		conn->bank.num_slots = cbreq->numberOfSlots;
 		osmo_fsm_inst_update_id_f(fi, "B%u", conn->bank.bank_id);
@@ -194,6 +213,23 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 			LOGPFSML(fi, LOGL_NOTICE, "Bankd connected from %s (localhost). "
 				"This only works if your clients also all are on localhost, "
 				"as they must be able to reach the bankd!\n", ip_str);
+		}
+
+		/* check for unique-ness */
+		previous_conn = bankd_conn_by_id(conn->srv, conn->bank.bank_id);
+		if (previous_conn && previous_conn != conn) {
+			/* we're dropping the current (new) connection as we don't really know which
+			 * is the "right" one. Dropping the new gives the old connection time to
+			 * timeout, or to continue to operate.  If we were to drop the old
+			 * connection, this could interrupt a perfectly working connection and opens
+			 * some kind of DoS. */
+			LOGPFSML(fi, LOGL_ERROR, "New bankd connection from %s:%s, but we already "
+				 "have a connection from %s:%u. Dropping new connection.\n",
+				 ip_str, port_str, previous_conn->peer->addr, previous_conn->peer->port);
+			resp = rspro_gen_ConnectBankRes(&conn->srv->comp_id, ResultCode_identityInUse);
+			client_conn_send(conn, resp);
+			osmo_fsm_inst_state_chg(fi, CLNTC_ST_REJECTED, 1, 2);
+			return;
 		}
 
 		/* reparent us from srv->connections to srv->banks */
@@ -445,6 +481,10 @@ static int server_client_fsm_timer_cb(struct osmo_fsm_inst *fi)
 	case 1:
 		/* No ClientConnectReq received:disconnect */
 		return 1; /* ask core to terminate FSM */
+	case 2:
+		/* Timeout after rejecting client */
+		LOGPFSML(fi, LOGL_NOTICE, "Closing connection of rejected peer\n");
+		return 1; /* ask core to terminate FSM */
 	default:
 		OSMO_ASSERT(0);
 	}
@@ -471,7 +511,7 @@ static const struct osmo_fsm_state server_client_fsm_states[] = {
 		.name = "ESTABLISHED",
 		.in_event_mask = S(CLNTC_E_CLIENT_CONN) | S(CLNTC_E_BANK_CONN),
 		.out_state_mask = S(CLNTC_ST_CONNECTED_CLIENT) | S(CLNTC_ST_WAIT_CONF_RES) |
-				  S(CLNTC_ST_CONNECTED_BANKD),
+				  S(CLNTC_ST_CONNECTED_BANKD) | S(CLNTC_ST_REJECTED),
 		.action = clnt_st_established,
 	},
 	[CLNTC_ST_WAIT_CONF_RES] = {
@@ -493,6 +533,10 @@ static const struct osmo_fsm_state server_client_fsm_states[] = {
 		.action = clnt_st_connected_bankd,
 		.onenter = clnt_st_connected_bankd_onenter,
 	},
+	[CLNTC_ST_REJECTED] = {
+		.name = "REJECTED",
+		/* no events permitted, no action required */
+	}
 
 };
 

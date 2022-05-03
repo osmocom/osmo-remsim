@@ -89,15 +89,17 @@ static const asn_INTEGER_enum_map_t asn_MAP_ResultCode_value2enum_1[] = {
 	{ 3,	13,	"illegalSlotId" },
 	{ 4,	26,	"unsupportedProtocolVersion" },
 	{ 5,	14,	"unknownSlotmap" },
+	{ 6,	13,	"identityInUse" },
 	{ 100,	14,	"cardNotPresent" },
 	{ 101,	16,	"cardUnresponsive" },
 	{ 102,	21,	"cardTransmissionError" }
 	/* This list is extensible */
 };
 static const unsigned int asn_MAP_ResultCode_enum2value_1[] = {
-	6,	/* cardNotPresent(100) */
-	8,	/* cardTransmissionError(102) */
-	7,	/* cardUnresponsive(101) */
+	7,	/* cardNotPresent(100) */
+	9,	/* cardTransmissionError(102) */
+	8,	/* cardUnresponsive(101) */
+	6,	/* identityInUse(6) */
 	2,	/* illegalBankId(2) */
 	1,	/* illegalClientId(1) */
 	3,	/* illegalSlotId(3) */
@@ -109,8 +111,8 @@ static const unsigned int asn_MAP_ResultCode_enum2value_1[] = {
 static const asn_INTEGER_specifics_t asn_SPC_ResultCode_specs_1 = {
 	asn_MAP_ResultCode_value2enum_1,	/* "tag" => N; sorted by tag */
 	asn_MAP_ResultCode_enum2value_1,	/* N => "tag"; sorted by N */
-	9,	/* Number of elements in the maps */
-	10,	/* Extensions before this member */
+	10,	/* Number of elements in the maps */
+	11,	/* Extensions before this member */
 	1,	/* Strict enumeration */
 	0,	/* Native long size */
 	0

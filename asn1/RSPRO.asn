@@ -87,6 +87,7 @@ ResultCode ::= ENUMERATED {
 	illegalSlotId			(3),
 	unsupportedProtocolVersion	(4),
 	unknownSlotmap			(5),
+	identityInUse			(6),
 
 	-- no card is present in given slot
 	cardNotPresent			(100),
