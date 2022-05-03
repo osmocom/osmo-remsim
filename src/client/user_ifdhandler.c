@@ -125,7 +125,6 @@ struct client_thread {
 
 /* configuration of client thread; passed in from IFD thread */
 struct client_thread_cfg {
-	const char *name;
 	const char *server_host;
 	int server_port;
 	int client_id;
@@ -367,7 +366,11 @@ static void *client_pthread_main(void *arg)
 	struct client_thread_cfg *cfg = arg;
 	struct client_config *ccfg;
 	struct client_thread *ct;
+	char hostname[256];
 	int rc;
+
+	if (gethostname(hostname, sizeof(hostname)) < 0)
+		OSMO_STRLCPY_ARRAY(hostname, "unknown");
 
 	osmo_select_init();
 	rc = osmo_ctx_init("client");
@@ -387,7 +390,7 @@ static void *client_pthread_main(void *arg)
 	if (!talloc_asn1_ctx)
 	       talloc_asn1_ctx= talloc_named_const(ct, 0, "asn1");
 
-	ct->bc = remsim_client_create(ct, cfg->name, "remsim_ifdhandler", ccfg);
+	ct->bc = remsim_client_create(ct, hostname, "remsim_ifdhandler", ccfg);
 	OSMO_ASSERT(ct->bc);
 	ct->bc->data = ct;
 
@@ -560,7 +563,6 @@ RESPONSECODE IFDHCreateChannelByName(DWORD Lun, LPSTR DeviceName)
 {
 	struct ifd_client *ic;
 	struct client_thread_cfg cfg = {
-		.name = "fixme-name",
 		.server_host = "127.0.0.1",
 		.server_port = -1,
 		.client_id = 0,

@@ -59,6 +59,7 @@ static void handle_sig_mapadd(int sig);
 __thread void *talloc_asn1_ctx;
 struct bankd *g_bankd;
 static void *g_tall_ctx;
+static char g_hostname[256];
 
 static void *worker_main(void *arg);
 
@@ -91,7 +92,7 @@ static void bankd_init(struct bankd *bankd)
 	bankd->srvc.bankd.num_slots = 8;
 
 	bankd->comp_id.type = ComponentType_remsimBankd;
-	OSMO_STRLCPY_ARRAY(bankd->comp_id.name, "fixme-name");
+	OSMO_STRLCPY_ARRAY(bankd->comp_id.name, g_hostname);
 	OSMO_STRLCPY_ARRAY(bankd->comp_id.software, "remsim-bankd");
 	OSMO_STRLCPY_ARRAY(bankd->comp_id.sw_version, PACKAGE_VERSION);
 	/* FIXME: other members of app_comp_id */
@@ -363,6 +364,9 @@ int main(int argc, char **argv)
 	g_bankd = talloc_zero(NULL, struct bankd);
 	OSMO_ASSERT(g_bankd);
 
+	if (gethostname(g_hostname, sizeof(g_hostname)) < 0)
+		OSMO_STRLCPY_ARRAY(g_hostname, "unknown");
+
 	bankd_init(g_bankd);
 
 	srvc = &g_bankd->srvc;
@@ -370,7 +374,7 @@ int main(int argc, char **argv)
 	srvc->server_port = 9998;
 	srvc->handle_rx = bankd_srvc_handle_rx;
 	srvc->own_comp_id.type = ComponentType_remsimBankd;
-	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.name, "fixme-name");
+	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.name, g_hostname);
 	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.software, "remsim-bankd");
 	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.sw_version, PACKAGE_VERSION);
 

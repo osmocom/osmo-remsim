@@ -80,8 +80,12 @@ static void handle_options(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
+	char hostname[256];
 	void *talloc_rest_ctx;
 	int rc;
+
+	if (gethostname(hostname, sizeof(hostname)) < 0)
+		OSMO_STRLCPY_ARRAY(hostname, "unknown");
 
 	g_tall_ctx = talloc_named_const(NULL, 0, "global");
 	talloc_asn1_ctx = talloc_named_const(g_tall_ctx, 0, "asn1");
@@ -106,7 +110,7 @@ int main(int argc, char **argv)
 		goto out_rspro;
 
 	g_rps->comp_id.type = ComponentType_remsimServer;
-	OSMO_STRLCPY_ARRAY(g_rps->comp_id.name, "fixme-name");
+	OSMO_STRLCPY_ARRAY(g_rps->comp_id.name, hostname);
 	OSMO_STRLCPY_ARRAY(g_rps->comp_id.software, "remsim-server");
 	OSMO_STRLCPY_ARRAY(g_rps->comp_id.sw_version, PACKAGE_VERSION);
 	/* FIXME: other members of app_comp_id */
