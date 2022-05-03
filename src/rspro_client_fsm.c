@@ -94,11 +94,11 @@ int server_conn_send_rspro(struct rspro_server_conn *srvc, RsproPDU_t *rspro)
 }
 
 enum server_conn_fsm_state {
-	/* waiting for initial connectiong to remsim-server */
+	/* waiting for initial connection to remsim-server */
 	SRVC_ST_INIT,
 	/* server connection established, waiting for ClientConnectRes */
 	SRVC_ST_ESTABLISHED,
-	/* server connection etsablished, ClientConnect succeeded */
+	/* server connection established, ClientConnect succeeded */
 	SRVC_ST_CONNECTED,
 	/* connection lost, we're waiting for a re-establish */
 	SRVC_ST_REESTABLISH,

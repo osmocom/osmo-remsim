@@ -111,7 +111,7 @@ struct msgb *itmsg_alloc(enum itmsg_type type, uint16_t status, const uint8_t *d
 void __thread *talloc_asn1_ctx;
 
 struct client_thread {
-	/* bankd client runningi inside this thread */
+	/* bankd client running inside this thread */
 	struct bankd_client *bc;
 
 	/* inter-thread osmo-fd; communication with IFD/PCSC thread */
@@ -132,7 +132,7 @@ struct client_thread_cfg {
 	int it_sock_fd;
 };
 
-/* enqueue a msgb (containg 'struct itmsg') towards the IFD-handler thread */
+/* enqueue a msgb (containing 'struct itmsg') towards the IFD-handler thread */
 static void enqueue_to_ifd(struct client_thread *ct, struct msgb *msg)
 {
 	if (!msg)

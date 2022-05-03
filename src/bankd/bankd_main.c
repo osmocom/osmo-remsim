@@ -82,7 +82,7 @@ static void bankd_init(struct bankd *bankd)
 
 	asn_debug = 0;
 
-	/* intialize members of 'bankd' */
+	/* initialize members of 'bankd' */
 	bankd->slotmaps = slotmap_init(bankd);
 	INIT_LLIST_HEAD(&bankd->workers);
 	pthread_mutex_init(&bankd->workers_mutex, NULL);
