@@ -512,6 +512,7 @@ int rest_api_init(void *ctx, uint16_t port)
 
 	if (ulfius_start_framework(&g_instance) != U_OK) {
 		LOGP(DREST, LOGL_FATAL, "Cannot start REST API on port %u\n", port);
+		ulfius_clean_instance(&g_instance);
 		return -1;
 	}
 	return 0;

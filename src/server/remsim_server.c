@@ -139,7 +139,6 @@ out_eventfd:
 	close(g_event_ofd.fd);
 out_rps:
 	talloc_free(g_rps->slotmaps);
-	talloc_free(g_rps);
 out_rspro:
 	rspro_server_destroy(g_rps);
 

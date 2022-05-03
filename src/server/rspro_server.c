@@ -854,6 +854,11 @@ struct rspro_server *rspro_server_create(void *ctx, const char *host, uint16_t p
 	pthread_rwlock_unlock(&srv->rwlock);
 
 	srv->link = ipa_server_link_create(ctx, NULL, host, port, accept_cb, srv);
+	if (!srv->link) {
+		talloc_free(srv);
+		return NULL;
+	}
+
 	ipa_server_link_open(srv->link);
 
 	return srv;
@@ -865,5 +870,6 @@ void rspro_server_destroy(struct rspro_server *srv)
 
 	ipa_server_link_destroy(srv->link);
 	srv->link = NULL;
+	pthread_rwlock_destroy(&srv->rwlock);
 	talloc_free(srv);
 }
