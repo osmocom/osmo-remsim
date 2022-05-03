@@ -138,6 +138,7 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 		if (conn->comp_id.type != ComponentType_remsimClient) {
 			LOGPFSML(fi, LOGL_ERROR, "ConnectClientReq from identity != Client ?!?\n");
 			osmo_fsm_inst_term(fi, OSMO_FSM_TERM_ERROR, NULL);
+			return;
 		}
 
 		/* reparent us from srv->connections to srv->clients */
@@ -180,6 +181,7 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 		if (conn->comp_id.type != ComponentType_remsimBankd) {
 			LOGPFSML(fi, LOGL_ERROR, "ConnectBankReq from identity != Bank ?!?\n");
 			osmo_fsm_inst_term(fi, OSMO_FSM_TERM_ERROR, NULL);
+			return;
 		}
 		/* FIXME: check for unique-ness */
 		conn->bank.bank_id = cbreq->bankId;
