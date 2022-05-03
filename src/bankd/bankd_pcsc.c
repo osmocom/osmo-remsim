@@ -127,12 +127,16 @@ int bankd_pcsc_read_slotnames(struct bankd *bankd, const char *csv_file)
 	size_t bytes_read;
 	struct parser_state ps;
 
-	if (csv_init(&p, CSV_APPEND_NULL) != 0)
+	if (csv_init(&p, CSV_APPEND_NULL) != 0) {
+		LOGP(DMAIN, LOGL_FATAL, "Error during csv_init\n");
 		return -1;
+	}
 
 	fp = fopen(csv_file, "rb");
-	if (!fp)
+	if (!fp) {
+		LOGP(DMAIN, LOGL_FATAL, "Error opening %s: %s\n", csv_file, strerror(errno));
 		return -1;
+	}
 
 	parser_state_init(&ps);
 	ps.bankd = bankd;

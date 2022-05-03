@@ -384,7 +384,9 @@ int main(int argc, char **argv)
 	/* Np lock or mutex required for the pcsc_slot_names list, as this is only
 	 * read once during bankd initialization, when the worker threads haven't
 	 * started yet */
-	OSMO_ASSERT(bankd_pcsc_read_slotnames(g_bankd, "bankd_pcsc_slots.csv") == 0);
+	rc = bankd_pcsc_read_slotnames(g_bankd, "bankd_pcsc_slots.csv");
+	if (rc)
+		exit(1);
 
 	/* Connection towards remsim-server */
 	rc = server_conn_fsm_alloc(g_bankd, srvc);
@@ -396,16 +398,21 @@ int main(int argc, char **argv)
 
 	/* create listening socket for inbound client connections */
 	rc = osmo_sock_init(AF_INET, SOCK_STREAM, IPPROTO_TCP, g_bind_ip, g_bind_port, OSMO_SOCK_F_BIND);
-	if (rc < 0)
+	if (rc < 0) {
+		fprintf(stderr, "Unable to create TCP socket at %s:%d: %s\n",
+			g_bind_ip ? g_bind_ip : "INADDR_ANY", g_bind_port, strerror(errno));
 		exit(1);
+	}
 	g_bankd->accept_fd = rc;
 
 	/* create worker threads: One per reader/slot! */
 	for (i = 0; i < g_bankd->srvc.bankd.num_slots; i++) {
 		struct bankd_worker *w;
 		w = bankd_create_worker(g_bankd, i);
-		if (!w)
+		if (!w) {
+			fprintf(stderr, "Error creating bankd worker thread\n");
 			exit(21);
+		}
 	}
 
 	while (1) {
