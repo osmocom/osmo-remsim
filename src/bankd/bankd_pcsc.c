@@ -237,13 +237,19 @@ static int pcsc_connect_slot_regex(struct bankd_worker *worker)
 					  &dwActiveProtocol);
 			if (rc == SCARD_S_SUCCESS)
 				result = 0;
-			else
+			else {
 				LOGW_PCSC_ERROR(worker, rc, "SCardConnect");
+				goto out_readerfree;
+			}
 			break;
 		}
 		p += strlen(p) + 1;
 	}
 
+	if (result < 0)
+		LOGW(worker, "Error: Cannot find PC/SC reader/slot matching using regex '%s'\n", worker->reader.name);
+
+out_readerfree:
 	SCardFreeMemory(worker->reader.pcsc.hContext, mszReaders);
 
 out_regfree:
