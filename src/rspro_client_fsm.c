@@ -32,6 +32,7 @@
 #include <osmocom/gsm/protocol/ipaccess.h>
 
 #include "debug.h"
+#include "asn1c_helpers.h"
 #include "rspro_client_fsm.h"
 
 #define S(x)	(1 << (x))
@@ -229,6 +230,8 @@ static void srvc_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 		pdu = data;
 		res = rspro_get_result(pdu);
 		if (res != ResultCode_ok) {
+			LOGPFSML(fi, LOGL_ERROR, "Rx RSPRO connectClientRes(result=%s), closing\n",
+				 asn_enum_name(&asn_DEF_ResultCode, res));
 			ipa_client_conn_close(srvc->conn);
 			osmo_fsm_inst_dispatch(fi, SRVC_E_TCP_DOWN, NULL);
 		} else {

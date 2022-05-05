@@ -1,5 +1,6 @@
 #pragma once
 
+#include <asn_application.h>
 struct asn_TYPE_descriptor_t;
 
 const char *asn_type_name(const asn_TYPE_descriptor_t *td);
