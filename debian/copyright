@@ -1,6 +1,6 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: osmo-remsim
-Source: http://cgit.osmocom.org/osmo-remsim/
+Source: https://gitea.osmocom.org/sim-card/osmo-remsim
 
 Files: *
 Copyright: 2018-2019 Harald Welte <laforge@gnumonks.org>
