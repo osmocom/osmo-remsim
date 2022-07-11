@@ -233,6 +233,7 @@ static void main_st_operational(struct osmo_fsm_inst *fi, uint32_t event, void *
 
 	switch (event) {
 	case MF_E_BANKD_LOST:
+		LOGPFSML(fi, LOGL_ERROR, "Connection to bankd lost\n");
 		osmo_fsm_inst_state_chg(fi, MF_ST_WAIT_BANKD, 0, 0);
 		break;
 	case MF_E_SRVC_CONFIG_BANK:
@@ -244,6 +245,8 @@ static void main_st_operational(struct osmo_fsm_inst *fi, uint32_t event, void *
 					   rspro_IpAddr2str(&pdu_rx->msg.choice.configClientBankReq.bankd.ip));
 		bc->bankd_conn.server_port = pdu_rx->msg.choice.configClientBankReq.bankd.port;
 		rspro2bank_slot(&bc->bankd_slot, &pdu_rx->msg.choice.configClientBankReq.bankSlot);
+		LOGPFSML(fi, LOGL_INFO, "Rx configClientBankReq(%s:%u / B%u:%u)\n", bc->bankd_conn.server_host,
+			 bc->bankd_conn.server_port, bc->bankd_slot.bank_id, bc->bankd_slot.slot_nr);
 		/* bankd port 0 is a magic value to indicate "no bankd" */
 		if (bc->bankd_conn.server_port == 0)
 			osmo_fsm_inst_state_chg(fi, MF_ST_UNCONFIGURED, 0, 0);
