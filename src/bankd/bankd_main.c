@@ -746,6 +746,7 @@ static int worker_handle_tpduModemToCard(struct bankd_worker *worker, const Rspr
 	if (rc < 0)
 		return rc;
 
+	LOGW(worker, "Tx RSPRO tpduCardToModem(%s)\n", osmo_hexdump_nospc(rx_buf, rx_buf_len));
 	/* encode response PDU and send it */
 	pdu_resp = rspro_gen_TpduCard2Modem(&mdm2sim->toBankSlot, &mdm2sim->fromClientSlot,
 					    rx_buf, rx_buf_len);
