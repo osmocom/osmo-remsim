@@ -20,7 +20,7 @@
 extern struct value_string worker_state_names[];
 
 #define LOGW(w, fmt, args...) \
-	LOGP(DBANKDW, LOGL_INFO, "[%03u %s] " fmt, (w)->num, get_value_string(worker_state_names, (w)->state), \
+	LOGP(DBANKDW, LOGL_INFO, "[%03u B%u:%u %s] " fmt, (w)->num, (w)->slot.bank_id, (w)->slot.slot_nr, get_value_string(worker_state_names, (w)->state), \
 		## args)
 
 struct bankd;
