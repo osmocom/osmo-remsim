@@ -230,6 +230,7 @@ static void main_st_operational(struct osmo_fsm_inst *fi, uint32_t event, void *
 	RsproPDU_t *pdu_rx = NULL;
 	RsproPDU_t *resp;
 	BankSlot_t bslot;
+	SlotPhysStatus_t *phys_status;
 
 	switch (event) {
 	case MF_E_BANKD_LOST:
@@ -264,6 +265,9 @@ static void main_st_operational(struct osmo_fsm_inst *fi, uint32_t event, void *
 		pdu_rx = data;
 		OSMO_ASSERT(pdu_rx);
 		OSMO_ASSERT(pdu_rx->msg.present == RsproPDUchoice_PR_tpduCardToModem);
+		LOGPFSML(fi, LOGL_NOTICE, "Rx tpduCardToModem(%s)\n",
+			 osmo_hexdump_nospc(pdu_rx->msg.choice.tpduCardToModem.data.buf,
+					    pdu_rx->msg.choice.tpduCardToModem.data.size));
 		/* forward to modem/cardem (via API) */
 		frontend_handle_card2modem(bc, pdu_rx->msg.choice.tpduCardToModem.data.buf,
 					   pdu_rx->msg.choice.tpduCardToModem.data.size);
@@ -273,6 +277,9 @@ static void main_st_operational(struct osmo_fsm_inst *fi, uint32_t event, void *
 		pdu_rx = data;
 		OSMO_ASSERT(pdu_rx);
 		OSMO_ASSERT(pdu_rx->msg.present == RsproPDUchoice_PR_setAtrReq);
+		LOGPFSML(fi, LOGL_NOTICE, "Rx setAtrReq(%s)\n",
+			 osmo_hexdump_nospc(pdu_rx->msg.choice.setAtrReq.atr.buf,
+					    pdu_rx->msg.choice.setAtrReq.atr.size));
 		/* forward to modem/cardem (via API) */
 		frontend_handle_set_atr(bc, pdu_rx->msg.choice.setAtrReq.atr.buf,
 					pdu_rx->msg.choice.setAtrReq.atr.size);
@@ -284,12 +291,21 @@ static void main_st_operational(struct osmo_fsm_inst *fi, uint32_t event, void *
 		pdu_rx = data;
 		OSMO_ASSERT(pdu_rx);
 		OSMO_ASSERT(pdu_rx->msg.present == RsproPDUchoice_PR_bankSlotStatusInd);
+		phys_status = &pdu_rx->msg.choice.bankSlotStatusInd.slotPhysStatus;
+		LOGPFSML(fi, LOGL_NOTICE, "Rx bankSlotStatusInd(reset_act=%d, vcc_act=%d, clk_act=%d, "
+			 "card_pres=%d)\n", phys_status->resetActive,
+			 phys_status->vccPresent ? *phys_status->vccPresent : -1,
+			 phys_status->clkActive ? *phys_status->clkActive : -1,
+			 phys_status->cardPresent ? *phys_status->cardPresent : -1);
 		/* forward to modem/cardem (via API) */
 		frontend_handle_slot_status(bc, &pdu_rx->msg.choice.bankSlotStatusInd.slotPhysStatus);
 		break;
 	case MF_E_MDM_STATUS_IND:
 		pstatus = data;
 		OSMO_ASSERT(pstatus);
+		LOGPFSML(fi, LOGL_NOTICE, "Tx clientSlotStatusInd(reset_act=%d, vcc_act=%d, clk_act=%d, "
+			 "card_pres=%d)\n", pstatus->flags.reset_active, pstatus->flags.vcc_present,
+			 pstatus->flags.clk_active, pstatus->flags.card_present);
 		/* forward to bankd */
 		bank_slot2rspro(&bslot, &bc->bankd_slot);
 		resp = rspro_gen_ClientSlotStatusInd(bc->srv_conn.clslot, &bslot,
@@ -305,11 +321,13 @@ static void main_st_operational(struct osmo_fsm_inst *fi, uint32_t event, void *
 	case MF_E_MDM_PTS_IND:
 		pts = data;
 		OSMO_ASSERT(pts);
+		LOGPFSML(fi, LOGL_NOTICE, "PTS Indication (%s)\n", osmo_hexdump_nospc(pts->buf, pts->len));
 		/* forward to bankd? */
 		break;
 	case MF_E_MDM_TPDU:
 		tpdu = data;
 		OSMO_ASSERT(tpdu);
+		LOGPFSML(fi, LOGL_INFO, "Tx tpduModemToCard (%s)\n", osmo_hexdump_nospc(tpdu->buf, tpdu->len));
 		/* forward to bankd */
 		bank_slot2rspro(&bslot, &bc->bankd_slot);
 		resp = rspro_gen_TpduModem2Card(bc->srv_conn.clslot, &bslot, tpdu->buf, tpdu->len);
