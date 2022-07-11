@@ -95,6 +95,17 @@ The remsim-server is the central element of a osmo-remsim deployment,
 it maintains a list of clients + bankds connected to it, as well as the
 dynamic SIM card mappings between them.
 
+%package -n osmo-remsim-apitool
+Summary:        Osmocom Remote SIM - API tool for Server
+License:        GPL-2.0-or-later
+Group:          Productivity/Telephony/Servers
+Requires:       python3
+
+%description -n osmo-remsim-apitool
+This is a small python tool for generating API requests to remsim-server,
+which can be used by the system administrator to introspect and/or modify
+the state (mostly slotmaps).
+
 %package -n osmo-remsim-bankd
 Summary:        Osmocom Remote SIM - Bank Daemon
 License:        GPL-2.0-or-later
@@ -190,6 +201,9 @@ make %{?_smp_mflags} check || find . -name testsuite.log -exec cat {} +
 %files -n osmo-remsim-server
 %{_bindir}/osmo-remsim-server
 %{_unitdir}/osmo-remsim-server.service
+
+%files -n osmo-remsim-server
+%{_bindir}/osmo-remsim-apitool
 
 %files -n osmo-remsim-bankd
 %{_bindir}/osmo-remsim-bankd

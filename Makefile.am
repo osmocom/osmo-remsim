@@ -10,7 +10,6 @@ EXTRA_DIST = \
 	     README.md \
 	     asn1 \
 	     contrib/osmo-remsim.spec.in \
-	     contrib/remsim-apitool.py \
 	     debian \
 	     $(NULL)
 

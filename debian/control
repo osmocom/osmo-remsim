@@ -51,6 +51,15 @@ Description: Osmocom Remote SIM - Central Server
  it maintains a list of clients + bankds connected to it, as well as the
  dynamic SIM card mappings between them.
 
+Package: osmo-remsim-apitool
+Architecture: any
+Multi-Arch: same
+Depends: ${misc:Depends}, python3
+Description: Osmocom Remote SIM - API tool for server
+ This is a small python tool for generating API requests to remsim-server,
+ which can be used by the system administrator to introspect and/or modify
+ the state (mostly slotmaps).
+
 Package: osmo-remsim-bankd
 Architecture: any
 Multi-Arch: same
