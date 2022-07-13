@@ -184,6 +184,14 @@ if (rv != SCARD_S_SUCCESS) { \
 	LOGW((w), text ": OK\n"); \
 }
 
+static DWORD bankd_share_mode(struct bankd *bankd)
+{
+	if (bankd->cfg.permit_shared_pcsc)
+		return SCARD_SHARE_SHARED;
+	else
+		return SCARD_SHARE_EXCLUSIVE;
+}
+
 static int pcsc_get_atr(struct bankd_worker *worker)
 {
 	long rc;
@@ -232,7 +240,7 @@ static int pcsc_connect_slot_regex(struct bankd_worker *worker)
 		int r = regexec(&compiled_name, p, 0, NULL, 0);
 		if (r == 0) {
 			LOGW(worker, "Attempting to open card/slot '%s'\n", p);
-			rc = SCardConnect(worker->reader.pcsc.hContext, p, SCARD_SHARE_SHARED,
+			rc = SCardConnect(worker->reader.pcsc.hContext, p, bankd_share_mode(worker->bankd),
 					  SCARD_PROTOCOL_T0, &worker->reader.pcsc.hCard,
 					  &dwActiveProtocol);
 			if (rc == SCARD_S_SUCCESS)
@@ -289,7 +297,7 @@ static int pcsc_reset_card(struct bankd_worker *worker, bool cold_reset)
 
 	LOGW(worker, "Resetting card in '%s' (%s)\n", worker->reader.name,
 		cold_reset ? "cold reset" : "warm reset");
-	rc = SCardReconnect(worker->reader.pcsc.hCard, SCARD_SHARE_SHARED, SCARD_PROTOCOL_T0,
+	rc = SCardReconnect(worker->reader.pcsc.hCard, bankd_share_mode(worker->bankd), SCARD_PROTOCOL_T0,
 			    cold_reset ? SCARD_UNPOWER_CARD : SCARD_RESET_CARD, &dwActiveProtocol);
 	PCSC_ERROR(worker, rc, "SCardReconnect");
 

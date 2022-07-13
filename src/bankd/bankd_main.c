@@ -98,6 +98,8 @@ static void bankd_init(struct bankd *bankd)
 	/* FIXME: other members of app_comp_id */
 
 	INIT_LLIST_HEAD(&bankd->pcsc_slot_names);
+
+	bankd->cfg.permit_shared_pcsc = false;
 }
 
 /* create + start a new bankd_worker thread */
@@ -291,6 +293,7 @@ static void printf_help()
 "				connections (default: INADDR_ANY)\n"
 "  -P --bind-port <1-65535>	Local TCP port to bind for incoming client\n"
 "				connectionss (default: 9999)\n"
+"  -s --permit-shared-pcsc	Permit SHARED access to PC/SC readers (default: exclusive)\n"
 	      );
 }
 
@@ -312,10 +315,11 @@ static void handle_options(int argc, char **argv)
 			{ "component-name", 1, 0, 'N' },
 			{ "bind-ip", 1, 0, 'I' },
 			{ "bind-port", 1, 0, 'P' },
+			{ "permit-shared-pcsc", 0, 0, 's' },
 			{ 0, 0, 0, 0 }
 		};
 
-		c = getopt_long(argc, argv, "hVd:i:o:b:n:N:I:P:", long_options, &option_index);
+		c = getopt_long(argc, argv, "hVd:i:o:b:n:N:I:P:s", long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -351,6 +355,9 @@ static void handle_options(int argc, char **argv)
 			break;
 		case 'P':
 			g_bind_port = atoi(optarg);
+			break;
+		case 's':
+			g_bankd->cfg.permit_shared_pcsc = true;
 			break;
 		}
 	}

@@ -130,6 +130,10 @@ struct bankd {
 	pthread_mutex_t workers_mutex;
 
 	struct llist_head pcsc_slot_names;
+
+	struct {
+		bool permit_shared_pcsc;
+	} cfg;
 };
 
 int bankd_pcsc_read_slotnames(struct bankd *bankd, const char *csv_file);

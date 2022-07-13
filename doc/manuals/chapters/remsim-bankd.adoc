@@ -89,6 +89,15 @@ approach seems to make more sense.
 *-P, --bind-port <1-65535>*::
   Specify the local TCP port to which the socket for incoming connections
   from `osmo-remsim-client`s is bound to.
+*-s, --permit-shared-pcsc*::
+  Specify whether the PC/SC readers should be accessed in SCARD_SHARE_SHARED
+  mode, instead of the default (SCARD_SHARE_EXCLUSIVE).  Shared mode would
+  permit multiple application programs to access a single reader/slot/card
+  concurrently.  This is potentially dangerous as the two programs operate
+  without knowledge of each other, and either of them might modify the card
+  state (such as the currently selected file, validated PIN, etc.) in a
+  way not expected by the other application.
+
 
 ==== Examples
 .remsim-server is on 10.2.3.4, cardreader has 5 slots:
