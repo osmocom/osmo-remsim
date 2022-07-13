@@ -105,5 +105,5 @@ Architecture: all
 Section: doc
 Priority: optional
 Depends: ${misc:Depends}
-Description: ${misc:Package} PDF documentation
- User manual for ${misc:Package} in PDF format.
+Description: Osmocom Remote SIM documentation
+ User manual for Osmocom Remote SIM in PDF format.
