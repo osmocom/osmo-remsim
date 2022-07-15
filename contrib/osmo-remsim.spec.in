@@ -202,7 +202,7 @@ make %{?_smp_mflags} check || find . -name testsuite.log -exec cat {} +
 %{_bindir}/osmo-remsim-server
 %{_unitdir}/osmo-remsim-server.service
 
-%files -n osmo-remsim-server
+%files -n osmo-remsim-apitool
 %{_bindir}/osmo-remsim-apitool
 
 %files -n osmo-remsim-bankd
