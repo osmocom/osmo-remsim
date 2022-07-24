@@ -32,6 +32,7 @@ static void printf_help()
 		"  -p --server-port 13245     remsim-server TCP port\n"
 		"  -c --client-id <0-1023>    RSPRO ClientId of this client\n"
 		"  -n --client-slot <0-1023>  RSPRO SlotNr of this client\n"
+		"  -a --atr HEXSTRING         default ATR to simulate (until bankd overrides it)\n"
 		"  -e --event-script <path>   event script to be called by client\n"
 #ifdef USB_SUPPORT
 		"  -V --usb-vendor VENDOR_ID\n"
@@ -73,7 +74,7 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 			{ 0, 0, 0, 0 }
 		};
 
-		c = getopt_long(argc, argv, "hvd:i:p:c:n:e:"
+		c = getopt_long(argc, argv, "hvd:i:p:c:n:a:e:"
 #ifdef USB_SUPPORT
 						"V:P:C:I:S:A:H:"
 #endif
