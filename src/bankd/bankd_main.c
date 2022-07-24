@@ -986,7 +986,10 @@ static void *worker_main(void *arg)
 				break;
 		}
 
-		LOGW(g_worker, "Error %d occurred: Cleaning up state\n", rc);
+		if (rc == -23)
+			LOGW(g_worker, "Client unmapped: Cleaning up state\n");
+		else
+			LOGW(g_worker, "Error %d occurred: Cleaning up state\n", rc);
 
 		/* clean-up: reset to sane state */
 		memset(&g_worker->card, 0, sizeof(g_worker->card));
