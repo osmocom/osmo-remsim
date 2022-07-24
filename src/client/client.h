@@ -73,6 +73,9 @@ struct client_config {
 		uint8_t data[ATR_SIZE_MAX];
 		uint8_t len;
 	} atr;
+	/* ignore any ATR received via RSPRO; only use the hard-coded default or
+	 * optionally the ATR given at the command line */
+	bool atr_ignore_rspro;
 
 	struct {
 		int vendor_id;

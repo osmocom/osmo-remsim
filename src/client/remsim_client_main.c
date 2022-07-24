@@ -33,6 +33,7 @@ static void printf_help()
 		"  -c --client-id <0-1023>    RSPRO ClientId of this client\n"
 		"  -n --client-slot <0-1023>  RSPRO SlotNr of this client\n"
 		"  -a --atr HEXSTRING         default ATR to simulate (until bankd overrides it)\n"
+		"  -r --atr-ignore-rspro      Ignore any ATR from bankd; use only ATR given by -a)\n"
 		"  -e --event-script <path>   event script to be called by client\n"
 #ifdef USB_SUPPORT
 		"  -V --usb-vendor VENDOR_ID\n"
@@ -61,6 +62,7 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 			{ "client-id", 1, 0, 'c' },
 			{ "client-slot", 1, 0, 'n' },
 			{ "atr", 1, 0, 'a' },
+			{ "atr-ignore-rspro", 0, 0, 'r' },
 			{ "event-script", 1, 0, 'e' },
 #ifdef USB_SUPPORT
 			{ "usb-vendor", 1, 0, 'V' },
@@ -74,7 +76,7 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 			{ 0, 0, 0, 0 }
 		};
 
-		c = getopt_long(argc, argv, "hvd:i:p:c:n:a:e:"
+		c = getopt_long(argc, argv, "hvd:i:p:c:n:a:re:"
 #ifdef USB_SUPPORT
 						"V:P:C:I:S:A:H:"
 #endif
@@ -113,6 +115,9 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 				fprintf(stderr, "ATR malformed\n");
 				exit(2);
 			}
+			break;
+		case 'r':
+			cfg->atr_ignore_rspro = true;
 			break;
 		case 'e':
 			osmo_talloc_replace_string(cfg, &cfg->event_script, optarg);

@@ -93,7 +93,13 @@ osmo-remsim-client-st2 currently has the following command-line options:
 *-a, --atr HEXSTRING*::
   Specify the initial ATR to be communicated to the modem/phone.  Can
   and will later be overridden by the ATR as specified by
-  `osmo-remsim-bankd` once a card has been mapped to this client.
+  `osmo-remsim-bankd` once a card has been mapped to this client, unless
+  the `--atr-ignore-rspro` option is also specified.
+*-r, --atr-ignore-rspro*::
+  Ignore any incoming RSPRO setAtrReq and always only use the locally-specified
+  ATR when communicating with the UE/modem/phone.  This can be used to constrain
+  the capabilities advertised.  This way, for example, the baud rate can be constrained,
+  or the use of logical channels prevented.
 *-e, --event-script COMMAND*::
   Specify the shell command to be execute when the client wants to call its
   helper script

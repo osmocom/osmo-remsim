@@ -280,9 +280,13 @@ static void main_st_operational(struct osmo_fsm_inst *fi, uint32_t event, void *
 		LOGPFSML(fi, LOGL_NOTICE, "Rx setAtrReq(%s)\n",
 			 osmo_hexdump_nospc(pdu_rx->msg.choice.setAtrReq.atr.buf,
 					    pdu_rx->msg.choice.setAtrReq.atr.size));
-		/* forward to modem/cardem (via API) */
-		frontend_handle_set_atr(bc, pdu_rx->msg.choice.setAtrReq.atr.buf,
-					pdu_rx->msg.choice.setAtrReq.atr.size);
+		if (bc->cfg->atr_ignore_rspro) {
+			LOGPFSML(fi, LOGL_NOTICE, "Ignoring RSPRO setAtrReq\n");
+		} else {
+			/* forward to modem/cardem (via API) */
+			frontend_handle_set_atr(bc, pdu_rx->msg.choice.setAtrReq.atr.buf,
+						pdu_rx->msg.choice.setAtrReq.atr.size);
+		}
 		/* send response to bankd */
 		resp = rspro_gen_SetAtrRes(ResultCode_ok);
 		server_conn_send_rspro(&bc->bankd_conn, resp);

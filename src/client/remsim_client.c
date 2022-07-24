@@ -57,6 +57,7 @@ struct client_config *client_config_init(void *ctx)
 	cfg->atr.data[0] = 0x3B;
 	cfg->atr.data[1] = 0x00; // the shortest simplest ATR possible
 	cfg->atr.len = 2;
+	cfg->atr_ignore_rspro = false;
 
 	return cfg;
 };
