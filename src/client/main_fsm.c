@@ -188,16 +188,16 @@ static void main_st_operational_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 {
 	struct bankd_client *bc = (struct bankd_client *) fi->priv;
 
-	/* Simulate card-insert to modem */
-	frontend_request_card_insert(bc);
-	call_script(bc, "request-card-insert");
-
 	/* Select remote (forwarded) SIM */
 	frontend_request_sim_remote(bc);
 	call_script(bc, "request-sim-remote");
 
 	/* Set the ATR */
 	frontend_handle_set_atr(bc, bc->cfg->atr.data, bc->cfg->atr.len);
+
+	/* Simulate card insertion to modem */
+	frontend_request_card_insert(bc);
+	call_script(bc, "request-card-insert");
 
 	/* Reset the modem */
 	frontend_request_modem_reset(bc);
