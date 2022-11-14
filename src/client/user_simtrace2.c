@@ -444,6 +444,12 @@ int client_user_main(struct bankd_client *bc)
 		goto close_exit;
 	}
 
+	if (!transp->usb_ep.in || !transp->usb_ep.out || !transp->usb_ep.irq_in) {
+		LOGP(DMAIN, LOGL_ERROR, "specified USB dev/config/interface doesn't have "
+		     "at least one IN, OUT and IRQ_IN endpoint\n");
+		goto close_exit;
+	}
+
 	allocate_and_submit_irq(ci);
 	/* submit multiple IN URB in order to work around OS#4409 */
 	for (i = 0; i < 4; i++)
