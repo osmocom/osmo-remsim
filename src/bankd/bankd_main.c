@@ -47,6 +47,7 @@
 #include "rspro_client_fsm.h"
 #include "debug.h"
 #include "rspro_util.h"
+#include "gsmtap.h"
 
 /* signal indicates to worker thread that its map has been deleted */
 #define SIGMAPDEL	SIGRTMIN+1
@@ -100,6 +101,8 @@ static void bankd_init(struct bankd *bankd)
 	INIT_LLIST_HEAD(&bankd->pcsc_slot_names);
 
 	bankd->cfg.permit_shared_pcsc = false;
+	bankd->cfg.gsmtap_host = NULL;
+	bankd->cfg.gsmtap_slot = -1;
 }
 
 /* create + start a new bankd_worker thread */
@@ -284,18 +287,20 @@ send_resp:
 static void printf_help()
 {
 	printf(
-"  -h --help			Print this help message\n"
-"  -V --version			Print the version of the program\n"
-"  -d --debug option		Enable debug logging (e.g. DMAIN:DST2)\n"
-"  -i --server-host A.B.C.D	remsim-server IP address (default: 127.0.0.1)\n"
-"  -p --server-port <1-65535>	remsim-server TCP port (default: 9998)\n"
-"  -b --bank-id <1-1023>	Bank Identifier of this SIM bank (default: 1)\n"
-"  -n --num-slots <1-1023>	Number of Slots in this SIM bank (default: 8)\n"
-"  -I --bind-ip A.B.C.D		Local IP address to bind for incoming client\n"
-"				connections (default: INADDR_ANY)\n"
-"  -P --bind-port <1-65535>	Local TCP port to bind for incoming client\n"
-"				connectionss (default: 9999)\n"
-"  -s --permit-shared-pcsc	Permit SHARED access to PC/SC readers (default: exclusive)\n"
+"  -h --help                    Print this help message\n"
+"  -V --version                 Print the version of the program\n"
+"  -d --debug option            Enable debug logging (e.g. DMAIN:DST2)\n"
+"  -i --server-host A.B.C.D     remsim-server IP address (default: 127.0.0.1)\n"
+"  -p --server-port <1-65535>   remsim-server TCP port (default: 9998)\n"
+"  -b --bank-id <1-1023>        Bank Identifier of this SIM bank (default: 1)\n"
+"  -n --num-slots <1-1023>      Number of Slots in this SIM bank (default: 8)\n"
+"  -I --bind-ip A.B.C.D         Local IP address to bind for incoming client\n"
+"                               connections (default: INADDR_ANY)\n"
+"  -P --bind-port <1-65535>		Local TCP port to bind for incoming client\n"
+"                               connections (default: 9999)\n"
+"  -s --permit-shared-pcsc      Permit SHARED access to PC/SC readers (default: exclusive)\n"
+"  -g --gsmtap-ip A.B.C.D       Enable GSMTAP and send APDU traces to given IP\n"
+"  -G --gsmtap-slot <0-1023>    Limit tracing to given bank slot, only (default: all slots)\n"
 	      );
 }
 
@@ -318,10 +323,12 @@ static void handle_options(int argc, char **argv)
 			{ "bind-ip", 1, 0, 'I' },
 			{ "bind-port", 1, 0, 'P' },
 			{ "permit-shared-pcsc", 0, 0, 's' },
+			{ "gsmtap-ip", 1, 0, 'g' },
+			{ "gsmtap-slot", 1, 0, 'G' },
 			{ 0, 0, 0, 0 }
 		};
 
-		c = getopt_long(argc, argv, "hVd:i:p:o:b:n:N:I:P:s", long_options, &option_index);
+		c = getopt_long(argc, argv, "hVd:i:p:b:n:N:I:P:sg:G:", long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -360,6 +367,12 @@ static void handle_options(int argc, char **argv)
 			break;
 		case 's':
 			g_bankd->cfg.permit_shared_pcsc = true;
+			break;
+		case 'g':
+			g_bankd->cfg.gsmtap_host = optarg;
+			break;
+		case 'G':
+			g_bankd->cfg.gsmtap_slot = atoi(optarg);
 			break;
 		}
 	}
@@ -417,6 +430,15 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 	g_bankd->accept_fd = rc;
+
+	/* initialize gsmtap, if required */
+	if (g_bankd->cfg.gsmtap_host) {
+		rc = bankd_gsmtap_init(g_bankd->cfg.gsmtap_host);
+		if (rc < 0) {
+			fprintf(stderr, "Unable to open GSMTAP");
+			exit(1);
+		}
+	}
 
 	/* create worker threads: One per reader/slot! */
 	for (i = 0; i < g_bankd->srvc.bankd.num_slots; i++) {
@@ -661,6 +683,14 @@ static int worker_send_atr(struct bankd_worker *worker)
 	set_atr = rspro_gen_SetAtrReq(worker->client.clslot.client_id,
 				      worker->client.clslot.slot_nr,
 				      worker->card.atr, worker->card.atr_len);
+
+	/* trace ATR to GSMTAP, if configured */
+	if (g_bankd->cfg.gsmtap_host && (g_bankd->cfg.gsmtap_slot == -1 ||
+		g_bankd->cfg.gsmtap_slot == worker->slot.slot_nr)) {
+		bankd_gsmtap_send_apdu(GSMTAP_SIM_ATR, worker->card.atr, worker->card.atr_len,
+			NULL, 0);
+	}
+
 	if (!set_atr)
 		return -1;
 	return worker_send_rspro(worker, set_atr);
@@ -761,6 +791,12 @@ static int worker_handle_tpduModemToCard(struct bankd_worker *worker, const Rspr
 					    rx_buf, rx_buf_len);
 	worker_send_rspro(worker, pdu_resp);
 
+	/* trace APDU to GSMTAP, if configured */
+	if (g_bankd->cfg.gsmtap_host && (g_bankd->cfg.gsmtap_slot == -1 ||
+		g_bankd->cfg.gsmtap_slot == worker->slot.slot_nr)) {
+		bankd_gsmtap_send_apdu(GSMTAP_SIM_APDU, mdm2sim->data.buf, mdm2sim->data.size, rx_buf,
+			rx_buf_len);
+	}
 	return 0;
 }
 

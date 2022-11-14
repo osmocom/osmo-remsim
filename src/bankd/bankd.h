@@ -139,6 +139,8 @@ struct bankd {
 
 	struct {
 		bool permit_shared_pcsc;
+		char *gsmtap_host;
+		int gsmtap_slot;
 	} cfg;
 };
 

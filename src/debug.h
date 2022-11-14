@@ -8,6 +8,7 @@ enum {
 	DREST,
 	DSLOTMAP,
 	DBANKDW,
+	DGSMTAP,
 };
 
 extern const struct log_info log_info;

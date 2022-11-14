@@ -52,6 +52,11 @@ static const struct log_info_cat default_categories[] = {
 		.loglevel = LOGL_INFO,
 		.enabled = 1,
 	},
+	[DGSMTAP] = {
+		.name = "DGSMTAP",
+		.loglevel = LOGL_INFO,
+		.enabled = 1,
+	},
 };
 
 const struct log_info log_info = {

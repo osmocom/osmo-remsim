@@ -3,7 +3,7 @@ AM_CFLAGS = -Wall -I$(top_srcdir)/include -I$(top_builddir)/include -I$(top_srcd
 	    $(OSMOCORE_CFLAGS) $(OSMOGSM_CFLAGS) $(OSMOABIS_CFLAGS) \
 	    $(PCSC_CFLAGS)
 
-noinst_HEADERS = bankd.h internal.h
+noinst_HEADERS = bankd.h internal.h gsmtap.h
 
 bin_PROGRAMS = osmo-remsim-bankd
 noinst_PROGRAMS = pcsc_test
@@ -13,7 +13,7 @@ pcsc_test_LDADD = $(OSMOCORE_LIBS) \
 		  $(PCSC_LIBS) $(top_builddir)/src/libosmo-rspro.la
 
 osmo_remsim_bankd_SOURCES = ../slotmap.c ../rspro_client_fsm.c ../debug.c \
-			  bankd_main.c bankd_pcsc.c
+			  bankd_main.c bankd_pcsc.c gsmtap.c
 osmo_remsim_bankd_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
 			  $(PCSC_LIBS) $(CSV_LIBS) $(top_builddir)/src/libosmo-rspro.la
 
