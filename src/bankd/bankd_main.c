@@ -319,7 +319,7 @@ static void handle_options(int argc, char **argv)
 			{ 0, 0, 0, 0 }
 		};
 
-		c = getopt_long(argc, argv, "hVd:i:o:b:n:N:I:P:s", long_options, &option_index);
+		c = getopt_long(argc, argv, "hVd:i:p:o:b:n:N:I:P:s", long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -808,7 +808,7 @@ static int worker_handle_rspro(struct bankd_worker *worker, const RsproPDU_t *pd
 		break;
 	}
 
-	return rc; 
+	return rc;
 }
 
 static int wait_for_fd_or_timeout(int fd, unsigned int timeout_secs)
