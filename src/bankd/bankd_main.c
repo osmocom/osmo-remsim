@@ -115,6 +115,8 @@ static struct bankd_worker *bankd_create_worker(struct bankd *bankd, unsigned in
 	worker->bankd = bankd;
 	worker->num = i;
 	worker->ops = &pcsc_driver_ops;
+	worker->last_vccPresent = true; /* allow cold reset should first indication be false */
+	worker->last_resetActive = false; /* allow warm reset should first indication be true */
 
 	/* in the initial state, the worker has no client.fd, bank_slot or pcsc handle yet */
 
@@ -774,10 +776,26 @@ static int worker_handle_clientSlotStatusInd(struct bankd_worker *worker, const 
 		sps->clkActive ? *sps->clkActive ? "ACTIVE" : "INACTIVE" : "NULL");
 
 	/* perform cold or warm reset */
-	if (sps->vccPresent && *sps->vccPresent == 0)
-		rc = worker->ops->reset_card(worker, true);
-	else if (sps->resetActive)
-		rc = worker->ops->reset_card(worker, false);
+	if (sps->vccPresent && *sps->vccPresent == 0) {
+		/* VCC is not present */
+
+		if (worker->last_vccPresent) {
+			/* falling edge detected on VCC; perform cold reset */
+			rc = worker->ops->reset_card(worker, true);
+		}
+	} else if (sps->resetActive) {
+		if (!worker->last_resetActive) {
+			/* VCC is present (or not reported) and rising edge detected on reset; perform warm reset */
+			rc = worker->ops->reset_card(worker, false);
+		}
+	}
+
+	/* update last known states */
+	if (sps->vccPresent) {
+		worker->last_vccPresent = *sps->vccPresent != 0;
+	}
+
+	worker->last_resetActive = sps->resetActive != 0;
 
 	return rc;
 }

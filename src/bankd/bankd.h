@@ -96,6 +96,12 @@ struct bankd_worker {
 		uint8_t atr[MAX_ATR_SIZE];
 		unsigned int atr_len;
 	} card;
+
+	/* last known state of the SIM card VCC indication */
+	bool last_vccPresent;
+
+	/* last known state of the SIM card reset indication */
+	bool last_resetActive;
 };
 
 /* bankd card reader driver operations */
