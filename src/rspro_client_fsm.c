@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include <talloc.h>
 
@@ -39,6 +40,25 @@
 
 #define T1_WAIT_CLIENT_CONN_RES		10
 #define T2_RECONNECT			10
+
+static const int k_reestablish_delay_s[] = {
+	0, 0, 0,                            // 3 immediate retries
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1,       // 1 Hz for 30 seconds
+	2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+	2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+	2, 2, 2, 2, 2, 2, 2, 2, 2, 2,       // 1/2 hz for 1 minute
+	4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+	4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+	4, 4, 4, 4, 4, 4, 4, 4, 4, 4,       // 1/4 Hz for 2 minutes
+	8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+	8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+	8, 8, 8, 8, 8, 8, 8, 8, 8, 8,       // 1/8 Hz for 4 minutes
+	16,                                 // 1/16 Hz thereafter
+};
+
+#define REESTABLISH_DELAY_COUNT ARRAY_SIZE(k_reestablish_delay_s)
 
 /***********************************************************************
  * client-side FSM for a RSPRO connection to remsim-server
@@ -101,7 +121,9 @@ enum server_conn_fsm_state {
 	SRVC_ST_ESTABLISHED,
 	/* server connection established, ClientConnect succeeded */
 	SRVC_ST_CONNECTED,
-	/* connection lost, we're waiting for a re-establish */
+	/* connection lost, 1st step: delaying until we re-establish */
+	SRVC_ST_REESTABLISH_DELAY,
+	/* connection lost, 2nd step: wait for a re-establish */
 	SRVC_ST_REESTABLISH,
 };
 
@@ -191,6 +213,46 @@ static const struct ipa_keepalive_params ka_params = {
 	.wait_for_resp = 10,
 };
 
+static int64_t get_monotonic_ms(void)
+{
+	struct timespec t;
+	clock_gettime(CLOCK_BOOTTIME, &t);
+	return ((1000LL * t.tv_sec) + (t.tv_nsec / 1000000));
+}
+
+static void srvc_do_reestablish(struct osmo_fsm_inst *fi)
+{
+	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
+
+	const int64_t since_last_ms = get_monotonic_ms() - srvc->reestablish_last_ms;
+
+	/* reset delay loop if it has been > 2x the longest timeout since our last attempt;
+	 * this lets us revert to rapid reconnect behavior for a good connection */
+	const int64_t reset_ms = 2*1000*(OSMO_MAX(OSMO_MAX(T1_WAIT_CLIENT_CONN_RES, T2_RECONNECT),
+		k_reestablish_delay_s[REESTABLISH_DELAY_COUNT-1]));
+
+	if (since_last_ms > reset_ms) {
+		srvc->reestablish_delay_idx = 0;
+		LOGPFSML(fi, LOGL_DEBUG, "->REESTABLISH_DELAY reset; %" PRId64 "ms since last attempt\n",
+			since_last_ms);
+	}
+
+	/* determine if we need to delay reestablishment */
+	const int64_t need_ms = k_reestablish_delay_s[srvc->reestablish_delay_idx] * 1000;
+	int64_t delay_ms = need_ms - since_last_ms;
+
+	if (delay_ms > 0) {
+		LOGPFSML(fi, LOGL_DEBUG, "->REESTABLISH_DELAY delay %" PRId64 "ms; %" PRId64 "ms since last attempt [step %zu/%zu@%ds]\n",
+			delay_ms, since_last_ms, srvc->reestablish_delay_idx, (REESTABLISH_DELAY_COUNT-1),
+			k_reestablish_delay_s[srvc->reestablish_delay_idx]);
+	} else {
+		/* cheat and always use a minimum delay of 1ms to ensure a fsm timeout is triggered */
+		delay_ms = 1;
+	}
+
+	osmo_fsm_inst_state_chg_ms(fi, SRVC_ST_REESTABLISH_DELAY, delay_ms, 3);
+}
+
 static void srvc_st_init(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
 	switch (event) {
@@ -224,7 +286,7 @@ static void srvc_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 	switch (event) {
 	case SRVC_E_TCP_DOWN:
 	case SRVC_E_KA_TIMEOUT:
-		osmo_fsm_inst_state_chg(fi, SRVC_ST_REESTABLISH, T2_RECONNECT, 2);
+		srvc_do_reestablish(fi);
 		break;
 	case SRVC_E_CLIENT_CONN_RES:
 		pdu = data;
@@ -260,7 +322,7 @@ static void srvc_st_connected(struct osmo_fsm_inst *fi, uint32_t event, void *da
 	switch (event) {
 	case SRVC_E_TCP_DOWN:
 	case SRVC_E_KA_TIMEOUT:
-		osmo_fsm_inst_state_chg(fi, SRVC_ST_REESTABLISH, T2_RECONNECT, 2);
+		srvc_do_reestablish(fi);
 		break;
 	case SRVC_E_RSPRO_TX:
 		pdu = data;
@@ -286,10 +348,9 @@ static int ipa_kaepalive_timeout_cb(struct osmo_fsm_inst *ka_fi, void *conn)
 	return 0; /* we will explicitly terminate it */
 }
 
-static void srvc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
+static void srvc_st_reestablish_delay_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
 {
 	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
-	int rc;
 
 	if (srvc->keepalive_fi) {
 		ipa_keepalive_fsm_stop(srvc->keepalive_fi);
@@ -303,6 +364,27 @@ static void srvc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 		ipa_client_conn_destroy(srvc->conn);
 		srvc->conn = NULL;
 	}
+
+	/* saturate timeout at last (longest) entry */
+	if (srvc->reestablish_delay_idx < REESTABLISH_DELAY_COUNT-1) {
+		srvc->reestablish_delay_idx++;
+	}
+}
+
+static void srvc_st_reestablish_delay(struct osmo_fsm_inst *fi, uint32_t event, void *data)
+{
+	switch (event) {
+	default:
+		OSMO_ASSERT(0);
+	}
+}
+static void srvc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
+{
+	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
+	int rc;
+
+	srvc->reestablish_last_ms = get_monotonic_ms();
+
 	LOGPFSML(fi, LOGL_INFO, "Creating TCP connection to server at %s:%u\n",
 		 srvc->server_host, srvc->server_port);
 	srvc->conn = ipa_client_conn_create2(fi, NULL, 0, NULL, 0, srvc->server_host, srvc->server_port,
@@ -351,7 +433,10 @@ static void srvc_allstate_action(struct osmo_fsm_inst *fi, uint32_t event, void 
 
 	switch (event) {
 	case SRVC_E_ESTABLISH:
-		osmo_fsm_inst_state_chg(fi, SRVC_ST_REESTABLISH, T2_RECONNECT, 2);
+		/* reset delay connect immediately on our first connection */
+		srvc->reestablish_delay_idx = 0;
+		srvc->reestablish_last_ms = 0;
+		srvc_do_reestablish(fi);
 		break;
 	case SRVC_E_DISCONNECT:
 		if (srvc->keepalive_fi) {
@@ -377,9 +462,13 @@ static int server_conn_fsm_timer_cb(struct osmo_fsm_inst *fi)
 	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
 
 	switch (fi->T) {
-	case 2:
-		/* TCP reconnect failed: retry */
+	case 3:
+		/* delay has expired; let's re-establish */
 		osmo_fsm_inst_state_chg(fi, SRVC_ST_REESTABLISH, T2_RECONNECT, 2);
+		break;
+	case 2:
+		/* TCP reconnect failed: retry after wait */
+		srvc_do_reestablish(fi);
 		break;
 	case 1:
 		/* no ClientConnectRes received: disconnect + reconnect */
@@ -397,28 +486,35 @@ static const struct osmo_fsm_state server_conn_fsm_states[] = {
 	[SRVC_ST_INIT] = {
 		.name = "INIT",
 		.in_event_mask = 0, /* S(SRVC_E_ESTABLISH) via allstate */
-		.out_state_mask = S(SRVC_ST_INIT) | S(SRVC_ST_REESTABLISH),
+		.out_state_mask = S(SRVC_ST_INIT) | S(SRVC_ST_REESTABLISH_DELAY),
 		.action = srvc_st_init,
 	},
 	[SRVC_ST_ESTABLISHED] = {
 		.name = "ESTABLISHED",
 		.in_event_mask = S(SRVC_E_TCP_DOWN) | S(SRVC_E_KA_TIMEOUT) | S(SRVC_E_CLIENT_CONN_RES),
-		.out_state_mask = S(SRVC_ST_CONNECTED) | S(SRVC_ST_REESTABLISH) | S(SRVC_ST_INIT),
+		.out_state_mask = S(SRVC_ST_CONNECTED) | S(SRVC_ST_REESTABLISH_DELAY) | S(SRVC_ST_INIT),
 		.action = srvc_st_established,
 		.onenter = srvc_st_established_onenter,
 	},
 	[SRVC_ST_CONNECTED] = {
 		.name = "CONNECTED",
 		.in_event_mask = S(SRVC_E_TCP_DOWN) | S(SRVC_E_KA_TIMEOUT) | S(SRVC_E_RSPRO_TX),
-		.out_state_mask = S(SRVC_ST_REESTABLISH) | S(SRVC_ST_INIT),
+		.out_state_mask = S(SRVC_ST_REESTABLISH_DELAY) | S(SRVC_ST_INIT),
 		.action = srvc_st_connected,
 		.onenter = srvc_st_connected_onenter,
 		.onleave = srvc_st_connected_onleave,
 	},
+	[SRVC_ST_REESTABLISH_DELAY] = {
+		.name = "REESTABLISH_DELAY",
+		.in_event_mask = 0,
+		.out_state_mask = S(SRVC_ST_REESTABLISH) | S(SRVC_ST_INIT),
+		.action = srvc_st_reestablish_delay,
+		.onenter = srvc_st_reestablish_delay_onenter,
+	},
 	[SRVC_ST_REESTABLISH] = {
 		.name = "REESTABLISH",
 		.in_event_mask = S(SRVC_E_TCP_UP) | S(SRVC_E_TCP_DOWN),
-		.out_state_mask = S(SRVC_ST_ESTABLISHED) | S(SRVC_ST_REESTABLISH) | S(SRVC_ST_INIT),
+		.out_state_mask = S(SRVC_ST_ESTABLISHED) | S(SRVC_ST_REESTABLISH_DELAY) | S(SRVC_ST_INIT),
 		.action = srvc_st_reestablish,
 		.onenter = srvc_st_reestablish_onenter,
 	},
@@ -444,6 +540,9 @@ int server_conn_fsm_alloc(void *ctx, struct rspro_server_conn *srvc)
 		return -1;
 
 	srvc->fi = fi;
+	srvc->reestablish_delay_idx = 0;
+	srvc->reestablish_last_ms = 0;
+
 	return 0;
 }
 

@@ -26,6 +26,13 @@ struct rspro_server_conn {
 	struct osmo_fsm_inst *fi;
 	struct osmo_fsm_inst *keepalive_fi;
 	int (*handle_rx)(struct rspro_server_conn *conn, const RsproPDU_t *pdu);
+
+	/* index into k_reestablish_delay[] for this connection */
+	size_t reestablish_delay_idx;
+
+	/* timestamp of last re-establish attempt, in milliseconds */
+	int64_t reestablish_last_ms;
+
 	/* IPA protocol identity */
 	struct ipaccess_unit ipa_dev;
 
