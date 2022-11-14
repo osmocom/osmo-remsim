@@ -21,6 +21,7 @@ depcomp
 install-sh
 libosmo-rspro.pc
 libtool
+*-libtool
 ltmain.sh
 missing
 Makefile.in
