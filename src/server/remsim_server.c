@@ -33,9 +33,10 @@ static void handle_sig_usr1(int signal)
 static void print_help()
 {
 	printf( "  Some useful help...\n"
-		"  -h --help			This text\n"
-		"  -V --version			Print version of the program\n"
-		"  -d --debug option		Enable debug logging (e.g. DMAIN:DST2)\n"
+		"  -h --help                This text\n"
+		"  -V --version             Print version of the program\n"
+		"  -d --debug option        Enable debug logging (e.g. DMAIN:DST2)\n"
+		"  -L --disable-color       Disable colors for logging to stderr\n"
 		);
 }
 
@@ -47,10 +48,11 @@ static void handle_options(int argc, char **argv)
 			{ "help", 0, 0, 'h' },
 			{ "version", 0, 0, 'V' },
 			{ "debug", 1, 0, 'd' },
-			{0, 0, 0, 0}
+			{ "disable-color", 0, 0, 'L' },
+			{ 0, 0, 0, 0 }
 		};
 
-		c = getopt_long(argc, argv, "hVd:", long_options, &option_index);
+		c = getopt_long(argc, argv, "hVd:L", long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -65,6 +67,9 @@ static void handle_options(int argc, char **argv)
 		case 'V':
 			printf("osmo-resmim-server version %s\n", VERSION);
 			exit(0);
+			break;
+		case 'L':
+			log_set_use_color(osmo_stderr_target, 0);
 			break;
 		default:
 			/* ignore */

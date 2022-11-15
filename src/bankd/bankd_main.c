@@ -301,6 +301,7 @@ static void printf_help()
 "  -s --permit-shared-pcsc      Permit SHARED access to PC/SC readers (default: exclusive)\n"
 "  -g --gsmtap-ip A.B.C.D       Enable GSMTAP and send APDU traces to given IP\n"
 "  -G --gsmtap-slot <0-1023>    Limit tracing to given bank slot, only (default: all slots)\n"
+"  -L --disable-color           Disable colors for logging to stderr\n"
 	      );
 }
 
@@ -325,10 +326,11 @@ static void handle_options(int argc, char **argv)
 			{ "permit-shared-pcsc", 0, 0, 's' },
 			{ "gsmtap-ip", 1, 0, 'g' },
 			{ "gsmtap-slot", 1, 0, 'G' },
+			{ "disable-color", 0, 0, 'L' },
 			{ 0, 0, 0, 0 }
 		};
 
-		c = getopt_long(argc, argv, "hVd:i:p:b:n:N:I:P:sg:G:", long_options, &option_index);
+		c = getopt_long(argc, argv, "hVd:i:p:b:n:N:I:P:sg:G:L", long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -373,6 +375,9 @@ static void handle_options(int argc, char **argv)
 			break;
 		case 'G':
 			g_bankd->cfg.gsmtap_slot = atoi(optarg);
+			break;
+		case 'L':
+			log_set_use_color(osmo_stderr_target, 0);
 			break;
 		}
 	}

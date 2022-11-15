@@ -35,6 +35,7 @@ static void printf_help()
 		"  -a --atr HEXSTRING         default ATR to simulate (until bankd overrides it)\n"
 		"  -r --atr-ignore-rspro      Ignore any ATR from bankd; use only ATR given by -a)\n"
 		"  -e --event-script <path>   event script to be called by client\n"
+		"  -L --disable-color         Disable colors for logging to stderr\n"
 #ifdef USB_SUPPORT
 		"  -V --usb-vendor VENDOR_ID\n"
 		"  -P --usb-product PRODUCT_ID\n"
@@ -64,6 +65,7 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 			{ "atr", 1, 0, 'a' },
 			{ "atr-ignore-rspro", 0, 0, 'r' },
 			{ "event-script", 1, 0, 'e' },
+			{" disable-color", 0, 0, 'L' },
 #ifdef USB_SUPPORT
 			{ "usb-vendor", 1, 0, 'V' },
 			{ "usb-product", 1, 0, 'P' },
@@ -76,7 +78,7 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 			{ 0, 0, 0, 0 }
 		};
 
-		c = getopt_long(argc, argv, "hvd:i:p:c:n:a:re:"
+		c = getopt_long(argc, argv, "hvd:i:p:c:n:a:re:L"
 #ifdef USB_SUPPORT
 						"V:P:C:I:S:A:H:"
 #endif
@@ -121,6 +123,9 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 			break;
 		case 'e':
 			osmo_talloc_replace_string(cfg, &cfg->event_script, optarg);
+			break;
+		case 'L':
+			log_set_use_color(osmo_stderr_target, 0);
 			break;
 #ifdef USB_SUPPORT
 		case 'V':
