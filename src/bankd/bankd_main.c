@@ -716,6 +716,7 @@ static int worker_handle_connectClientReq(struct bankd_worker *worker, const Rsp
 
 	if (worker->state != BW_ST_CONN_WAIT_ID) {
 		LOGW(worker, "Unexpected connectClientReq\n");
+		res = ResultCode_illegalClientId;
 		rc = -102;
 		goto respond_and_err;
 	}
