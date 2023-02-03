@@ -410,7 +410,7 @@ static int api_cb_slotmaps_del(const struct _u_request *req, struct _u_response 
 		goto err;
 	}
 	map_id = strtoul(slotmap_id_str, NULL, 10);
-	if (map_id < 0) {
+	if (map_id == ULONG_MAX && errno != 0) {
 		status = 400;
 		goto err;
 	}
