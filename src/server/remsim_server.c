@@ -124,13 +124,15 @@ int main(int argc, char **argv)
 	if (rc < 0)
 		goto out_rps;
 	osmo_fd_setup(&g_event_ofd, rc, OSMO_FD_READ, event_fd_cb, g_rps, 0);
-	osmo_fd_register(&g_event_ofd);
+	rc = osmo_fd_register(&g_event_ofd);
+	if (rc < 0)
+		goto out_eventfd;
 
 	signal(SIGUSR1, handle_sig_usr1);
 
 	rc = rest_api_init(talloc_rest_ctx, 9997);
 	if (rc < 0)
-		goto out_eventfd;
+		goto out_unregister;
 
 	while (1) {
 		osmo_select_main(0);
@@ -140,6 +142,8 @@ int main(int argc, char **argv)
 
 	exit(0);
 
+out_unregister:
+	osmo_fd_unregister(&g_event_ofd);
 out_eventfd:
 	close(g_event_ofd.fd);
 out_rps:
