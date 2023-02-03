@@ -515,6 +515,7 @@ void rspro2bank_slot(struct bank_slot *out, const BankSlot_t *in)
 
 void bank_slot2rspro(BankSlot_t *out, const struct bank_slot *in)
 {
+	memset(out, 0, sizeof(*out));
 	out->bankId = in->bank_id;
 	out->slotNr = in->slot_nr;
 }
@@ -527,6 +528,7 @@ void rspro2client_slot(struct client_slot *out, const ClientSlot_t *in)
 
 void client_slot2rspro(ClientSlot_t *out, const struct client_slot *in)
 {
+	memset(out, 0, sizeof(*out));
 	out->clientId = in->client_id;
 	out->slotNr = in->slot_nr;
 }
