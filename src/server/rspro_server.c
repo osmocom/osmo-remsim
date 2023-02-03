@@ -844,6 +844,7 @@ struct rspro_server *rspro_server_create(void *ctx, const char *host, uint16_t p
 
 {
 	struct rspro_server *srv = talloc_zero(ctx, struct rspro_server);
+	int rc;
 	OSMO_ASSERT(srv);
 
 	pthread_rwlock_init(&srv->rwlock, NULL);
@@ -854,14 +855,22 @@ struct rspro_server *rspro_server_create(void *ctx, const char *host, uint16_t p
 	pthread_rwlock_unlock(&srv->rwlock);
 
 	srv->link = ipa_server_link_create(ctx, NULL, host, port, accept_cb, srv);
-	if (!srv->link) {
-		talloc_free(srv);
-		return NULL;
-	}
+	if (!srv->link)
+		goto out_free;
 
-	ipa_server_link_open(srv->link);
+	rc = ipa_server_link_open(srv->link);
+	if (rc < 0)
+		goto out_destroy;
 
 	return srv;
+
+out_destroy:
+	ipa_server_link_destroy(srv->link);
+out_free:
+	pthread_rwlock_destroy(&srv->rwlock);
+	talloc_free(srv);
+
+	return NULL;
 }
 
 void rspro_server_destroy(struct rspro_server *srv)
