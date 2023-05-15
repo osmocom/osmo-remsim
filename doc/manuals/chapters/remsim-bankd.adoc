@@ -166,3 +166,9 @@ In the above example, the +\[CCID\]+ and the +\(serialnumber\)+ both had to be e
 
 The +[0-9]\{2\}+ construct exists to perform wildcard matching, no matter which particular two-digit number
 pcscd decides to use.
+
+.Example: CSV file mapping bankd slot 0 to a OMNIKEY 3x21 Smart Card Reader:
+----
+"1","0","HID Global OMNIKEY 3x21 Smart Card Reader \[OMNIKEY 3x21 Smart Card Reader\] 00 00"
+----
+
