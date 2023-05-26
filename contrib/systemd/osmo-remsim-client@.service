@@ -1,5 +1,7 @@
 [Unit]
 Description=Osmocom Remote SIM Client %i
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
