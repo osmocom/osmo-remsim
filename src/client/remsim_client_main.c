@@ -117,6 +117,7 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 				fprintf(stderr, "ATR malformed\n");
 				exit(2);
 			}
+			cfg->atr.len = rc;
 			break;
 		case 'r':
 			cfg->atr_ignore_rspro = true;
