@@ -4,7 +4,7 @@
  * 	found in "../../asn1/RSPRO.asn"
  */
 
-#include "ResetStateRes.h"
+#include <osmocom/rspro/ResetStateRes.h>
 
 static asn_TYPE_member_t asn_MBR_ResetStateRes_1[] = {
 	{ ATF_NOFLAGS, 0, offsetof(struct ResetStateRes, result),

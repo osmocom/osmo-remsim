@@ -1134,8 +1134,8 @@ CHOICE_encode_aper(asn_TYPE_descriptor_t *td,
 		if(per_put_few_bits(po, present, ct->range_bits))
 			_ASN_ENCODE_FAILED;
 
-			return elm->type->aper_encoder(elm->type, elm->per_constraints,
-										   memb_ptr, po);
+		return elm->type->aper_encoder(elm->type, elm->per_constraints,
+			   memb_ptr, po);
 	} else {
 		asn_enc_rval_t rval;
 		if(specs->ext_start == -1)

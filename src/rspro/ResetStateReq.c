@@ -4,7 +4,7 @@
  * 	found in "../../asn1/RSPRO.asn"
  */
 
-#include "ResetStateReq.h"
+#include <osmocom/rspro/ResetStateReq.h>
 
 static const ber_tlv_tag_t asn_DEF_ResetStateReq_tags_1[] = {
 	(ASN_TAG_CLASS_UNIVERSAL | (16 << 2))
