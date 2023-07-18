@@ -170,11 +170,15 @@ static int stdin_fd_cb(struct osmo_fd *ofd, unsigned int what)
 int client_user_main(struct bankd_client *bc)
 {
 	struct stdin_state ss;
+	int rc;
 
 	/* register stdin file descriptor with osmocom select loop abstraction */
 	memset(&ss, 0, sizeof(ss));
 	osmo_fd_setup(&ss.ofd, fileno(stdin), OSMO_FD_READ, &stdin_fd_cb, &ss, 0);
-	osmo_fd_register(&ss.ofd);
+	rc = osmo_fd_register(&ss.ofd);
+	if (rc < 0)
+		return rc;
+
 	ss.bc = bc;
 
 	while (1) {
