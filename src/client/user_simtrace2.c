@@ -411,6 +411,7 @@ int client_user_main(struct bankd_client *bc)
 	ci->priv = bc;
 	bc->cardem = ci;
 
+	memset(ifm, 0, sizeof(*ifm));
 	ifm->vendor = cfg->usb.vendor_id;
 	ifm->product = cfg->usb.product_id;
 	ifm->configuration = cfg->usb.config_id;
