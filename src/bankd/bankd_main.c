@@ -284,13 +284,13 @@ send_resp:
 	return 0;
 }
 
-static void printf_help()
+static void printf_help(FILE *out)
 {
-	printf(
+	fprintf(out,
 "  -h --help                    Print this help message\n"
 "  -V --version                 Print the version of the program\n"
 "  -d --debug option            Enable debug logging (e.g. DMAIN:DST2)\n"
-"  -i --server-host A.B.C.D     remsim-server IP address (default: 127.0.0.1)\n"
+"  -i --server-host A.B.C.D     remsim-server IP address (mandatory)\n"
 "  -p --server-port <1-65535>   remsim-server TCP port (default: 9998)\n"
 "  -b --bank-id <1-1023>        Bank Identifier of this SIM bank (default: 1)\n"
 "  -n --num-slots <1-1023>      Number of Slots in this SIM bank (default: 8)\n"
@@ -336,7 +336,7 @@ static void handle_options(int argc, char **argv)
 
 		switch (c) {
 		case 'h':
-			printf_help();
+			printf_help(stdout);
 			exit(0);
 			break;
 		case 'V':
@@ -397,7 +397,7 @@ int main(int argc, char **argv)
 	bankd_init(g_bankd);
 
 	srvc = &g_bankd->srvc;
-	srvc->server_host = "localhost";
+	srvc->server_host = NULL;
 	srvc->server_port = 9998;
 	srvc->handle_rx = bankd_srvc_handle_rx;
 	srvc->own_comp_id.type = ComponentType_remsimBankd;
@@ -406,6 +406,13 @@ int main(int argc, char **argv)
 	OSMO_STRLCPY_ARRAY(srvc->own_comp_id.sw_version, PACKAGE_VERSION);
 
 	handle_options(argc, argv);
+
+	if (!srvc->server_host) {
+		fprintf(stderr, "ERROR: You must specify the host name / IP of the remsim-server to which "
+			"the bankd shall connect to\n\n");
+		printf_help(stderr);
+		exit(2);
+	}
 
 	g_bankd->main = pthread_self();
 	signal(SIGMAPDEL, handle_sig_mapdel);

@@ -61,7 +61,7 @@ approach seems to make more sense.
 
 ==== SYNOPSIS
 
-*osmo-remsim-bankd* [-h] [-V] [-d LOGOPT] [-i A.B.C.D] [-p <1-65535>] [-b <1-1023>] [-n <1-1023>] [-I A.B.C.D] [-P <1-65535> ]
+*osmo-remsim-bankd* [-h] [-V] [-d LOGOPT] -i A.B.C.D [-p <1-65535>] [-b <1-1023>] [-n <1-1023>] [-I A.B.C.D] [-P <1-65535> ]
 
 ==== OPTIONS
 
@@ -73,7 +73,9 @@ approach seems to make more sense.
   Configure the logging verbosity, see <<remsim_logging>>.
 *-i, --server-host A.B.C.D*::
   Specify the remote IP address/hostname of the `osmo-remsim-server` to
-  which this bankd shall establish its RSPRO control connection
+  which this bankd shall establish its RSPRO control connection.  Do not specify a loopback
+  address or localhost, as this would in most cases result in a broken configuration where
+  a [usually remote] remsim-client attempts to reach the bankd via loopback, which doesn't work.
 *-p, --server-port <1-65535>*::
   Specify the remote TCP port number of the `osmo-remsim-server` to which
   this bankd shall establish its RSPRO control connection
