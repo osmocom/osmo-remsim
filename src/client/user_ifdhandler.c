@@ -396,7 +396,8 @@ static void *client_pthread_main(void *arg)
 
 	INIT_LLIST_HEAD(&ct->it_msgq);
 	osmo_fd_setup(&ct->it_ofd, cfg->it_sock_fd, OSMO_FD_READ, &it_sock_fd_cb, ct, 0);
-	osmo_fd_register(&ct->it_ofd);
+	rc = osmo_fd_register(&ct->it_ofd);
+	OSMO_ASSERT(rc == 0);
 
 	/* ensure we get properly cleaned up if cancelled */
 	pthread_cleanup_push(client_pthread_cleanup, ct);
