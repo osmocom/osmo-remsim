@@ -238,7 +238,7 @@ static void srvc_do_reestablish(struct osmo_fsm_inst *fi)
 	}
 
 	/* determine if we need to delay reestablishment */
-	const int64_t need_ms = k_reestablish_delay_s[srvc->reestablish_delay_idx] * 1000;
+	const int64_t need_ms = (int64_t) k_reestablish_delay_s[srvc->reestablish_delay_idx] * 1000;
 	int64_t delay_ms = need_ms - since_last_ms;
 
 	if (delay_ms > 0) {
