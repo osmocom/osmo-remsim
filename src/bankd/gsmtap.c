@@ -97,7 +97,7 @@ int bankd_gsmtap_send_apdu(uint8_t sub_type, const uint8_t *mdm_tpdu, unsigned i
 	LOGP(DGSMTAP, LOGL_DEBUG, "sending APDU sub_type=%u, mdm_tpdu len=%u, sim_tpdu len=%u, iov cnt=%u\n",
 		sub_type, mdm_tpdu_len, sim_tpdu_len, cnt);
 
-	const int rc = writev(gsmtap_inst_fd(g_gti), iov, cnt);
+	const int rc = writev(gsmtap_inst_fd2(g_gti), iov, cnt);
 	if (rc < 0) {
 		char errtxt[128];
 		LOGP(DGSMTAP, LOGL_ERROR, "writev() failed with errno=%d: %s\n", errno, strerror_r(errno,
