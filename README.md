@@ -1,89 +1,78 @@
 osmo-remsim - Osmocom remote SIM software suite
 ===============================================
 
-This software suite is a work in progress.
+osmo-remsim is a suite of software programs enabling physical/geographic separation of a cellular phone (or
+modem) on the one hand side and the SIM/USIM/ISIM card on the other side.
+
+Using osmo-remsim, you can operate an entire fleet of modems/phones, as well as banks of SIM cards and
+dynamically establish or remove the connections between modems/phones and cards.
+
+So in technical terms, it behaves like a proxy for the ISO 7816 smart card interface between the MS/UE and the
+UICC/SIM/USIM/ISIM.
+
+While originally designed to be used in context of cellular networks, there is nothing cellular specific in
+the system. It can therefore also be used with other systems that use contact based smart cards according to
+ISO 7816. Currently only the T=0 protocol with standard (non-extended) APDUs is supported.
+
+Homepage
+--------
+Please visit the [official homepage](https://osmocom.org/projects/osmo-remsim/wiki)
+for usage instructions, manual and examples.
 
 
-osmo-remsim-client
-------------------
+GIT Repository
+--------------
 
-The client interfaces with GSM phones / modems via dedicated "Card
-Emulation" devices such as the Osmocom SIMtrace2 or sysmocom sysmoQMOD
-board + firmware.  This hardware implements the ISO7816-3 electrical
-interface and protocol handling and  passes any TPDU headers received
-from the phone/modem to osmo-remsim-client for further processing of the
-TPDUs associated to the given APDU transfer.
+You can clone from the official osmo-remsim.git repository using
 
-osmo-remsim-client connects via a RSPRO control connection to
-osmo-remsim-server at startup and registers itself.  It will receive
-configuration data such as the osmo-remsim-bankd IP+Port and the
-ClientId from osmo-remsim-server.
+        git clone https://gitea.osmocom.org/sim-card/osmo-remsim
 
-After receiving the configuration, osmo-remsim-client will establish a
-RSPRO data connection to the osmo-remsim-bankd IP:Port.
+There is a web interface at <https://gitea.osmocom.org/sim-card/osmo-remsim>.
 
-As the USB interface for remote SIM in simtrace2.git uses one interface
-per slot, we can implement the client in blocking mode, i.e. use
-blocking I/O on the TCP/RSPRO side.  This simplifies the code compared
-to a more complex async implementation.
+Documentation
+-------------
+
+The User Manual is [optionally] built in PDF form as part of the build process.
+
+A pre-rendered PDF version of the current `master` can be found at
+[User Manual](https://downloads.osmocom.org/docs/latest/osmo-remsim-usermanual.pdf).
 
 
-osmo-remsim-bankd
------------------
+Forum
+-----
 
-The osmo-remsim-bankd (SIM Bank Daemon) manages one given SIM bank.  The
-initial implementation supports a PC/SC driver to expose any PC/SC
-compatible card readers as SIM bank.
+We welcome any osmo-remsim related discussions in the
+[SIM Card Technology](https://discourse.osmocom.org/c/sim-card-technology/)
+section of the osmocom discourse (web based Forum).
 
-osmo-remsim-bankd initially connects via a RSPRO control connection to
-osmo-remsim-server at startup, and will in turn receive a set of initial
-[client,slot]:[bankd,slot] mappings.  These mappings determine which
-slot on the client (corresponding to a modem) is mapped to which slot on
-the SIM bank.  Mappings can be updated by osmo-remsim-server at any given
-point in time.
 
-osmo-remsim-bankd implements a RSPRO server, where it listens to
-connections from osmo-remsim-clients.
+Mailing List
+------------
 
-As PC/SC only offers a blocking API, there is one thread per PC/SC slot.
-This thread will perform blocking I/O on the socket towards the client,
-and blocking API calls on PC/SC.
+There is no separate mailing list for this project. However,
+discussions related to pySim are happening on the simtrace
+<simtrace@lists.osmocom.org> mailing list, please see
+<https://lists.osmocom.org/mailman/listinfo/simtrace> for subscription
+options and the list archive.
 
-In terms of thread handling, we do:
+Please observe the [Osmocom Mailing List
+Rules](https://osmocom.org/projects/cellular-infrastructure/wiki/Mailing_List_Rules)
+when posting.
 
-* accept() handling in [spare] worker threads
-** this means blocking I/O can be used, as each worker thread only has
-   one TCP connection
-** client identifies itself with client:slot
-** lookup mapping based on client:slot (using mutex for protection)
-** open the reader based on the lookup result
 
-The worker threads initially don't have any mapping to a specific
-reader, and that mapping is only established at a later point after the
-client has identified itself.  The advantage is that the entire bankd
-can live without any non-blocking I/O.
+Issue Tracker
+-------------
 
-The main thread handles the connection to osmo-remsim-server, where it
-can also use non-blocking I/O.  However, re-connection would be
-required, to avoid stalling all banks/cards in the event of a connection
-loss to the server.
+We use the [issue tracker of the osmo-remsim project on osmocom.org](https://osmocom.org/projects/osmo-remsim/issues) for
+tracking the state of bug reports and feature requests.  Feel free to submit any issues you may find, or help
+us out by resolving existing issues.
 
-worker threads have the following states:
-* INIT (just started)
-* ACCEPTING (they're blocking in the accept() call on the server socket fd)
-* CONNECTED_WAIT_ID (TCP established, but peer not yet identified itself)
-* CONNECTED_CLIENT (TCP established, client has identified itself, no mapping)
-* CONNECTED_CLIENT_MAPPED (TCP established, client has identified itself, mapping exists)
-* CONNECTED_CLIENT_MAPPED_CARD (TCP established, client identified, mapping exists, card opened)
-* CONNECTED_SERVER (TCP established, server has identified itself)
 
-Once the client disconnects, or any other error occurs (such as card I/O
-errors), the worker thread either returns to INIT state (closing client
-socket and reader), or it terminates.  Termination would mean that the
-main thread would have to do non-blocking join to detect client
-termination and then re-spawn clients, so the "return to INIT state"
-approach seems to make more sense.
+Contributing
+------------
 
-Open topics:
-* detecting multiple connections from a server, logging this or even
-  avoiding that situation
+Our coding standards are described at
+<https://osmocom.org/projects/cellular-infrastructure/wiki/Coding_standards>
+
+We are using a gerrit-based patch review process explained at
+<https://osmocom.org/projects/cellular-infrastructure/wiki/Gerrit>
