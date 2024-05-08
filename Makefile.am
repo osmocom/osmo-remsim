@@ -9,7 +9,6 @@ EXTRA_DIST = \
 	     .version \
 	     README.md \
 	     asn1 \
-	     contrib/osmo-remsim.spec.in \
 	     debian \
 	     $(NULL)
 

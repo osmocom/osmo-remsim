@@ -197,7 +197,6 @@ AC_OUTPUT(
 	contrib/Makefile
 	contrib/etc_default/Makefile
 	contrib/systemd/Makefile
-	contrib/osmo-remsim.spec
 	doc/Makefile
 	doc/examples/Makefile
 	doc/manuals/Makefile
