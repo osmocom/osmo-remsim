@@ -372,9 +372,9 @@ static void *client_pthread_main(void *arg)
 	if (gethostname(hostname, sizeof(hostname)) < 0)
 		OSMO_STRLCPY_ARRAY(hostname, "unknown");
 
-	osmo_select_init();
 	rc = osmo_ctx_init("client");
 	OSMO_ASSERT(rc == 0);
+	osmo_select_init();
 
 	ct = talloc_zero(OTC_GLOBAL, struct client_thread);
 	OSMO_ASSERT(ct);
