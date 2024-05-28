@@ -8,3 +8,4 @@
 # If any interfaces have been removed or changed since the last public release: c:r:0.
 #library	what	        description / commit summary line
 libosmocore > 1.9.0	working (compiling)	gsmtap_inst_fd2()
+libosmo-simtrace2 >= 0.9.0 required to compile (sim presence polarity)
