@@ -86,6 +86,13 @@ struct client_config {
 		int addr;
 		char *path;
 	} usb;
+
+	/* only valid for simtrace2 devices */
+	struct {
+		/* allow to define sim presence pin behaviour */
+		bool presence_valid;
+		bool presence_pol;
+	} simtrace;
 };
 
 struct bankd_client {

@@ -396,6 +396,7 @@ int client_user_main(struct bankd_client *bc)
 	struct osmo_st2_transport *transp;
 	struct osmo_st2_cardem_inst *ci;
 	struct client_config *cfg = bc->cfg;
+	struct cardemu_usb_msg_config cardem_config = { .features = CEMU_FEAT_F_STATUS_IRQ };
 	int rc, i;
 
 	rc = osmo_libusb_init(NULL);
@@ -456,8 +457,12 @@ int client_user_main(struct bankd_client *bc)
 	for (i = 0; i < 4; i++)
 		allocate_and_submit_in(ci);
 
-	/* request firmware to generate STATUS on IRQ endpoint */
-	osmo_st2_cardem_request_config(ci, CEMU_FEAT_F_STATUS_IRQ);
+	/* request firmware to generate STATUS on IRQ endpoint, set presence polarity */
+	if (cfg->simtrace.presence_valid) {
+		cardem_config.pres_pol = cfg->simtrace.presence_pol ? CEMU_CONFIG_PRES_POL_PRES_H : 0;
+		cardem_config.pres_pol |= CEMU_CONFIG_PRES_POL_VALID;
+	}
+	osmo_st2_cardem_request_config2(ci, &cardem_config);
 
 	while (1) {
 		osmo_select_main(0);

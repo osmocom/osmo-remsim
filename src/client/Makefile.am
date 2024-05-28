@@ -32,7 +32,7 @@ if BUILD_CLIENT_ST2
 bin_PROGRAMS += osmo-remsim-client-st2
 osmo_remsim_client_st2_SOURCES = user_simtrace2.c remsim_client_main.c \
 				 remsim_client.c main_fsm.c ../rspro_client_fsm.c ../debug.c
-osmo_remsim_client_st2_CPPFLAGS = -DUSB_SUPPORT
+osmo_remsim_client_st2_CPPFLAGS = -DUSB_SUPPORT -DSIMTRACE_SUPPORT
 osmo_remsim_client_st2_CFLAGS = $(AM_CFLAGS)
 osmo_remsim_client_st2_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
 			       $(OSMOUSB_LIBS) $(OSMOSIMTRACE2_LIBS) \

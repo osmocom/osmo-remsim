@@ -36,6 +36,9 @@ static void printf_help()
 		"  -r --atr-ignore-rspro      Ignore any ATR from bankd; use only ATR given by -a)\n"
 		"  -e --event-script <path>   event script to be called by client\n"
 		"  -L --disable-color         Disable colors for logging to stderr\n"
+#ifdef SIMTRACE_SUPPORT
+		"  -Z --set-sim-presence <0-1> Define the presence pin behaviou\n"
+#endif
 #ifdef USB_SUPPORT
 		"  -V --usb-vendor VENDOR_ID\n"
 		"  -P --usb-product PRODUCT_ID\n"
@@ -79,6 +82,9 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 		};
 
 		c = getopt_long(argc, argv, "hvd:i:p:c:n:a:re:L"
+#ifdef SIMTRACE_SUPPORT
+						"Z:"
+#endif
 #ifdef USB_SUPPORT
 						"V:P:C:I:S:A:H:"
 #endif
@@ -128,6 +134,12 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 		case 'L':
 			log_set_use_color(osmo_stderr_target, 0);
 			break;
+#ifdef SIMTRACE_SUPPORT
+		case 'Z':
+			cfg->simtrace.presence_valid = true;
+			cfg->simtrace.presence_pol = atoi(optarg);
+			break;
+#endif
 #ifdef USB_SUPPORT
 		case 'V':
 			cfg->usb.vendor_id = strtol(optarg, NULL, 16);
