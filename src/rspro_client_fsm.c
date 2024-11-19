@@ -76,7 +76,7 @@ static const int k_reestablish_delay_s[] = {
 static void push_and_send(struct ipa_client_conn *ipa, struct msgb *msg_tx)
 {
 	ipa_prepend_header_ext(msg_tx, IPAC_PROTO_EXT_RSPRO);
-	ipa_msg_push_header(msg_tx, IPAC_PROTO_OSMO);
+	ipa_prepend_header(msg_tx, IPAC_PROTO_OSMO);
 	ipa_client_conn_send(ipa, msg_tx);
 	/* msg_tx is now queued and will be freed. */
 }
