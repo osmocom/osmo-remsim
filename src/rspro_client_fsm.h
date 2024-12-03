@@ -18,12 +18,10 @@ enum server_conn_fsm_event {
 	SRVC_E_RSPRO_TX		/* transmit a RSPRO PDU to the peer */
 };
 
-struct ipa_client_conn;
-
 struct osmo_rspro_client {
 	const char *unit_name;
 
-	struct ipa_client_conn *link;
+	struct osmo_stream_cli *link;
 	osmo_rspro_client_read_cb_t read_cb;
 	void *data;
 
@@ -36,7 +34,7 @@ struct osmo_rspro_client {
 /* representing a client-side connection to a RSPRO server */
 struct rspro_server_conn {
 	/* state */
-	struct ipa_client_conn *conn;
+	struct osmo_stream_cli *conn;
 	struct osmo_fsm_inst *fi;
 	struct osmo_fsm_inst *keepalive_fi;
 	int (*handle_rx)(struct rspro_server_conn *conn, const RsproPDU_t *pdu);
