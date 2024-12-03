@@ -1,16 +1,25 @@
-AM_CFLAGS = -Wall -I$(top_srcdir)/include -I/$(top_builddir)/include -I$(top_srcdir)/src \
-	    $(OSMOCORE_CFLAGS) $(OSMOGSM_CFLAGS) $(OSMOABIS_CFLAGS) \
+AM_CFLAGS = -Wall \
+	    -I$(top_srcdir)/include \
+	    -I/$(top_builddir)/include \
+	    -I$(top_srcdir)/src \
+	    -I$(top_srcdir)/include/osmocom/rspro \
+	    $(OSMOABIS_CFLAGS) \
+	    $(OSMOGSM_CFLAGS) \
+	    $(OSMOCORE_CFLAGS) \
 	    $(PCSC_CFLAGS) $(USB_CFLAGS) \
 	    $(OSMOSIMTRACE2_CFLAGS) \
-	    -I$(top_srcdir)/include/osmocom/rspro
+	    $(NULL)
 
 bin_PROGRAMS = osmo-remsim-client-shell
 
 osmo_remsim_client_shell_SOURCES = user_shell.c remsim_client_main.c \
 				   remsim_client.c main_fsm.c ../rspro_client_fsm.c ../debug.c
 osmo_remsim_client_shell_CFLAGS = $(AM_CFLAGS)
-osmo_remsim_client_shell_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
-		      $(top_builddir)/src/libosmo-rspro.la
+osmo_remsim_client_shell_LDADD = $(top_builddir)/src/libosmo-rspro.la \
+				 $(OSMOABIS_LIBS) \
+				 $(OSMOGSM_LIBS) \
+				 $(OSMOCORE_LIBS) \
+				 $(NULL)
 
 if BUILD_CLIENT_IFDHANDLER
 EXTRA_DIST=PkgInfo osmo-remsim-client-reader_conf.in
@@ -24,8 +33,11 @@ libifd_remsim_client_la_SOURCES = user_ifdhandler.c \
 libifd_remsim_client_la_CFLAGS = $(AM_CFLAGS)
 libifd_remsim_client_la_CPPFLAGS = $(PCSC_CFLAGS)
 libifd_remsim_client_la_LDFLAGS = -no-undefined
-libifd_remsim_client_la_LIBADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
-		      $(top_builddir)/src/libosmo-rspro.la
+libifd_remsim_client_la_LIBADD = $(top_builddir)/src/libosmo-rspro.la \
+				 $(OSMOABIS_LIBS) \
+				 $(OSMOGSM_LIBS) \
+				 $(OSMOCORE_LIBS) \
+				 $(NULL)
 endif
 
 if BUILD_CLIENT_ST2
@@ -34,10 +46,14 @@ osmo_remsim_client_st2_SOURCES = user_simtrace2.c remsim_client_main.c \
 				 remsim_client.c main_fsm.c ../rspro_client_fsm.c ../debug.c
 osmo_remsim_client_st2_CPPFLAGS = -DUSB_SUPPORT -DSIMTRACE_SUPPORT
 osmo_remsim_client_st2_CFLAGS = $(AM_CFLAGS)
-osmo_remsim_client_st2_LDADD = $(OSMOCORE_LIBS) $(OSMOGSM_LIBS) $(OSMOABIS_LIBS) \
-			       $(OSMOUSB_LIBS) $(OSMOSIMTRACE2_LIBS) \
+osmo_remsim_client_st2_LDADD = $(top_builddir)/src/libosmo-rspro.la \
+			       $(OSMOABIS_LIBS) \
+			       $(OSMOSIMTRACE2_LIBS) \
+			       $(OSMOGSM_LIBS) \
+			       $(OSMOCORE_LIBS) \
+			       $(OSMOUSB_LIBS) \
 			       $(USB_LIBS) \
-			       $(top_builddir)/src/libosmo-rspro.la
+			       $(NULL)
 endif
 
-noinst_HEADERS = client.h 
+noinst_HEADERS = client.h

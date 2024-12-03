@@ -7,9 +7,14 @@ SUBDIRS += server
 endif
 SUBDIRS += client
 
-AM_CFLAGS = -Wall -I$(top_srcdir)/include -I$(top_builddir)/include \
-	    $(OSMOCORE_CFLAGS) $(OSMOGSM_CFLAGS) $(OSMOABIS_CFLAGS) \
-	    -I$(top_srcdir)/include/osmocom/rspro
+AM_CFLAGS = -Wall \
+	    -I$(top_srcdir)/include \
+	    -I$(top_builddir)/include \
+	    -I$(top_srcdir)/include/osmocom/rspro \
+	    $(OSMOABIS_CFLAGS) \
+	    $(OSMOGSM_CFLAGS) \
+	    $(OSMOCORE_CFLAGS) \
+	    $(NULL)
 
 RSPRO_LIBVERSION=2:0:0
 lib_LTLIBRARIES = libosmo-rspro.la
