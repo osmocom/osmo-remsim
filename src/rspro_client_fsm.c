@@ -25,12 +25,16 @@
 #include <talloc.h>
 
 #include <osmocom/core/logging.h>
+#include <osmocom/core/select.h>
 #include <osmocom/core/utils.h>
 #include <osmocom/core/msgb.h>
 #include <osmocom/core/fsm.h>
-
-#include <osmocom/abis/ipa.h>
 #include <osmocom/gsm/protocol/ipaccess.h>
+#include <osmocom/netif/stream.h>
+#include <osmocom/netif/ipa.h>
+
+/* libosmo-abis still needed for ipa_keepalive_fsm: */
+#include <osmocom/abis/ipa.h>
 
 #include "debug.h"
 #include "asn1c_helpers.h"
@@ -73,15 +77,15 @@ static const int k_reestablish_delay_s[] = {
  * remsim-bankd for their RSPRO control connection to remsim-server.
  ***********************************************************************/
 
-static void push_and_send(struct ipa_client_conn *ipa, struct msgb *msg_tx)
+static void push_and_send(struct osmo_stream_cli *cli, struct msgb *msg_tx)
 {
 	ipa_prepend_header_ext(msg_tx, IPAC_PROTO_EXT_RSPRO);
 	ipa_prepend_header(msg_tx, IPAC_PROTO_OSMO);
-	ipa_client_conn_send(ipa, msg_tx);
+	osmo_stream_cli_send(cli, msg_tx);
 	/* msg_tx is now queued and will be freed. */
 }
 
-static int ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *rspro)
+static int cli_conn_send_rspro(struct osmo_stream_cli *cli, RsproPDU_t *rspro)
 {
 	struct msgb *msg = rspro_enc_msg(rspro);
 	if (!msg) {
@@ -90,14 +94,14 @@ static int ipa_client_conn_send_rspro(struct ipa_client_conn *ipa, RsproPDU_t *r
 		ASN_STRUCT_FREE(asn_DEF_RsproPDU, rspro);
 		return -1;
 	}
-	push_and_send(ipa, msg);
+	push_and_send(cli, msg);
 	return 0;
 }
 
 static int _server_conn_send_rspro(struct rspro_server_conn *srvc, RsproPDU_t *rspro)
 {
 	LOGPFSML(srvc->fi, LOGL_DEBUG, "Tx RSPRO %s\n", rspro_msgt_name(rspro));
-	return ipa_client_conn_send_rspro(srvc->conn, rspro);
+	return cli_conn_send_rspro(srvc->conn, rspro);
 }
 
 int server_conn_send_rspro(struct rspro_server_conn *srvc, RsproPDU_t *rspro)
@@ -139,35 +143,101 @@ static const struct value_string server_conn_fsm_event_names[] = {
 	{ 0, NULL }
 };
 
-static void srvc_updown_cb(struct ipa_client_conn *conn, int up)
+static int srvc_connect_cb(struct osmo_stream_cli *cli)
 {
-	struct rspro_server_conn *srvc = conn->data;
-
-	LOGPFSML(srvc->fi, LOGL_NOTICE, "RSPRO link to %s:%d %s\n",
-		 conn->addr, conn->port, up ? "UP" : "DOWN");
-
-	osmo_fsm_inst_dispatch(srvc->fi, up ? SRVC_E_TCP_UP: SRVC_E_TCP_DOWN, 0);
+	struct rspro_server_conn *srvc = osmo_stream_cli_get_data(cli);
+	LOGPFSML(srvc->fi, LOGL_NOTICE, "RSPRO link to %s:%d UP\n", srvc->server_host, srvc->server_port);
+	osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_TCP_UP, 0);
+	return 0;
 }
 
-static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
+static int srvc_disconnect_cb(struct osmo_stream_cli *cli)
 {
-	struct ipaccess_head *hh = (struct ipaccess_head *) msg->data;
-	struct ipaccess_head_ext *he = (struct ipaccess_head_ext *) msgb_l2(msg);
-	struct rspro_server_conn *srvc = conn->data;
+	struct rspro_server_conn *srvc = osmo_stream_cli_get_data(cli);
+
+	LOGPFSML(srvc->fi, LOGL_NOTICE, "RSPRO link to %s:%d DOWN\n", srvc->server_host, srvc->server_port);
+	osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_TCP_DOWN, 0);
+	return 0;
+}
+
+static struct msgb *ipa_bts_id_ack(void)
+{
+	struct msgb *nmsg2;
+	nmsg2 = ipa_msg_alloc(0);
+	if (!nmsg2)
+		return NULL;
+	msgb_v_put(nmsg2, IPAC_MSGT_ID_ACK);
+	ipa_prepend_header(nmsg2, IPAC_PROTO_IPACCESS);
+	return nmsg2;
+}
+
+static int _ipaccess_bts_handle_ccm(struct osmo_stream_cli *cli, struct rspro_server_conn *srvc, struct msgb *msg)
+{
+	/* special handling for IPA CCM. */
+	if (osmo_ipa_msgb_cb_proto(msg) != IPAC_PROTO_IPACCESS)
+		return 0;
+
+	int ret = 0;
+	const uint8_t *data = msgb_l2(msg);
+	int len = msgb_l2len(msg);
+	OSMO_ASSERT(len > 0);
+	uint8_t msg_type = *data;
+
+	/* ping, pong and acknowledgment cases. */
+	struct osmo_fd tmp_ofd = { .fd = osmo_stream_cli_get_fd(cli) };
+	OSMO_ASSERT(tmp_ofd.fd >= 0);
+	ret = ipa_ccm_rcvmsg_bts_base(msg, &tmp_ofd);
+	if (ret < 0)
+		goto err;
+
+	/* this is a request for identification from the BSC. */
+	if (msg_type == IPAC_MSGT_ID_GET) {
+		struct msgb *rmsg;
+		LOGPFSML(srvc->fi, LOGL_NOTICE, "received ID_GET for unit ID %u/%u/%u\n",
+			 srvc->ipa_dev.site_id, srvc->ipa_dev.bts_id, srvc->ipa_dev.trx_id);
+		rmsg = ipa_ccm_make_id_resp_from_req(&srvc->ipa_dev, data + 1, len - 1);
+		if (!rmsg) {
+			LOGPFSML(srvc->fi, LOGL_ERROR, "Failed parsing ID_GET message.\n");
+			goto err;
+		}
+		osmo_stream_cli_send(cli, rmsg);
+
+		/* send ID_ACK. */
+		rmsg = ipa_bts_id_ack();
+		if (!rmsg) {
+			LOGPFSML(srvc->fi, LOGL_ERROR, "Failed allocating ID_ACK message.\n");
+			goto err;
+		}
+		osmo_stream_cli_send(cli, rmsg);
+	}
+	return 1;
+
+err:
+	return -1;
+}
+
+static int srvc_read_cb(struct osmo_stream_cli *cli, int res, struct msgb *msg)
+{
+	enum ipaccess_proto ipa_proto = osmo_ipa_msgb_cb_proto(msg);
+	struct rspro_server_conn *srvc = osmo_stream_cli_get_data(cli);
 	RsproPDU_t *pdu;
 	int rc;
 
-	if (msgb_length(msg) < sizeof(*hh))
-		goto invalid;
-	msg->l2h = &hh->data[0];
-	switch (hh->proto) {
+	if (res <= 0) {
+		LOGPFSML(srvc->fi, LOGL_NOTICE, "failed reading from socket: %d\n", res);
+		goto err;
+	}
+
+	switch (ipa_proto) {
 	case IPAC_PROTO_IPACCESS:
-		rc = ipaccess_bts_handle_ccm(srvc->conn, &srvc->ipa_dev, msg);
+		OSMO_ASSERT(msgb_l2len(msg) > 0);
+		uint8_t msg_type = msg->l2h[0];
+		rc = _ipaccess_bts_handle_ccm(srvc->conn, srvc, msg);
 		if (rc < 0) {
 			msgb_free(msg);
 			break;
 		}
-		switch (hh->data[0]) {
+		switch (msg_type) {
 		case IPAC_MSGT_PONG:
 			ipa_keepalive_fsm_pong_received(srvc->keepalive_fi);
 			rc = 0;
@@ -177,10 +247,7 @@ static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 		}
 		break;
 	case IPAC_PROTO_OSMO:
-		if (!he || msgb_l2len(msg) < sizeof(*he))
-			goto invalid;
-		msg->l2h = &he->data[0];
-		switch (he->proto) {
+		switch (osmo_ipa_msgb_cb_proto_ext(msg)) {
 		case IPAC_PROTO_EXT_RSPRO:
 			LOGPFSML(srvc->fi, LOGL_DEBUG, "Received RSPRO %s\n", msgb_hexdump(msg));
 			pdu = rspro_dec_msg(msg);
@@ -192,20 +259,20 @@ static int srvc_read_cb(struct ipa_client_conn *conn, struct msgb *msg)
 			ASN_STRUCT_FREE(asn_DEF_RsproPDU, pdu);
 			break;
 		default:
-			goto invalid;
+			goto err;
 		}
 		break;
 	default:
-		goto invalid;
+		goto err;
 	}
 
 	msgb_free(msg);
 	return rc;
 
-invalid:
-	LOGPFSML(srvc->fi, LOGL_ERROR, "Error decoding PDU\n");
+err:
 	msgb_free(msg);
-	return -1;
+	osmo_stream_cli_close(cli);
+	return -EBADF;
 }
 
 static const struct ipa_keepalive_params ka_params = {
@@ -294,8 +361,7 @@ static void srvc_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 		if (res != ResultCode_ok) {
 			LOGPFSML(fi, LOGL_ERROR, "Rx RSPRO connectClientRes(result=%s), closing\n",
 				 asn_enum_name(&asn_DEF_ResultCode, res));
-			ipa_client_conn_close(srvc->conn);
-			osmo_fsm_inst_dispatch(fi, SRVC_E_TCP_DOWN, NULL);
+			osmo_stream_cli_close(srvc->conn);
 		} else {
 			/* somehow notify the main code? */
 			osmo_fsm_inst_state_chg(fi, SRVC_ST_CONNECTED, 0, 0);
@@ -341,6 +407,12 @@ static void srvc_st_connected_onleave(struct osmo_fsm_inst *fi, uint32_t next_st
 		osmo_fsm_inst_dispatch(fi->proc.parent, srvc->parent_disc_evt, NULL);
 }
 
+static void ipa_keepalive_send_cb(struct osmo_fsm_inst *fi, void *conn, struct msgb *msg)
+{
+	struct osmo_stream_cli *cli = (struct osmo_stream_cli *)conn;
+	osmo_stream_cli_send(cli, msg);
+}
+
 static int ipa_kaepalive_timeout_cb(struct osmo_fsm_inst *ka_fi, void *conn)
 {
 	struct osmo_fsm_inst *fi = ka_fi->proc.parent;
@@ -360,8 +432,7 @@ static void srvc_st_reestablish_delay_onenter(struct osmo_fsm_inst *fi, uint32_t
 
 	if (srvc->conn) {
 		LOGPFSML(fi, LOGL_INFO, "Destroying existing connection to server\n");
-		ipa_client_conn_close(srvc->conn);
-		ipa_client_conn_destroy(srvc->conn);
+		osmo_stream_cli_destroy(srvc->conn);
 		srvc->conn = NULL;
 	}
 
@@ -387,24 +458,39 @@ static void srvc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 
 	LOGPFSML(fi, LOGL_INFO, "Creating TCP connection to server at %s:%u\n",
 		 srvc->server_host, srvc->server_port);
-	srvc->conn = ipa_client_conn_create2(fi, NULL, 0, NULL, 0, srvc->server_host, srvc->server_port,
-						srvc_updown_cb, srvc_read_cb, NULL, srvc);
+	srvc->conn = osmo_stream_cli_create(fi);
 	if (!srvc->conn) {
 		LOGPFSML(fi, LOGL_FATAL, "Unable to create socket: %s\n", strerror(errno));
 		exit(1);
 	}
 
-	srvc->keepalive_fi = ipa_client_conn_alloc_keepalive_fsm(srvc->conn, &ka_params, fi->id);
+	osmo_stream_cli_set_name(srvc->conn, fi->id);
+	osmo_stream_cli_set_data(srvc->conn, srvc);
+	osmo_stream_cli_set_addr(srvc->conn, srvc->server_host);
+	osmo_stream_cli_set_port(srvc->conn, srvc->server_port);
+	osmo_stream_cli_set_proto(srvc->conn, IPPROTO_TCP);
+	osmo_stream_cli_set_nodelay(srvc->conn, true);
+
+	/* Reconnect is handled by upper layers: */
+	osmo_stream_cli_set_reconnect_timeout(srvc->conn, -1);
+
+	osmo_stream_cli_set_segmentation_cb(srvc->conn, osmo_ipa_segmentation_cb);
+	osmo_stream_cli_set_connect_cb(srvc->conn, srvc_connect_cb);
+	osmo_stream_cli_set_disconnect_cb(srvc->conn, srvc_disconnect_cb);
+	osmo_stream_cli_set_read_cb2(srvc->conn, srvc_read_cb);
+
+	srvc->keepalive_fi = ipa_generic_conn_alloc_keepalive_fsm(srvc->conn, srvc->conn, &ka_params, fi->id);
 	if (!srvc->keepalive_fi) {
 		LOGPFSM(fi, "Unable to create keepalive FSM\n");
 		exit(1);
 	}
+	ipa_keepalive_fsm_set_send_cb(srvc->keepalive_fi, ipa_keepalive_send_cb);
 	ipa_keepalive_fsm_set_timeout_cb(srvc->keepalive_fi, ipa_kaepalive_timeout_cb);
 	/* ensure parent is notified once keepalive FSM instance is dying */
 	osmo_fsm_inst_change_parent(srvc->keepalive_fi, srvc->fi, SRVC_E_KA_TERMINATED);
 
 	/* Attempt to connect TCP socket */
-	rc = ipa_client_conn_open(srvc->conn);
+	rc = osmo_stream_cli_open(srvc->conn);
 	if (rc < 0) {
 		LOGPFSML(fi, LOGL_FATAL, "Unable to connect RSPRO to %s:%u - %s\n",
 			srvc->server_host, srvc->server_port, strerror(errno));
@@ -446,8 +532,7 @@ static void srvc_allstate_action(struct osmo_fsm_inst *fi, uint32_t event, void 
 		}
 		if (srvc->conn) {
 			LOGPFSML(fi, LOGL_INFO, "Destroying existing connection to server\n");
-			ipa_client_conn_close(srvc->conn);
-			ipa_client_conn_destroy(srvc->conn);
+			osmo_stream_cli_destroy(srvc->conn);
 			srvc->conn = NULL;
 		}
 		osmo_fsm_inst_state_chg(fi, SRVC_ST_INIT, 0, 0);
@@ -472,8 +557,7 @@ static int server_conn_fsm_timer_cb(struct osmo_fsm_inst *fi)
 		break;
 	case 1:
 		/* no ClientConnectRes received: disconnect + reconnect */
-		ipa_client_conn_close(srvc->conn);
-		osmo_fsm_inst_dispatch(fi, SRVC_E_TCP_DOWN, NULL);
+		osmo_stream_cli_close(srvc->conn);
 		break;
 	default:
 		OSMO_ASSERT(0);

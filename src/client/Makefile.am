@@ -4,6 +4,7 @@ AM_CFLAGS = -Wall \
 	    -I$(top_srcdir)/src \
 	    -I$(top_srcdir)/include/osmocom/rspro \
 	    $(OSMOABIS_CFLAGS) \
+	    $(OSMONETIF_CFLAGS) \
 	    $(OSMOGSM_CFLAGS) \
 	    $(OSMOCORE_CFLAGS) \
 	    $(PCSC_CFLAGS) $(USB_CFLAGS) \
@@ -17,6 +18,7 @@ osmo_remsim_client_shell_SOURCES = user_shell.c remsim_client_main.c \
 osmo_remsim_client_shell_CFLAGS = $(AM_CFLAGS)
 osmo_remsim_client_shell_LDADD = $(top_builddir)/src/libosmo-rspro.la \
 				 $(OSMOABIS_LIBS) \
+				 $(OSMONETIF_LIBS) \
 				 $(OSMOGSM_LIBS) \
 				 $(OSMOCORE_LIBS) \
 				 $(NULL)
@@ -35,6 +37,7 @@ libifd_remsim_client_la_CPPFLAGS = $(PCSC_CFLAGS)
 libifd_remsim_client_la_LDFLAGS = -no-undefined
 libifd_remsim_client_la_LIBADD = $(top_builddir)/src/libosmo-rspro.la \
 				 $(OSMOABIS_LIBS) \
+				 $(OSMONETIF_LIBS) \
 				 $(OSMOGSM_LIBS) \
 				 $(OSMOCORE_LIBS) \
 				 $(NULL)
@@ -48,6 +51,7 @@ osmo_remsim_client_st2_CPPFLAGS = -DUSB_SUPPORT -DSIMTRACE_SUPPORT
 osmo_remsim_client_st2_CFLAGS = $(AM_CFLAGS)
 osmo_remsim_client_st2_LDADD = $(top_builddir)/src/libosmo-rspro.la \
 			       $(OSMOABIS_LIBS) \
+			       $(OSMONETIF_LIBS) \
 			       $(OSMOSIMTRACE2_LIBS) \
 			       $(OSMOGSM_LIBS) \
 			       $(OSMOCORE_LIBS) \

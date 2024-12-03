@@ -1,7 +1,8 @@
 #pragma once
 
 #include <osmocom/core/fsm.h>
-#include <osmocom/abis/ipa.h>
+#include <osmocom/gsm/ipa.h>
+#include <osmocom/netif/stream.h>
 #include <osmocom/rspro/RsproPDU.h>
 
 #include "rspro_util.h"
@@ -17,12 +18,10 @@ enum server_conn_fsm_event {
 	SRVC_E_RSPRO_TX		/* transmit a RSPRO PDU to the peer */
 };
 
-struct rspro_server_conn;
-
 /* representing a client-side connection to a RSPRO server */
 struct rspro_server_conn {
 	/* state */
-	struct ipa_client_conn *conn;
+	struct osmo_stream_cli *conn;
 	struct osmo_fsm_inst *fi;
 	struct osmo_fsm_inst *keepalive_fi;
 	int (*handle_rx)(struct rspro_server_conn *conn, const RsproPDU_t *pdu);

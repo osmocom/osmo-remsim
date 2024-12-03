@@ -32,6 +32,7 @@
 #include <netdb.h>
 
 #include <osmocom/core/socket.h>
+#include <osmocom/core/select.h>
 #include <osmocom/core/linuxlist.h>
 #include <osmocom/core/logging.h>
 #include <osmocom/core/application.h>

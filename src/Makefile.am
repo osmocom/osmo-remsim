@@ -12,6 +12,7 @@ AM_CFLAGS = -Wall \
 	    -I$(top_builddir)/include \
 	    -I$(top_srcdir)/include/osmocom/rspro \
 	    $(OSMOABIS_CFLAGS) \
+	    $(OSMONETIF_CFLAGS) \
 	    $(OSMOGSM_CFLAGS) \
 	    $(OSMOCORE_CFLAGS) \
 	    $(NULL)
@@ -19,7 +20,7 @@ AM_CFLAGS = -Wall \
 RSPRO_LIBVERSION=2:0:0
 lib_LTLIBRARIES = libosmo-rspro.la
 libosmo_rspro_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(RSPRO_LIBVERSION)
-# OSMOGSM_LIBS, OSMOABIS_LIBS not needed, we don't use any of its symbols, only the header above
+# OSMOABIS_LIBS, OSMONETIF_LIBS, OSMOGSM_LIBS not needed, we don't use any of its symbols, only the header above
 libosmo_rspro_la_LIBADD = $(OSMOCORE_LIBS) \
 			  rspro/libosmo-asn1-rspro.la
 libosmo_rspro_la_SOURCES = rspro_util.c asn1c_helpers.c
