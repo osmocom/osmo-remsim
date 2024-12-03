@@ -3,6 +3,7 @@
 #include <osmocom/core/fsm.h>
 #include <osmocom/abis/ipa.h>
 #include <osmocom/rspro/RsproPDU.h>
+#include <osmocom/rspro/rspro_client.h>
 
 #include "rspro_util.h"
 
@@ -17,7 +18,20 @@ enum server_conn_fsm_event {
 	SRVC_E_RSPRO_TX		/* transmit a RSPRO PDU to the peer */
 };
 
-struct rspro_server_conn;
+struct ipa_client_conn;
+
+struct osmo_rspro_client {
+	const char *unit_name;
+
+	struct ipa_client_conn *link;
+	osmo_rspro_client_read_cb_t read_cb;
+	void *data;
+
+	struct osmo_timer_list ping_timer;
+	struct osmo_timer_list connect_timer;
+	int is_connected;
+	int got_ipa_pong;
+};
 
 /* representing a client-side connection to a RSPRO server */
 struct rspro_server_conn {

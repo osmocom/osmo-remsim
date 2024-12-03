@@ -28,24 +28,10 @@
 #define OSMO_RSPRO_CLIENT_PING_INTERVAL 20
 
 struct msgb;
-struct ipa_client_conn;
 struct osmo_rspro_client;
 
 /* Expects message in msg->l2h */
 typedef int (*osmo_rspro_client_read_cb_t)(struct osmo_rspro_client *rsproc, struct msgb *msg);
-
-struct osmo_rspro_client {
-	const char *unit_name;
-
-	struct ipa_client_conn *link;
-	osmo_rspro_client_read_cb_t read_cb;
-	void *data;
-
-	struct osmo_timer_list ping_timer;
-	struct osmo_timer_list connect_timer;
-	int is_connected;
-	int got_ipa_pong;
-};
 
 struct osmo_rspro_client *osmo_rspro_client_create(void *talloc_ctx,
 						 const char *unit_name,
