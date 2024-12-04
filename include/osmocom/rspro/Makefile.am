@@ -72,8 +72,3 @@ noinst_HEADERS+=per_support.h
 noinst_HEADERS+=per_decoder.h
 noinst_HEADERS+=per_encoder.h
 noinst_HEADERS+=per_opentype.h
-
-rspro_HEADERS = \
-	rspro_client.h
-
-rsprodir = $(includedir)/osmocom/rspro

@@ -1,4 +1,3 @@
-usr/include/osmocom/rspro
 usr/lib/*/libosmo-rspro*.a
 usr/lib/*/libosmo-rspro*.so
 usr/lib/*/libosmo-rspro*.la
