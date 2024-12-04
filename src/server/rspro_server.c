@@ -2,6 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <errno.h>
 
 #include <osmocom/core/linuxlist.h>
 #include <osmocom/core/select.h>
@@ -9,6 +10,7 @@
 #include <osmocom/core/logging.h>
 #include <osmocom/core/socket.h>
 #include <osmocom/gsm/protocol/ipaccess.h>
+#include <osmocom/netif/ipa.h>
 #include <osmocom/abis/ipa.h>
 
 #include <osmocom/rspro/RsproPDU.h>
@@ -60,7 +62,7 @@ static void client_conn_send(struct rspro_client_conn *conn, RsproPDU_t *pdu)
 	}
 	ipa_prepend_header_ext(msg_tx, IPAC_PROTO_EXT_RSPRO);
 	ipa_prepend_header(msg_tx, IPAC_PROTO_OSMO);
-	ipa_server_conn_send(conn->peer, msg_tx);
+	osmo_stream_srv_send(conn->peer, msg_tx);
 }
 
 
@@ -127,9 +129,10 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 	RsproPDU_t *resp = NULL;
 	char ip_str[INET6_ADDRSTRLEN];
 	char port_str[6];
+	int fd = osmo_stream_srv_get_fd(conn->peer);
 
 	/* remote IP and port */
-	osmo_sock_get_ip_and_port(conn->peer->ofd.fd, ip_str, sizeof(ip_str),
+	osmo_sock_get_ip_and_port(fd, ip_str, sizeof(ip_str),
 				  port_str, sizeof(port_str), false);
 
 	switch (event) {
@@ -174,9 +177,14 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 				 * timeout, or to continue to operate.  If we were to drop the old
 				 * connection, this could interrupt a perfectly working connection and opens
 				 * some kind of DoS. */
+				char prev_ip_str[INET6_ADDRSTRLEN];
+				char prev_port_str[6];
+				int prev_fd = osmo_stream_srv_get_fd(previous_conn->peer);
+				osmo_sock_get_ip_and_port(prev_fd, prev_ip_str, sizeof(prev_ip_str),
+							  prev_port_str, sizeof(prev_port_str), false);
 				LOGPFSML(fi, LOGL_ERROR, "New client connection from %s:%s, but we already "
-					 "have a connection from %s:%u. Dropping new connection.\n",
-					 ip_str, port_str, previous_conn->peer->addr, previous_conn->peer->port);
+					 "have a connection from %s:%s. Dropping new connection.\n",
+					 ip_str, port_str, prev_ip_str, prev_port_str);
 				resp = rspro_gen_ConnectClientRes(&conn->srv->comp_id, ResultCode_identityInUse);
 				client_conn_send(conn, resp);
 				osmo_fsm_inst_state_chg(fi, CLNTC_ST_REJECTED, 1, 2);
@@ -218,14 +226,19 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 		/* check for unique-ness */
 		previous_conn = bankd_conn_by_id(conn->srv, conn->bank.bank_id);
 		if (previous_conn && previous_conn != conn) {
+			char prev_ip_str[INET6_ADDRSTRLEN];
+			char prev_port_str[6];
+			int prev_fd = osmo_stream_srv_get_fd(previous_conn->peer);
+			osmo_sock_get_ip_and_port(prev_fd, prev_ip_str, sizeof(prev_ip_str),
+							prev_port_str, sizeof(prev_port_str), false);
 			/* we're dropping the current (new) connection as we don't really know which
 			 * is the "right" one. Dropping the new gives the old connection time to
 			 * timeout, or to continue to operate.  If we were to drop the old
 			 * connection, this could interrupt a perfectly working connection and opens
 			 * some kind of DoS. */
 			LOGPFSML(fi, LOGL_ERROR, "New bankd connection from %s:%s, but we already "
-				 "have a connection from %s:%u. Dropping new connection.\n",
-				 ip_str, port_str, previous_conn->peer->addr, previous_conn->peer->port);
+				 "have a connection from %s:%s. Dropping new connection.\n",
+				 ip_str, port_str, prev_ip_str, prev_port_str);
 			resp = rspro_gen_ConnectBankRes(&conn->srv->comp_id, ResultCode_identityInUse);
 			client_conn_send(conn, resp);
 			osmo_fsm_inst_state_chg(fi, CLNTC_ST_REJECTED, 1, 2);
@@ -307,8 +320,9 @@ static void _update_client_for_slotmap(struct slot_mapping *map, struct rspro_se
 		bankd_port = 0;
 	} else {
 		/* obtain IP and port of bankd */
-		rc = osmo_sock_get_ip_and_port(bankd_conn->peer->ofd.fd, ip_str, sizeof(ip_str),
-						port_str, sizeof(port_str), false);
+		rc = osmo_sock_get_ip_and_port(osmo_stream_srv_get_fd(bankd_conn->peer),
+					       ip_str, sizeof(ip_str),
+					       port_str, sizeof(port_str), false);
 		if (rc < 0) {
 			LOGPFSML(bankd_conn->fi, LOGL_ERROR, "Error during getpeername\n");
 			return;
@@ -636,66 +650,127 @@ static int handle_rx_rspro(struct rspro_client_conn *conn, const RsproPDU_t *pdu
 	return 0;
 }
 
-/* data was received from one of the client connections to the RSPRO socket */
-static int sock_read_cb(struct ipa_server_conn *peer, struct msgb *msg)
+static int _ipa_srv_conn_ccm(struct rspro_client_conn *conn, struct msgb *msg)
 {
-	struct ipaccess_head *hh = (struct ipaccess_head *) msg->data;
-	struct ipaccess_head_ext *he = (struct ipaccess_head_ext *) msgb_l2(msg);
-	struct rspro_client_conn *conn = peer->data;
+	struct tlv_parsed tlvp;
+	uint8_t msg_type;
+	struct ipaccess_unit unit_data = {};
+	char *unitid;
+	int len, ret;
+
+	OSMO_ASSERT(msgb_l2len(msg) > 0);
+	msg_type = msg->l2h[0];
+
+	switch (msg_type) {
+	case IPAC_MSGT_PING:
+		ret = ipa_ccm_send_pong(osmo_stream_srv_get_fd(conn->peer));
+		if (ret < 0) {
+			LOGPFSML(conn->fi, LOGL_ERROR, "Cannot send PONG message. Reason: %s\n", strerror(errno));
+			goto err;
+		}
+		return 0;
+	case IPAC_MSGT_PONG:
+		LOGPFSML(conn->fi, LOGL_DEBUG, "PONG!\n");
+		ipa_keepalive_fsm_pong_received(conn->keepalive_fi);
+		return 0;
+	case IPAC_MSGT_ID_ACK:
+		LOGPFSML(conn->fi, LOGL_DEBUG, "ID_ACK? -> ACK!\n");
+		ret = ipa_ccm_send_id_ack(osmo_stream_srv_get_fd(conn->peer));
+		if (ret < 0) {
+			LOGPFSML(conn->fi, LOGL_ERROR, "Cannot send ID_ACK message. Reason: %s\n", strerror(errno));
+			goto err;
+		}
+		return 0;
+	case IPAC_MSGT_ID_RESP:
+		ret = ipa_ccm_id_resp_parse(&tlvp, (const uint8_t *)msg->l2h+1, msgb_l2len(msg)-1);
+		if (ret < 0) {
+			LOGPFSML(conn->fi, LOGL_ERROR, "IPA CCM RESPonse with malformed TLVs\n");
+			goto err;
+		}
+		if (!TLVP_PRESENT(&tlvp, IPAC_IDTAG_UNIT)) {
+			LOGPFSML(conn->fi, LOGL_ERROR, "IPA CCM RESP without unit ID\n");
+			goto err;
+		}
+		len = TLVP_LEN(&tlvp, IPAC_IDTAG_UNIT);
+		if (len < 1) {
+			LOGPFSML(conn->fi, LOGL_ERROR, "IPA CCM RESP with short unit ID\n");
+			goto err;
+		}
+		unitid = (char *) TLVP_VAL(&tlvp, IPAC_IDTAG_UNIT);
+		unitid[len-1] = '\0';
+		ipa_parse_unitid(unitid, &unit_data);
+		break;
+	default:
+		LOGPFSML(conn->fi, LOGL_ERROR, "Unknown IPA message type\n");
+		goto err;
+	}
+
+	return 0;
+err:
+	/* Connection and msgb destroyed by parent. */
+	return -1;
+}
+
+/* data was received from one of the client connections to the RSPRO socket */
+static int sock_read_cb(struct osmo_stream_srv *peer, int res, struct msgb *msg)
+{
+	enum ipaccess_proto ipa_proto = osmo_ipa_msgb_cb_proto(msg);
+	struct rspro_client_conn *conn = osmo_stream_srv_get_data(peer);
 	RsproPDU_t *pdu;
 	int rc;
 
-	if (msgb_length(msg) < sizeof(*hh))
-		goto invalid;
-	msg->l2h = &hh->data[0];
-	switch (hh->proto) {
+	if (res <= 0) {
+		LOGPFSML(conn->fi, LOGL_NOTICE, "failed reading from socket: %d\n", res);
+		goto err;
+	}
+
+	switch (ipa_proto) {
 	case IPAC_PROTO_IPACCESS:
-		rc = ipa_server_conn_ccm(peer, msg);
+		rc = _ipa_srv_conn_ccm(conn, msg);
 		if (rc < 0)
-			break;
-		switch (hh->data[0]) {
-		case IPAC_MSGT_PONG:
-			ipa_keepalive_fsm_pong_received(conn->keepalive_fi);
-			rc = 0;
-			break;
-		default:
-			break;
-		}
+			goto err;
 		break;
 	case IPAC_PROTO_OSMO:
-		if (!he || msgb_l2len(msg)< sizeof(*he))
-			goto invalid;
-		msg->l2h = &he->data[0];
-
-		switch (he->proto) {
+		switch (osmo_ipa_msgb_cb_proto_ext(msg)) {
 		case IPAC_PROTO_EXT_RSPRO:
 			pdu = rspro_dec_msg(msg);
-			if (!pdu)
-				goto invalid;
-
+			if (!pdu) {
+				rc = -EIO;
+				break;
+			}
 			rc = handle_rx_rspro(conn, pdu);
 			ASN_STRUCT_FREE(asn_DEF_RsproPDU, pdu);
 			break;
 		default:
-			goto invalid;
+			LOGPFSML(conn->fi, LOGL_ERROR, "Rx unexpected ipa proto ext: %d\n",
+				 osmo_ipa_msgb_cb_proto_ext(msg));
+			goto err;
 		}
 		break;
 	default:
-		goto invalid;
+		LOGPFSML(conn->fi, LOGL_ERROR, "Rx unexpected ipa proto: %d\n", ipa_proto);
+		goto err;
 	}
+
 	msgb_free(msg);
 	return rc;
 
-invalid:
+err:
 	msgb_free(msg);
-	return -1;
+	osmo_stream_srv_destroy(peer);
+	return -EBADF;
 }
 
-static int sock_closed_cb(struct ipa_server_conn *peer)
+static int sock_closed_cb(struct osmo_stream_srv *peer)
 {
-	struct rspro_client_conn *conn = peer->data;
-	if (conn->fi)
+	struct rspro_client_conn *conn = osmo_stream_srv_get_data(peer);
+	if (!conn)
+		return 0; /* rspro conn is already being destroyed, do nothing. */
+	osmo_stream_srv_set_data(peer, NULL);
+	if (conn->fi) {
+		conn->peer = NULL;
 		osmo_fsm_inst_dispatch(conn->fi, CLNTC_E_TCP_DOWN, NULL);
+	}
 	/* FIXME: who cleans up conn? */
 	/* ipa server code relases 'peer' just after this */
 	return 0;
@@ -706,10 +781,16 @@ static const struct ipa_keepalive_params ka_params = {
 	.wait_for_resp = 10,
 };
 
-/* a new TCP connection was accepted on the RSPRO server socket */
-static int accept_cb(struct ipa_server_link *link, int fd)
+static void ipa_keepalive_send_cb(struct osmo_fsm_inst *fi, void *conn, struct msgb *msg)
 {
-	struct rspro_server *srv = link->data;
+	struct osmo_stream_srv *srv = (struct osmo_stream_srv *)conn;
+	osmo_stream_srv_send(srv, msg);
+}
+
+/* a new TCP connection was accepted on the RSPRO server socket */
+static int accept_cb(struct osmo_stream_srv_link *link, int fd)
+{
+	struct rspro_server *srv = osmo_stream_srv_link_get_data(link);
 	struct rspro_client_conn *conn;
 
 	conn = talloc_zero(srv, struct rspro_client_conn);
@@ -717,9 +798,12 @@ static int accept_cb(struct ipa_server_link *link, int fd)
 
 	conn->srv = srv;
 	/* don't allocate peer under 'conn', as it must survive 'conn' during teardown */
-	conn->peer = ipa_server_conn_create(link, link, fd, sock_read_cb, sock_closed_cb, conn);
+	conn->peer = osmo_stream_srv_create2(link, link, fd, conn);
 	if (!conn->peer)
 		goto out_err;
+	osmo_stream_srv_set_read_cb(conn->peer, sock_read_cb);
+	osmo_stream_srv_set_closed_cb(conn->peer, sock_closed_cb);
+	osmo_stream_srv_set_segmentation_cb(conn->peer, osmo_ipa_segmentation_cb);
 
 	/* don't allocate 'fi' as slave from 'conn', as 'fi' needs to survive 'conn' during
 	 * teardown */
@@ -728,11 +812,12 @@ static int accept_cb(struct ipa_server_link *link, int fd)
 		goto out_err_conn;
 
 	/* use ipa_keepalive_fsm to periodically send an IPA_PING and expect a PONG in response */
-	conn->keepalive_fi = ipa_server_conn_alloc_keepalive_fsm(conn->peer, &ka_params, NULL);
+	conn->keepalive_fi = ipa_generic_conn_alloc_keepalive_fsm(conn->peer, conn->peer, &ka_params, NULL);
 	if (!conn->keepalive_fi)
 		goto out_err_fi;
 	/* ensure parent is notified once keepalive FSM instance is dying */
 	osmo_fsm_inst_change_parent(conn->keepalive_fi, conn->fi, CLNTC_E_KA_TIMEOUT);
+	ipa_keepalive_fsm_set_send_cb(conn->keepalive_fi, ipa_keepalive_send_cb);
 	ipa_keepalive_fsm_start(conn->keepalive_fi);
 
 	INIT_LLIST_HEAD(&conn->bank.maps_new);
@@ -751,7 +836,7 @@ static int accept_cb(struct ipa_server_link *link, int fd)
 out_err_fi:
 	osmo_fsm_inst_term(conn->fi, OSMO_FSM_TERM_ERROR, NULL);
 out_err_conn:
-	ipa_server_conn_destroy(conn->peer);
+	osmo_stream_srv_destroy(conn->peer);
 	/* the above will free 'conn' down the chain */
 	return -1;
 out_err:
@@ -824,8 +909,12 @@ static void _unlink_all_slotmaps(struct rspro_client_conn *conn)
 static void rspro_client_conn_destroy(struct rspro_client_conn *conn)
 {
 	/* this will internally call closed_cb() which will dispatch a TCP_DOWN event */
-	ipa_server_conn_destroy(conn->peer);
-	conn->peer = NULL;
+	if (conn->peer) {
+		osmo_stream_srv_set_data(conn->peer, NULL);
+		osmo_stream_srv_destroy(conn->peer);
+		conn->peer = NULL;
+		return;
+	} /* else: destroy initiated by conn->peer's closed_cb(). */
 
 	/* ensure all slotmaps are unlinked + returned to NEW or deleted */
 	slotmaps_wrlock(conn->srv->slotmaps);
@@ -854,18 +943,26 @@ struct rspro_server *rspro_server_create(void *ctx, const char *host, uint16_t p
 	INIT_LLIST_HEAD(&srv->banks);
 	pthread_rwlock_unlock(&srv->rwlock);
 
-	srv->link = ipa_server_link_create(ctx, NULL, host, port, accept_cb, srv);
+	srv->link = osmo_stream_srv_link_create(ctx);
 	if (!srv->link)
 		goto out_free;
 
-	rc = ipa_server_link_open(srv->link);
+	osmo_stream_srv_link_set_proto(srv->link, IPPROTO_TCP);
+	osmo_stream_srv_link_set_addr(srv->link, host);
+	osmo_stream_srv_link_set_port(srv->link, port);
+	osmo_stream_srv_link_set_data(srv->link, srv);
+	osmo_stream_srv_link_set_nodelay(srv->link, true);
+	osmo_stream_srv_link_set_accept_cb(srv->link, accept_cb);
+
+
+	rc = osmo_stream_srv_link_open(srv->link);
 	if (rc < 0)
 		goto out_destroy;
 
 	return srv;
 
 out_destroy:
-	ipa_server_link_destroy(srv->link);
+	osmo_stream_srv_link_destroy(srv->link);
 out_free:
 	pthread_rwlock_destroy(&srv->rwlock);
 	talloc_free(srv);
@@ -877,7 +974,7 @@ void rspro_server_destroy(struct rspro_server *srv)
 {
 	/* FIXME: clear all lists */
 
-	ipa_server_link_destroy(srv->link);
+	osmo_stream_srv_link_destroy(srv->link);
 	srv->link = NULL;
 	pthread_rwlock_destroy(&srv->rwlock);
 	talloc_free(srv);

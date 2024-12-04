@@ -3,13 +3,13 @@
 #include <osmocom/core/linuxlist.h>
 #include <osmocom/core/select.h>
 #include <osmocom/core/fsm.h>
-#include <osmocom/abis/ipa.h>
+#include <osmocom/netif/stream.h>
 
 #include "rspro_util.h"
 #include "slotmap.h"
 
 struct rspro_server {
-	struct ipa_server_link *link;
+	struct osmo_stream_srv_link *link;
 	/* list of rspro_client_conn */
 	struct llist_head connections;
 	struct llist_head clients;
@@ -30,7 +30,7 @@ struct rspro_client_conn {
 	/* back-pointer to rspro_server */
 	struct rspro_server *srv;
 	/* reference to the underlying IPA server connection */
-	struct ipa_server_conn *peer;
+	struct osmo_stream_srv *peer;
 	/* FSM instance for this connection */
 	struct osmo_fsm_inst *fi;
 	/* remote component identity (after it has been received) */
