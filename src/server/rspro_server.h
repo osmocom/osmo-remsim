@@ -4,6 +4,7 @@
 #include <osmocom/core/select.h>
 #include <osmocom/core/fsm.h>
 #include <osmocom/netif/stream.h>
+#include <osmocom/netif/ipa.h>
 
 #include "rspro_util.h"
 #include "slotmap.h"
@@ -36,7 +37,7 @@ struct rspro_client_conn {
 	/* remote component identity (after it has been received) */
 	struct app_comp_id comp_id;
 	/* keep-alive handling FSM */
-	struct osmo_fsm_inst *keepalive_fi;
+	struct osmo_ipa_ka_fsm_inst *ka_fi;
 
 	struct {
 		struct llist_head maps_new;

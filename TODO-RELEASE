@@ -9,3 +9,4 @@
 #library	what	        description / commit summary line
 libosmocore > 1.9.0	working (compiling)	gsmtap_inst_fd2()
 libosmo-simtrace2 >= 0.9.0 required to compile (sim presence polarity)
+libosmo-netif >1.5.1  osmo_ipa_ka_fsm_inst APIs

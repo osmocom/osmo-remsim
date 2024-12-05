@@ -11,7 +11,6 @@
 #include <osmocom/core/socket.h>
 #include <osmocom/gsm/protocol/ipaccess.h>
 #include <osmocom/netif/ipa.h>
-#include <osmocom/abis/ipa.h>
 
 #include <osmocom/rspro/RsproPDU.h>
 
@@ -164,9 +163,7 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 			rspro2client_slot(&conn->client.slot, cclreq->clientSlot);
 			osmo_fsm_inst_update_id_f(fi, "C%u:%u", conn->client.slot.client_id,
 						  conn->client.slot.slot_nr);
-			osmo_fsm_inst_update_id_f(conn->keepalive_fi, "C%u:%u",
-						  conn->client.slot.client_id,
-						  conn->client.slot.slot_nr);
+			osmo_ipa_ka_fsm_set_id(conn->ka_fi, fi->id);
 			LOGPFSML(fi, LOGL_INFO, "Client connected from %s:%s\n", ip_str, port_str);
 
 			/* check for unique-ness */
@@ -214,7 +211,7 @@ static void clnt_st_established(struct osmo_fsm_inst *fi, uint32_t event, void *
 		conn->bank.bank_id = cbreq->bankId;
 		conn->bank.num_slots = cbreq->numberOfSlots;
 		osmo_fsm_inst_update_id_f(fi, "B%u", conn->bank.bank_id);
-		osmo_fsm_inst_update_id_f(conn->keepalive_fi, "B%u", conn->bank.bank_id);
+		osmo_ipa_ka_fsm_set_id(conn->ka_fi, fi->id);
 
 		LOGPFSML(fi, LOGL_INFO, "Bankd connected from %s:%s\n", ip_str, port_str);
 		if (!strncmp(ip_str, "127.", 4)) {
@@ -671,7 +668,7 @@ static int _ipa_srv_conn_ccm(struct rspro_client_conn *conn, struct msgb *msg)
 		return 0;
 	case IPAC_MSGT_PONG:
 		LOGPFSML(conn->fi, LOGL_DEBUG, "PONG!\n");
-		ipa_keepalive_fsm_pong_received(conn->keepalive_fi);
+		osmo_ipa_ka_fsm_pong_received(conn->ka_fi);
 		return 0;
 	case IPAC_MSGT_ID_ACK:
 		LOGPFSML(conn->fi, LOGL_DEBUG, "ID_ACK? -> ACK!\n");
@@ -764,28 +761,37 @@ err:
 static int sock_closed_cb(struct osmo_stream_srv *peer)
 {
 	struct rspro_client_conn *conn = osmo_stream_srv_get_data(peer);
-	if (!conn)
-		return 0; /* rspro conn is already being destroyed, do nothing. */
+	OSMO_ASSERT(conn);
 	osmo_stream_srv_set_data(peer, NULL);
-	if (conn->fi) {
-		conn->peer = NULL;
-		osmo_fsm_inst_dispatch(conn->fi, CLNTC_E_TCP_DOWN, NULL);
+	if (conn->ka_fi) {
+		osmo_ipa_ka_fsm_stop(conn->ka_fi);
+		osmo_ipa_ka_fsm_free(conn->ka_fi);
+		conn->ka_fi = NULL;
 	}
-	/* FIXME: who cleans up conn? */
-	/* ipa server code relases 'peer' just after this */
+	if (conn->fi) {
+		if (conn->peer) {
+			conn->peer = NULL;
+			osmo_fsm_inst_dispatch(conn->fi, CLNTC_E_TCP_DOWN, NULL);
+		} /* else: rspro conn is already being destroyed, do nothing. */
+	}
 	return 0;
 }
 
-static const struct ipa_keepalive_params ka_params = {
-	.interval = 30,
-	.wait_for_resp = 10,
-};
-
-static void ipa_keepalive_send_cb(struct osmo_fsm_inst *fi, void *conn, struct msgb *msg)
+static int ipa_keepalive_send_cb(struct osmo_ipa_ka_fsm_inst *ka_fi, struct msgb *msg, void *data)
 {
-	struct osmo_stream_srv *srv = (struct osmo_stream_srv *)conn;
+	struct osmo_stream_srv *srv = data;
 	osmo_stream_srv_send(srv, msg);
+	return 0;
 }
+
+static int ipa_keepalive_timeout_cb(struct osmo_ipa_ka_fsm_inst *ka_fi, void *data)
+{
+	struct osmo_stream_srv *peer = data;
+	struct rspro_client_conn *conn = osmo_stream_srv_get_data(peer);
+	osmo_fsm_inst_dispatch(conn->fi, CLNTC_E_KA_TIMEOUT, NULL);
+	return 0;
+}
+
 
 /* a new TCP connection was accepted on the RSPRO server socket */
 static int accept_cb(struct osmo_stream_srv_link *link, int fd)
@@ -812,13 +818,15 @@ static int accept_cb(struct osmo_stream_srv_link *link, int fd)
 		goto out_err_conn;
 
 	/* use ipa_keepalive_fsm to periodically send an IPA_PING and expect a PONG in response */
-	conn->keepalive_fi = ipa_generic_conn_alloc_keepalive_fsm(conn->peer, conn->peer, &ka_params, NULL);
-	if (!conn->keepalive_fi)
+	conn->ka_fi = osmo_ipa_ka_fsm_alloc(conn->peer, conn->fi->id);
+	if (!conn->ka_fi)
 		goto out_err_fi;
-	/* ensure parent is notified once keepalive FSM instance is dying */
-	osmo_fsm_inst_change_parent(conn->keepalive_fi, conn->fi, CLNTC_E_KA_TIMEOUT);
-	ipa_keepalive_fsm_set_send_cb(conn->keepalive_fi, ipa_keepalive_send_cb);
-	ipa_keepalive_fsm_start(conn->keepalive_fi);
+	osmo_ipa_ka_fsm_set_data(conn->ka_fi, conn->peer);
+	osmo_ipa_ka_fsm_set_ping_interval(conn->ka_fi, 30);
+	osmo_ipa_ka_fsm_set_pong_timeout(conn->ka_fi, 10);
+	osmo_ipa_ka_fsm_set_send_cb(conn->ka_fi, ipa_keepalive_send_cb);
+	osmo_ipa_ka_fsm_set_timeout_cb(conn->ka_fi, ipa_keepalive_timeout_cb);
+	osmo_ipa_ka_fsm_start(conn->ka_fi);
 
 	INIT_LLIST_HEAD(&conn->bank.maps_new);
 	INIT_LLIST_HEAD(&conn->bank.maps_unack);
@@ -910,9 +918,9 @@ static void rspro_client_conn_destroy(struct rspro_client_conn *conn)
 {
 	/* this will internally call closed_cb() which will dispatch a TCP_DOWN event */
 	if (conn->peer) {
-		osmo_stream_srv_set_data(conn->peer, NULL);
-		osmo_stream_srv_destroy(conn->peer);
+		struct osmo_stream_srv *peer = conn->peer;
 		conn->peer = NULL;
+		osmo_stream_srv_destroy(peer);
 		return;
 	} /* else: destroy initiated by conn->peer's closed_cb(). */
 

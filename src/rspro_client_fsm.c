@@ -33,9 +33,6 @@
 #include <osmocom/netif/stream.h>
 #include <osmocom/netif/ipa.h>
 
-/* libosmo-abis still needed for ipa_keepalive_fsm: */
-#include <osmocom/abis/ipa.h>
-
 #include "debug.h"
 #include "asn1c_helpers.h"
 #include "rspro_client_fsm.h"
@@ -137,7 +134,6 @@ static const struct value_string server_conn_fsm_event_names[] = {
 	OSMO_VALUE_STRING(SRVC_E_TCP_UP),
 	OSMO_VALUE_STRING(SRVC_E_TCP_DOWN),
 	OSMO_VALUE_STRING(SRVC_E_KA_TIMEOUT),
-	OSMO_VALUE_STRING(SRVC_E_KA_TERMINATED),
 	OSMO_VALUE_STRING(SRVC_E_CLIENT_CONN_RES),
 	OSMO_VALUE_STRING(SRVC_E_RSPRO_TX),
 	{ 0, NULL }
@@ -156,6 +152,13 @@ static int srvc_disconnect_cb(struct osmo_stream_cli *cli)
 	struct rspro_server_conn *srvc = osmo_stream_cli_get_data(cli);
 
 	LOGPFSML(srvc->fi, LOGL_NOTICE, "RSPRO link to %s:%d DOWN\n", srvc->server_host, srvc->server_port);
+
+	if (srvc->ka_fi) {
+		osmo_ipa_ka_fsm_stop(srvc->ka_fi);
+		osmo_ipa_ka_fsm_free(srvc->ka_fi);
+		srvc->ka_fi = NULL;
+	}
+
 	osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_TCP_DOWN, 0);
 	return 0;
 }
@@ -239,7 +242,7 @@ static int srvc_read_cb(struct osmo_stream_cli *cli, int res, struct msgb *msg)
 		}
 		switch (msg_type) {
 		case IPAC_MSGT_PONG:
-			ipa_keepalive_fsm_pong_received(srvc->keepalive_fi);
+			osmo_ipa_ka_fsm_pong_received(srvc->ka_fi);
 			rc = 0;
 			break;
 		default:
@@ -274,11 +277,6 @@ err:
 	osmo_stream_cli_close(cli);
 	return -EBADF;
 }
-
-static const struct ipa_keepalive_params ka_params = {
-	.interval = 30,
-	.wait_for_resp = 10,
-};
 
 static int64_t get_monotonic_ms(void)
 {
@@ -334,7 +332,7 @@ static void srvc_st_established_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
 	RsproPDU_t *pdu;
 
-	ipa_keepalive_fsm_start(srvc->keepalive_fi);
+	osmo_ipa_ka_fsm_start(srvc->ka_fi);
 
 	if (srvc->own_comp_id.type == ComponentType_remsimClient)
 		pdu = rspro_gen_ConnectClientReq(&srvc->own_comp_id, srvc->clslot);
@@ -407,28 +405,24 @@ static void srvc_st_connected_onleave(struct osmo_fsm_inst *fi, uint32_t next_st
 		osmo_fsm_inst_dispatch(fi->proc.parent, srvc->parent_disc_evt, NULL);
 }
 
-static void ipa_keepalive_send_cb(struct osmo_fsm_inst *fi, void *conn, struct msgb *msg)
+static int ipa_keepalive_send_cb(struct osmo_ipa_ka_fsm_inst *ka_fi, struct msgb *msg, void *data)
 {
-	struct osmo_stream_cli *cli = (struct osmo_stream_cli *)conn;
+	struct osmo_stream_cli *cli = data;
 	osmo_stream_cli_send(cli, msg);
+	return 0;
 }
 
-static int ipa_kaepalive_timeout_cb(struct osmo_fsm_inst *ka_fi, void *conn)
+static int ipa_keepalive_timeout_cb(struct osmo_ipa_ka_fsm_inst *ka_fi, void *data)
 {
-	struct osmo_fsm_inst *fi = ka_fi->proc.parent;
-	osmo_fsm_inst_dispatch(fi, SRVC_E_KA_TIMEOUT, NULL);
-	return 0; /* we will explicitly terminate it */
+	struct osmo_stream_cli *cli = data;
+	struct rspro_server_conn *srvc = osmo_stream_cli_get_data(cli);
+	osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_KA_TIMEOUT, NULL);
+	return 0;
 }
 
 static void srvc_st_reestablish_delay_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
 {
 	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
-
-	if (srvc->keepalive_fi) {
-		ipa_keepalive_fsm_stop(srvc->keepalive_fi);
-		osmo_fsm_inst_term(srvc->keepalive_fi, OSMO_FSM_TERM_REGULAR, NULL);
-		srvc->keepalive_fi = NULL;
-	}
 
 	if (srvc->conn) {
 		LOGPFSML(fi, LOGL_INFO, "Destroying existing connection to server\n");
@@ -449,6 +443,7 @@ static void srvc_st_reestablish_delay(struct osmo_fsm_inst *fi, uint32_t event, 
 		OSMO_ASSERT(0);
 	}
 }
+
 static void srvc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_state)
 {
 	struct rspro_server_conn *srvc = (struct rspro_server_conn *) fi->priv;
@@ -461,7 +456,7 @@ static void srvc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 	srvc->conn = osmo_stream_cli_create(fi);
 	if (!srvc->conn) {
 		LOGPFSML(fi, LOGL_FATAL, "Unable to create socket: %s\n", strerror(errno));
-		exit(1);
+		goto err_exit;
 	}
 
 	osmo_stream_cli_set_name(srvc->conn, fi->id);
@@ -479,15 +474,16 @@ static void srvc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 	osmo_stream_cli_set_disconnect_cb(srvc->conn, srvc_disconnect_cb);
 	osmo_stream_cli_set_read_cb2(srvc->conn, srvc_read_cb);
 
-	srvc->keepalive_fi = ipa_generic_conn_alloc_keepalive_fsm(srvc->conn, srvc->conn, &ka_params, fi->id);
-	if (!srvc->keepalive_fi) {
+	srvc->ka_fi = osmo_ipa_ka_fsm_alloc(srvc->conn, fi->id);
+	if (!srvc->ka_fi) {
 		LOGPFSM(fi, "Unable to create keepalive FSM\n");
-		exit(1);
+		goto err_free_cli;
 	}
-	ipa_keepalive_fsm_set_send_cb(srvc->keepalive_fi, ipa_keepalive_send_cb);
-	ipa_keepalive_fsm_set_timeout_cb(srvc->keepalive_fi, ipa_kaepalive_timeout_cb);
-	/* ensure parent is notified once keepalive FSM instance is dying */
-	osmo_fsm_inst_change_parent(srvc->keepalive_fi, srvc->fi, SRVC_E_KA_TERMINATED);
+	osmo_ipa_ka_fsm_set_data(srvc->ka_fi, srvc->conn);
+	osmo_ipa_ka_fsm_set_ping_interval(srvc->ka_fi, 30);
+	osmo_ipa_ka_fsm_set_pong_timeout(srvc->ka_fi, 10);
+	osmo_ipa_ka_fsm_set_send_cb(srvc->ka_fi, ipa_keepalive_send_cb);
+	osmo_ipa_ka_fsm_set_timeout_cb(srvc->ka_fi, ipa_keepalive_timeout_cb);
 
 	/* Attempt to connect TCP socket */
 	rc = osmo_stream_cli_open(srvc->conn);
@@ -495,8 +491,17 @@ static void srvc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 		LOGPFSML(fi, LOGL_FATAL, "Unable to connect RSPRO to %s:%u - %s\n",
 			srvc->server_host, srvc->server_port, strerror(errno));
 		/* FIXME: retry? Timer? Abort? */
-		OSMO_ASSERT(0);
+		goto err_free_ka_fi;
 	}
+
+err_free_ka_fi:
+	osmo_ipa_ka_fsm_free(srvc->ka_fi);
+	srvc->ka_fi = NULL;
+err_free_cli:
+	osmo_stream_cli_destroy(srvc->conn);
+	srvc->conn = NULL;
+err_exit:
+	exit(1);
 }
 
 static void srvc_st_reestablish(struct osmo_fsm_inst *fi, uint32_t event, void *data)
@@ -525,11 +530,6 @@ static void srvc_allstate_action(struct osmo_fsm_inst *fi, uint32_t event, void 
 		srvc_do_reestablish(fi);
 		break;
 	case SRVC_E_DISCONNECT:
-		if (srvc->keepalive_fi) {
-			ipa_keepalive_fsm_stop(srvc->keepalive_fi);
-			osmo_fsm_inst_term(srvc->keepalive_fi, OSMO_FSM_TERM_REGULAR, NULL);
-			srvc->keepalive_fi = NULL;
-		}
 		if (srvc->conn) {
 			LOGPFSML(fi, LOGL_INFO, "Destroying existing connection to server\n");
 			osmo_stream_cli_destroy(srvc->conn);
