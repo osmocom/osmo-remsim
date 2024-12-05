@@ -781,6 +781,8 @@ static int sock_closed_cb(struct osmo_stream_srv *peer)
 static int ipa_keepalive_send_cb(struct osmo_ipa_ka_fsm_inst *ka_fi, struct msgb *msg)
 {
 	struct osmo_stream_srv *srv = osmo_ipa_ka_fsm_get_data(ka_fi);
+	struct rspro_client_conn *conn = osmo_stream_srv_get_data(srv);
+	LOGPFSML(conn->fi, LOGL_INFO, "Tx IPA PING\n");
 	osmo_stream_srv_send(srv, msg);
 	return 0;
 }
@@ -789,6 +791,7 @@ static int ipa_keepalive_timeout_cb(struct osmo_ipa_ka_fsm_inst *ka_fi)
 {
 	struct osmo_stream_srv *peer = osmo_ipa_ka_fsm_get_data(ka_fi);
 	struct rspro_client_conn *conn = osmo_stream_srv_get_data(peer);
+	LOGPFSML(conn->fi, LOGL_NOTICE, "IPA PONG Timeout\n");
 	osmo_fsm_inst_dispatch(conn->fi, CLNTC_E_KA_TIMEOUT, NULL);
 	return 0;
 }
@@ -835,9 +838,11 @@ static int accept_cb(struct osmo_stream_srv_link *link, int fd)
 	INIT_LLIST_HEAD(&conn->bank.maps_delreq);
 	INIT_LLIST_HEAD(&conn->bank.maps_deleting);
 
+	LOGPFSML(conn->fi, LOGL_NOTICE, "PESPIN: wlock_wrlock()\n");
 	pthread_rwlock_wrlock(&conn->srv->rwlock);
 	llist_add_tail(&conn->list, &srv->connections);
 	pthread_rwlock_unlock(&conn->srv->rwlock);
+	LOGPFSML(conn->fi, LOGL_NOTICE, "PESPIN: wlock_unlock()\n");
 
 	osmo_fsm_inst_dispatch(conn->fi, CLNTC_E_TCP_UP, NULL);
 	return 0;
