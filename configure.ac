@@ -36,7 +36,6 @@ PKG_PROG_PKG_CONFIG([0.20])
 PKG_CHECK_MODULES(OSMOCORE, libosmocore >= 1.6.0)
 PKG_CHECK_MODULES(OSMOGSM, libosmogsm >= 0.11.0)
 PKG_CHECK_MODULES(OSMONETIF, libosmo-netif >= 1.5.0)
-PKG_CHECK_MODULES(OSMOABIS, libosmoabis >= 1.6.0)
 
 AC_ARG_ENABLE([remsim-server],[AS_HELP_STRING([--disable-remsim-server], [Build osmo-remsim-server])],
 	[osmo_ac_build_server="$enableval"],[osmo_ac_build_server="yes"])
