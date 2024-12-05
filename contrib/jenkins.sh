@@ -1,5 +1,5 @@
 #!/bin/sh
-# jenkins build helper script for libosmo-abis.  This is how we build on jenkins.osmocom.org
+# jenkins build helper script for osmo-remsim.  This is how we build on jenkins.osmocom.org
 #
 # environment variables:
 # * WITH_MANUALS: build manual PDFs if set to "1"
@@ -30,7 +30,6 @@ export PATH="$inst/bin:$PATH"
 
 osmo-build-dep.sh libosmocore "" --disable-doxygen
 osmo-build-dep.sh libosmo-netif "" --disable-doxygen
-osmo-build-dep.sh libosmo-abis
 osmo-build-dep.sh simtrace2
 
 # Additional configure options and depends

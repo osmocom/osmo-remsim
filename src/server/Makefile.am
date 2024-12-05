@@ -4,7 +4,6 @@ AM_CFLAGS = -Wall \
 	    -I$(top_builddir)/include \
 	    -I$(top_srcdir)/src \
 	    -I$(top_srcdir)/include/osmocom/rspro \
-	    $(OSMOABIS_CFLAGS) \
 	    $(OSMONETIF_CFLAGS) \
 	    $(OSMOGSM_CFLAGS) \
 	    $(OSMOCORE_CFLAGS) \
@@ -20,7 +19,6 @@ bin_PROGRAMS = osmo-remsim-server
 osmo_remsim_server_SOURCES = remsim_server.c rspro_server.c rest_api.c \
 			     ../rspro_util.c ../slotmap.c ../debug.c
 osmo_remsim_server_LDADD = $(top_builddir)/src/libosmo-rspro.la \
-			   $(OSMOABIS_LIBS) \
 			   $(OSMONETIF_LIBS) \
 			   $(OSMOGSM_LIBS) \
 			   $(OSMOCORE_LIBS) \
