@@ -13,7 +13,6 @@ enum server_conn_fsm_event {
 	SRVC_E_TCP_UP,
 	SRVC_E_TCP_DOWN,
 	SRVC_E_KA_TIMEOUT,
-	SRVC_E_KA_TERMINATED,
 	SRVC_E_CLIENT_CONN_RES,
 	SRVC_E_RSPRO_TX		/* transmit a RSPRO PDU to the peer */
 };
@@ -23,7 +22,7 @@ struct rspro_server_conn {
 	/* state */
 	struct osmo_stream_cli *conn;
 	struct osmo_fsm_inst *fi;
-	struct osmo_fsm_inst *keepalive_fi;
+	struct osmo_ipa_ka_fsm_inst *ka_fi;
 	int (*handle_rx)(struct rspro_server_conn *conn, const RsproPDU_t *pdu);
 
 	/* index into k_reestablish_delay[] for this connection */

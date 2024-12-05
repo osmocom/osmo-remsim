@@ -22,6 +22,7 @@
 #include <libusb.h>
 
 #include <osmocom/core/fsm.h>
+#include <osmocom/core/select.h>
 #include <osmocom/core/utils.h>
 
 #include <osmocom/usb/libusb.h>

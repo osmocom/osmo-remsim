@@ -2,7 +2,6 @@
 
 #include <osmocom/core/linuxlist.h>
 #include <osmocom/core/fsm.h>
-#include <osmocom/abis/ipa.h>
 #include <osmocom/rspro/RsproPDU.h>
 
 #include "rspro_util.h"
