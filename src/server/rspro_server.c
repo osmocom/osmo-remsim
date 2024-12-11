@@ -837,9 +837,11 @@ static int accept_cb(struct osmo_stream_srv_link *link, int fd)
 	INIT_LLIST_HEAD(&conn->bank.maps_delreq);
 	INIT_LLIST_HEAD(&conn->bank.maps_deleting);
 
+	LOGPFSML(conn->fi, LOGL_NOTICE, "PESPIN: wlock_wrlock()\n");
 	pthread_rwlock_wrlock(&conn->srv->rwlock);
 	llist_add_tail(&conn->list, &srv->connections);
 	pthread_rwlock_unlock(&conn->srv->rwlock);
+	LOGPFSML(conn->fi, LOGL_NOTICE, "PESPIN: wlock_unlock()\n");
 
 	osmo_fsm_inst_dispatch(conn->fi, CLNTC_E_TCP_UP, NULL);
 	return 0;

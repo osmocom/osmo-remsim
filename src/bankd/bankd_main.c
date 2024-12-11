@@ -81,6 +81,7 @@ static void bankd_init(struct bankd *bankd)
 	osmo_fsm_log_addr(0);
 	log_set_print_tid(osmo_stderr_target, 1);
 	log_enable_multithread();
+	log_target_file_switch_to_stream(osmo_stderr_target);
 
 	asn_debug = 0;
 
@@ -439,6 +440,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "ERROR: reading PCSC slots\n");
 		exit(1);
 	}
+	LOGP(DMAIN, LOGL_INFO, "Finish Read PCSC slots\n");
 
 	/* Connection towards remsim-server */
 	rc = server_conn_fsm_alloc(g_bankd, srvc);
@@ -481,6 +483,7 @@ int main(int argc, char **argv)
 	}
 
 	while (!terminate) {
+		LOGP(DMAIN, LOGL_INFO, "osmo_select_main(0)\n");
 		osmo_select_main(0);
 	}
 	LOGP(DMAIN, LOGL_NOTICE, "Terminated\n");
