@@ -502,6 +502,7 @@ err_free_cli:
 	osmo_stream_cli_destroy(srvc->conn);
 	srvc->conn = NULL;
 err_exit:
+	LOGPFSML(fi, LOGL_FATAL, "exit(1)\n");
 	exit(1);
 }
 

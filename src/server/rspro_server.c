@@ -780,6 +780,8 @@ static int sock_closed_cb(struct osmo_stream_srv *peer)
 static int ipa_keepalive_send_cb(struct osmo_ipa_ka_fsm_inst *ka_fi, struct msgb *msg, void *data)
 {
 	struct osmo_stream_srv *srv = data;
+	struct rspro_client_conn *conn = osmo_stream_srv_get_data(srv);
+	LOGPFSML(conn->fi, LOGL_DEBUG, "Tx IPA PING\n");
 	osmo_stream_srv_send(srv, msg);
 	return 0;
 }
@@ -788,6 +790,7 @@ static int ipa_keepalive_timeout_cb(struct osmo_ipa_ka_fsm_inst *ka_fi, void *da
 {
 	struct osmo_stream_srv *peer = data;
 	struct rspro_client_conn *conn = osmo_stream_srv_get_data(peer);
+	LOGPFSML(conn->fi, LOGL_NOTICE, "IPA PONG Timeout\n");
 	osmo_fsm_inst_dispatch(conn->fi, CLNTC_E_KA_TIMEOUT, NULL);
 	return 0;
 }

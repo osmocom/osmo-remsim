@@ -420,12 +420,15 @@ int main(int argc, char **argv)
 	signal(SIGMAPADD, handle_sig_mapadd);
 	signal(SIGUSR1, handle_sig_usr1);
 
+	LOGP(DMAIN, LOGL_INFO, "Reading PCSC slots...\n");
 	/* Np lock or mutex required for the pcsc_slot_names list, as this is only
 	 * read once during bankd initialization, when the worker threads haven't
 	 * started yet */
 	rc = bankd_pcsc_read_slotnames(g_bankd, "bankd_pcsc_slots.csv");
-	if (rc)
+	if (rc) {
+		fprintf(stderr, "ERROR: failed reading bankd_pcsc_slots.csv file\n");
 		exit(1);
+	}
 
 	/* Connection towards remsim-server */
 	rc = server_conn_fsm_alloc(g_bankd, srvc);
@@ -436,6 +439,8 @@ int main(int argc, char **argv)
 	osmo_fsm_inst_dispatch(srvc->fi, SRVC_E_ESTABLISH, NULL);
 
 	/* create listening socket for inbound client connections */
+	LOGP(DMAIN, LOGL_INFO, "Initiating listen TCP socket at %s:%d\n",
+	     g_bind_ip ? g_bind_ip : "INADDR_ANY", g_bind_port);
 	rc = osmo_sock_init(AF_INET, SOCK_STREAM, IPPROTO_TCP, g_bind_ip, g_bind_port, OSMO_SOCK_F_BIND);
 	if (rc < 0) {
 		fprintf(stderr, "Unable to create TCP socket at %s:%d: %s\n",
@@ -446,6 +451,7 @@ int main(int argc, char **argv)
 
 	/* initialize gsmtap, if required */
 	if (g_bankd->cfg.gsmtap_host) {
+		LOGP(DMAIN, LOGL_INFO, "Initiating GSMTAP\n");
 		rc = bankd_gsmtap_init(g_bankd->cfg.gsmtap_host);
 		if (rc < 0) {
 			fprintf(stderr, "Unable to open GSMTAP\n");
@@ -456,6 +462,7 @@ int main(int argc, char **argv)
 	/* create worker threads: One per reader/slot! */
 	for (i = 0; i < g_bankd->srvc.bankd.num_slots; i++) {
 		struct bankd_worker *w;
+		LOGP(DMAIN, LOGL_INFO, "Initiating worker %d\n", i);
 		w = bankd_create_worker(g_bankd, i);
 		if (!w) {
 			fprintf(stderr, "Error creating bankd worker thread\n");
@@ -463,12 +470,10 @@ int main(int argc, char **argv)
 		}
 	}
 
-	while (1) {
-		if (terminate)
-			break;
+	while (!terminate) {
 		osmo_select_main(0);
 	}
-
+	LOGP(DMAIN, LOGL_NOTICE, "Terminated\n");
 	talloc_free(g_bankd);
 	exit(0);
 }
