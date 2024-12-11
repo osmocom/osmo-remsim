@@ -493,6 +493,7 @@ static void srvc_st_reestablish_onenter(struct osmo_fsm_inst *fi, uint32_t prev_
 		/* FIXME: retry? Timer? Abort? */
 		goto err_free_ka_fi;
 	}
+	return;
 
 err_free_ka_fi:
 	osmo_ipa_ka_fsm_free(srvc->ka_fi);
