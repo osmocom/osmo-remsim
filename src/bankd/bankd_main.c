@@ -303,6 +303,8 @@ static void printf_help(FILE *out)
 "  -g --gsmtap-ip A.B.C.D       Enable GSMTAP and send APDU traces to given IP\n"
 "  -G --gsmtap-slot <0-1023>    Limit tracing to given bank slot, only (default: all slots)\n"
 "  -L --disable-color           Disable colors for logging to stderr\n"
+"  -T --timestamp               Prefix every log line with a timestamp\n"
+"  -e --log-level number        Set a global loglevel.\n"
 	      );
 }
 
@@ -328,10 +330,12 @@ static void handle_options(int argc, char **argv)
 			{ "gsmtap-ip", 1, 0, 'g' },
 			{ "gsmtap-slot", 1, 0, 'G' },
 			{ "disable-color", 0, 0, 'L' },
+			{ "timestamp", 0, 0, 'T' },
+			{ "log-level", 1, 0, 'e' },
 			{ 0, 0, 0, 0 }
 		};
 
-		c = getopt_long(argc, argv, "hVd:i:p:b:n:N:I:P:sg:G:L", long_options, &option_index);
+		c = getopt_long(argc, argv, "hVd:i:p:b:n:N:I:P:sg:G:LTe:", long_options, &option_index);
 		if (c == -1)
 			break;
 
@@ -379,6 +383,12 @@ static void handle_options(int argc, char **argv)
 			break;
 		case 'L':
 			log_set_use_color(osmo_stderr_target, 0);
+			break;
+		case 'T':
+			log_set_print_timestamp(osmo_stderr_target, 1);
+			break;
+		case 'e':
+			log_set_log_level(osmo_stderr_target, atoi(optarg));
 			break;
 		}
 	}

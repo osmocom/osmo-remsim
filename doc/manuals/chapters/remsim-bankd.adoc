@@ -99,6 +99,16 @@ approach seems to make more sense.
   without knowledge of each other, and either of them might modify the card
   state (such as the currently selected file, validated PIN, etc.) in a
   way not expected by the other application.
+*-g, --gsmtap-ip A.B.C.D*::
+  Enable GSMTAP and send APDU traces to given IP.
+*-G, --gsmtap-slot <0-1023>*::
+  Limit tracing to given bank slot, only (default: all slots).
+*-L, --disable-color*::
+  Disable colors for logging to stderr.
+*-T, --timestamp*::
+  Prefix every log line with a timestamp.
+*-e, --log-level number*::
+  Set a global loglevel for all logging.
 
 
 ==== Examples
