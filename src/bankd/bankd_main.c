@@ -448,7 +448,7 @@ int main(int argc, char **argv)
 	if (g_bankd->cfg.gsmtap_host) {
 		rc = bankd_gsmtap_init(g_bankd->cfg.gsmtap_host);
 		if (rc < 0) {
-			fprintf(stderr, "Unable to open GSMTAP");
+			fprintf(stderr, "Unable to open GSMTAP\n");
 			exit(1);
 		}
 	}
