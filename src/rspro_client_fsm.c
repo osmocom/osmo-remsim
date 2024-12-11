@@ -321,7 +321,7 @@ static void srvc_do_reestablish(struct osmo_fsm_inst *fi)
 static void srvc_st_init(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
 	switch (event) {
-	case SRVC_E_ESTABLISH:
+	case SRVC_E_ESTABLISH: /* Handled in all_state */
 	default:
 		OSMO_ASSERT(0);
 	}
