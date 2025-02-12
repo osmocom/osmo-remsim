@@ -16,7 +16,7 @@ AM_CFLAGS = -Wall \
 	    $(OSMOCORE_CFLAGS) \
 	    $(NULL)
 
-RSPRO_LIBVERSION=2:0:0
+RSPRO_LIBVERSION=2:1:0
 lib_LTLIBRARIES = libosmo-rspro.la
 libosmo_rspro_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(RSPRO_LIBVERSION)
 # OSMONETIF_LIBS, OSMOGSM_LIBS not needed, we don't use any of its symbols, only the header above

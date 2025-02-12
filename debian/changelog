@@ -1,3 +1,101 @@
+osmo-remsim (1.1.0) unstable; urgency=medium
+
+  [ Harald Welte ]
+  * manual: Document the logging configuration
+  * manual: update remsim-client options to match --help output
+  * manual: Update changelog, copyright, version
+  * Fix client_id/bank_id/slot_nr range in manual + --help output
+  * Check RSPRO component type; print error if type doesn't match
+  * server: Log connection establishment from bankd/client; warn on localhost
+  * server: Log keep-alive timeout and TCP disconnects
+  * server: Differentiate log levels, not everything is DEBUG
+  * bankd: Differentiate log levels, not everything is DEBUG
+  * server: Fix segfault in error path (client component ID != client)
+  * server: Detect duplicate client/bankd connection; drop new ones
+  * bankd: Better error messages during start-up
+  * encode actual hostname in RSPRO
+  * cosmetic: various typo/spelling fixes
+  * server: Fix various error paths if startup fails
+  * bankd: Log more clearly if we fail to open a PC/SC reader
+  * rspro_client_fsm: Log clientConnectResult != ok
+  * update git URLs (git -> https; gitea)
+  * bankd: log BankID:SlotNr in every log line
+  * main_fsm: Log bankd config (ip/port/bank_id/slot_nr) + disconnect
+  * bankd: Log not just ModemToCard but also CardToModem
+  * Install + package remsim-apitool as separate sub-package
+  * debian/control: Don't use misc:Package
+  * fix rpm spec file for packacing of apitool
+  * client: Log TPDU/ATR/PTS/slotStatus at INFO or NOTICE level
+  * bankd: Open PC/SC by default in EXCLUSIVE mode
+  * client: Fix '-a' command-line argument for ATR
+  * client: Option to ignore any ATR sent by bankd
+  * bankd: Don't log an "Error" if slotmap is removed
+  * remsim-client-st2: Proper error if not all endpoints can be found
+  * Fix various 'uninitialized variable' bugs reported by coverity
+  * rest_api: strtoul canot return negative
+  * remsim_server: handle osmo_fd_register() failure case
+  * rspro_server: Handle ipa_server_link_open() error case
+  * bankd_main: Avoid uninitialized variable
+  * rspro_client_fsm: Fix integer overflow calculating re-establishment delay
+  * user_ifdhandler: Fix missing check of osmo_fd_register return val
+  * user_shell: Fix unchecked return value of osmo_fd_register()
+  * user_simtrace2: Fix uninitialized ifm->path
+  * bankd: Don't use 127.0.0.1 as default IP address for the server
+  * README.md: Major update / meaningful content
+  * Add funding link to github mirror
+
+  [ Oliver Smith ]
+  * treewide: remove FSF address
+  * packaging: osmo-remsim-apitool needs py3-requests
+  * debian: set compat level to 10
+  * systemd: depend on networking-online.target
+  * src/rspro: regenerate to fix misleading indents
+  * checkpatch.conf: ignore rspro generated files
+  * debian/rules: don't compress pdfs
+  * contrib: remove rpm spec file
+  * contrib/jenkins: libosmo-abis after libosmo-netif
+
+  [ James Tavares ]
+  * bankd: add missing -p short form option
+  * ignore libtool artifacts from cross-compile environments
+  * bankd: edge detect RESET and VCC indications
+  * client: set the local/remote mode before inserting card
+  * bankd: Add GSMTAP functionality for SIM traffic
+  * bankd, client, server: add -L option to disable log coloring
+  * rspro_client: implement re-establish delay
+
+  [ Daniel Willmann ]
+  * remsim_client: Fix custom ATR '-a' option
+
+  [ Stephan Skrodzki ]
+  * another csv example for our usb CCID reader
+
+  [ arehbein ]
+  * bankd: Use gsmtap_inst_fd2()
+
+  [ Joey Berkovitz ]
+  * user_ifdhandler: Fix segfault on startup
+
+  [ Alexander Couzens ]
+  * remsim_client: add support to set sim presence pin polarity
+
+  [ Pau Espin Pedrol ]
+  * Replace deprecated ipa_msg_push_header()
+  * Fix uninitialized return value
+  * Remove rspro_client.c which is not used anyway
+  * Makefile:am: Improve formatting and order of CFLAGS and LIBS
+  * rspro: use osmo_stream to handle IPA connection
+  * server: Implement IPA server with osmo_stream
+  * Use new osmo_ipa_ka_fsm_inst APIs from libosmo-netif
+  * Drop dependency on libosmo-abis
+  * rspro_client_fsm: Fix missing return
+  * bankd: Fix typo in fprintf string output
+  * cosmetic: rspro_client_fsm: Document event handled in all_state
+  * Several logging improvements
+  * bankd: Add -T and -e cmdline params
+
+ -- Oliver Smith <osmith@sysmocom.de>  Wed, 12 Feb 2025 15:54:41 +0100
+
 osmo-remsim (1.0.0) unstable; urgency=medium
 
   [ Harald Welte ]

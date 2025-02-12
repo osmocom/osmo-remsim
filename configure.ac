@@ -33,9 +33,9 @@ if test "x$PKG_CONFIG_INSTALLED" = "xno"; then
 fi
 PKG_PROG_PKG_CONFIG([0.20])
 
-PKG_CHECK_MODULES(OSMOCORE, libosmocore >= 1.6.0)
-PKG_CHECK_MODULES(OSMOGSM, libosmogsm >= 0.11.0)
-PKG_CHECK_MODULES(OSMONETIF, libosmo-netif >= 1.5.0)
+PKG_CHECK_MODULES(OSMOCORE, libosmocore >= 1.11.0)
+PKG_CHECK_MODULES(OSMOGSM, libosmogsm >= 1.11.0)
+PKG_CHECK_MODULES(OSMONETIF, libosmo-netif >= 1.6.0)
 
 AC_ARG_ENABLE([remsim-server],[AS_HELP_STRING([--disable-remsim-server], [Build osmo-remsim-server])],
 	[osmo_ac_build_server="$enableval"],[osmo_ac_build_server="yes"])
@@ -64,8 +64,8 @@ AC_ARG_ENABLE([remsim-client-st2],[AS_HELP_STRING([--disable-remsim-client-st2],
 	[osmo_ac_build_client_st2="$enableval"],[osmo_ac_build_client_st2="yes"])
 if test "$osmo_ac_build_client_st2" = "yes"; then
 	AC_DEFINE(BUILD_CLIENT_ST2, 1, [Define if we want to build osmo-remsim-client-st2])
-	PKG_CHECK_MODULES(OSMOUSB, libosmousb >= 1.4.0)
-	PKG_CHECK_MODULES(OSMOSIMTRACE2, libosmo-simtrace2 >= 0.8.0)
+	PKG_CHECK_MODULES(OSMOUSB, libosmousb >= 1.11.0)
+	PKG_CHECK_MODULES(OSMOSIMTRACE2, libosmo-simtrace2 >= 0.9.0)
 	PKG_CHECK_MODULES(USB, libusb-1.0)
 fi
 AM_CONDITIONAL(BUILD_CLIENT_ST2, test "x$osmo_ac_build_client_st2" = "xyes")
