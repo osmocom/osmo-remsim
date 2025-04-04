@@ -145,7 +145,7 @@ static int stdin_fd_cb(struct osmo_fd *ofd, unsigned int what)
 	if (rc < 0)
 		return rc;
 	if (rc == 0) {
-		fprintf(stderr, "STDIN was closed, terminating");
+		fprintf(stderr, "STDIN was closed, terminating\n");
 		exit(0);
 	}
 	msgb_put(ss->rx_msg, rc);
