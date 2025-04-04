@@ -534,8 +534,9 @@ static void srvc_allstate_action(struct osmo_fsm_inst *fi, uint32_t event, void 
 	case SRVC_E_DISCONNECT:
 		if (srvc->conn) {
 			LOGPFSML(fi, LOGL_INFO, "Destroying existing connection to server\n");
-			osmo_stream_cli_destroy(srvc->conn);
+			struct osmo_stream_cli *conn = srvc->conn;
 			srvc->conn = NULL;
+			osmo_stream_cli_destroy(conn);
 		}
 		osmo_fsm_inst_state_chg(fi, SRVC_ST_INIT, 0, 0);
 		break;
