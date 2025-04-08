@@ -247,15 +247,15 @@ send_resp:
 			/* Remove a mapping */
 			map = slotmap_by_bank(g_bankd->slotmaps, &bs);
 			if (!map) {
-				LOGPFSML(srvc->fi, LOGL_ERROR, "could not find to-be-deleted slotmap\n");
+				LOGPFSML(srvc->fi, LOGL_ERROR, "B(%lu:%lu) could not find to-be-deleted slotmap\n", rreq->bank.bankId, rreq->bank.slotNr);
 				resp = rspro_gen_RemoveMappingRes(ResultCode_unknownSlotmap);
 			} else {
 				rspro2client_slot(&cs, &rreq->client);
 				if (!client_slot_equals(&map->client, &cs)) {
-					LOGPFSML(srvc->fi, LOGL_NOTICE, "ClientId in removeMappingReq != map\n");
+					LOGPFSML(srvc->fi, LOGL_NOTICE, "B(%lu:%lu): ClientId in removeMappingReq != map\n", rreq->bank.bankId, rreq->bank.slotNr);
 					resp = rspro_gen_RemoveMappingRes(ResultCode_unknownSlotmap);
 				} else {
-					LOGPFSML(srvc->fi, LOGL_INFO, "removing slotmap\n");
+					LOGPFSML(srvc->fi, LOGL_INFO, "B(%lu:%lu): removing slotmap\n", rreq->bank.bankId, rreq->bank.slotNr);
 					bankd_srvc_remove_mapping(map);
 					resp = rspro_gen_RemoveMappingRes(ResultCode_ok);
 				}
