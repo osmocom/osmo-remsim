@@ -207,7 +207,8 @@ static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t
 		} else {
 			rspro2bank_slot(&bs, &creq->bank);
 			rspro2client_slot(&cs, &creq->client);
-			/* check if map exists */
+
+			/* check if slot map exists */
 			map = slotmap_by_bank(g_bankd->slotmaps, &bs);
 			if (map) {
 				if (client_slot_equals(&map->client, &cs)) {
@@ -215,10 +216,20 @@ static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t
 					resp = rspro_gen_CreateMappingRes(ResultCode_ok);
 					goto send_resp;
 				} else {
-					LOGPFSML(srvc->fi, LOGL_NOTICE, "implicitly removing slotmap\n");
+					LOGPFSML(srvc->fi, LOGL_NOTICE, "slot already connected to client %d:%d. Removing old mapping.\n",
+						 map->client.client_id, map->client.slot_nr);
 					bankd_srvc_remove_mapping(map);
 				}
 			}
+
+			/* check if client map exists */
+			map = slotmap_by_client(g_bankd->slotmaps, &cs);
+			if (map) {
+				LOGPFSML(srvc->fi, LOGL_NOTICE, "client already connected to slot %d:%d. Removing old mapping.\n",
+					 map->bank.bank_id, map->bank.slot_nr);
+				bankd_srvc_remove_mapping(map);
+			}
+
 			/* Add a new mapping */
 			map = slotmap_add(g_bankd->slotmaps, &bs, &cs);
 			if (!map) {
