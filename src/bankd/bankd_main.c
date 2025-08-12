@@ -792,7 +792,7 @@ static int worker_handle_tpduModemToCard(struct bankd_worker *worker, const Rspr
 {
 	const struct TpduModemToCard *mdm2sim = &pdu->msg.choice.tpduModemToCard;
 	uint8_t rx_buf[1024];
-	DWORD rx_buf_len = sizeof(rx_buf);
+	size_t rx_buf_len = sizeof(rx_buf);
 	RsproPDU_t *pdu_resp;
 	struct client_slot clslot;
 	struct bank_slot bslot;
