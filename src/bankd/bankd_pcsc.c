@@ -313,11 +313,15 @@ static int pcsc_transceive(struct bankd_worker *worker, const uint8_t *out, size
 	SCARD_IO_REQUEST pioRecvPci;
 	long rc;
 
-	rc = SCardTransmit(worker->reader.pcsc.hCard, pioSendPci, out, out_len, &pioRecvPci, in, in_len);
+	/* DWORD can be different from size_t */
+	DWORD in_len_d = *in_len;
+
+	rc = SCardTransmit(worker->reader.pcsc.hCard, pioSendPci, out, out_len, &pioRecvPci, in, &in_len_d);
 	/* don't use PCSC_ERROR here as we don't want to log every successful SCardTransmit */
 	if (rc != SCARD_S_SUCCESS)
 		LOGW_PCSC_ERROR(worker, rc, "SCardTransmit");
 
+	*in_len = in_len_d;
 	return rc;
 }
 
