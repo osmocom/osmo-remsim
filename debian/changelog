@@ -1,3 +1,15 @@
+osmo-remsim (1.1.2) unstable; urgency=medium
+
+  [ Alexander Couzens ]
+  * bankd: Remove Mapping: improve logging
+  * bankd: implicit remove a client mapping when creating a new mapping
+
+  [ Oliver Smith ]
+  * src/bankd/bankd_main: fix error on debian 13 i386
+  * src/bankd/bankd_pcsc: fix error on debian 13 i386
+
+ -- Oliver Smith <osmith@sysmocom.de>  Tue, 26 Aug 2025 16:22:12 +0200
+
 osmo-remsim (1.1.1) unstable; urgency=medium
 
   * src/client/user_shell: add missing \n
