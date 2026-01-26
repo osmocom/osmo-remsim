@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <errno.h>
+#include <arpa/inet.h>
 
 #include <osmocom/core/linuxlist.h>
 #include <osmocom/core/select.h>
