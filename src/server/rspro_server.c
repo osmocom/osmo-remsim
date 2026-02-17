@@ -763,18 +763,21 @@ static int sock_closed_cb(struct osmo_stream_srv *peer)
 {
 	struct rspro_client_conn *conn = osmo_stream_srv_get_data(peer);
 	OSMO_ASSERT(conn);
+
 	osmo_stream_srv_set_data(peer, NULL);
 	if (conn->ka_fi) {
 		osmo_ipa_ka_fsm_stop(conn->ka_fi);
 		osmo_ipa_ka_fsm_free(conn->ka_fi);
 		conn->ka_fi = NULL;
 	}
-	if (conn->fi) {
-		if (conn->peer) {
-			conn->peer = NULL;
+
+	if (conn->peer) {
+		conn->peer = NULL;
+		if (conn->fi)
 			osmo_fsm_inst_dispatch(conn->fi, CLNTC_E_TCP_DOWN, NULL);
-		} /* else: rspro conn is already being destroyed, do nothing. */
 	}
+	/* else: rspro conn is already being destroyed, do nothing. */
+
 	return 0;
 }
 
@@ -920,13 +923,13 @@ static void _unlink_all_slotmaps(struct rspro_client_conn *conn)
 /* only to be used by the FSM cleanup. */
 static void rspro_client_conn_destroy(struct rspro_client_conn *conn)
 {
-	/* this will internally call closed_cb() which will dispatch a TCP_DOWN event */
+	/* only the FSM should call this in the clean up, when conn->fi is already NULL */
+	OSMO_ASSERT(conn->fi == NULL);
+
 	if (conn->peer) {
 		struct osmo_stream_srv *peer = conn->peer;
-		conn->peer = NULL;
 		osmo_stream_srv_destroy(peer);
-		return;
-	} /* else: destroy initiated by conn->peer's closed_cb(). */
+	}
 
 	/* ensure all slotmaps are unlinked + returned to NEW or deleted */
 	slotmaps_wrlock(conn->srv->slotmaps);
