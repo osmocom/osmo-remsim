@@ -101,13 +101,20 @@ static void cb2(int c, void *data)
 	LOGP(DMAIN, LOGL_INFO, "PC/SC slot name: %u/%u -> regex '%s'\n",
 	     sn->slot.bank_id, sn->slot.slot_nr, sn->name_regex);
 
+	if (!sn->name_regex) {
+		LOGP(DMAIN, LOGL_ERROR, "B%d:%d: No reader name given. Maybe invalid csv.\n",
+		     sn->slot.bank_id, sn->slot.slot_nr);
+		talloc_free(sn);
+		goto out;
+	}
+
 	memset(&compiled_name, 0, sizeof(compiled_name));
 
 	rc = regcomp(&compiled_name, sn->name_regex, REG_EXTENDED);
 	if (rc != 0) {
 		char *errmsg = get_regerror(sn, rc, &compiled_name);
-		LOGP(DMAIN, LOGL_ERROR, "Error compiling regex '%s': %s - Ignoring\n",
-		     sn->name_regex, errmsg);
+		LOGP(DMAIN, LOGL_ERROR, "B%d:%d: Error compiling regex '%s': %s - Ignoring\n",
+		     sn->slot.bank_id, sn->slot.slot_nr, sn->name_regex, errmsg);
 		talloc_free(errmsg);
 		talloc_free(sn);
 	} else {
@@ -115,6 +122,7 @@ static void cb2(int c, void *data)
 	}
 	regfree(&compiled_name);
 
+out:
 	ps->state = ST_BANK_NR;
 	ps->cur = NULL;
 }
