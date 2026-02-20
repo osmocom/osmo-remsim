@@ -55,6 +55,7 @@ struct parser_state {
 	struct bankd *bankd;
 	enum parser_state_name state;
 	struct pcsc_slot_name *cur;
+	bool invalid_csv;
 };
 
 
@@ -62,6 +63,7 @@ static void parser_state_init(struct parser_state *ps)
 {
 	ps->state = ST_BANK_NR;
 	ps->cur = NULL;
+	ps->invalid_csv = false;
 }
 
 static void cb1(void *s, size_t len, void *data)
@@ -104,6 +106,7 @@ static void cb2(int c, void *data)
 	if (!sn->name_regex) {
 		LOGP(DMAIN, LOGL_ERROR, "B%d:%d: No reader name given. Maybe invalid csv.\n",
 		     sn->slot.bank_id, sn->slot.slot_nr);
+		ps->invalid_csv = true;
 		talloc_free(sn);
 		goto out;
 	}
@@ -113,8 +116,9 @@ static void cb2(int c, void *data)
 	rc = regcomp(&compiled_name, sn->name_regex, REG_EXTENDED);
 	if (rc != 0) {
 		char *errmsg = get_regerror(sn, rc, &compiled_name);
-		LOGP(DMAIN, LOGL_ERROR, "B%d:%d: Error compiling regex '%s': %s - Ignoring\n",
+		LOGP(DMAIN, LOGL_ERROR, "B%d:%d: Error compiling regex '%s': %s\n",
 		     sn->slot.bank_id, sn->slot.slot_nr, sn->name_regex, errmsg);
+		ps->invalid_csv = true;
 		talloc_free(errmsg);
 		talloc_free(sn);
 	} else {
@@ -161,6 +165,11 @@ int bankd_pcsc_read_slotnames(struct bankd *bankd, const char *csv_file)
 	csv_fini(&p, cb1, cb2, &ps);
 	fclose(fp);
 	csv_free(&p);
+
+	if (ps.invalid_csv) {
+		LOGP(DMAIN, LOGL_FATAL, "Error parsing bankd PC/SC CSV.\n");
+		return -1;
+	}
 
 	return 0;
 }
