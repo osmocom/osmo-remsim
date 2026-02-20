@@ -1,3 +1,13 @@
+osmo-remsim (1.1.3) unstable; urgency=medium
+
+  [ Pau Espin Pedrol ]
+  * rspro_server.c: Fix missing include for inet_ntoa()
+
+  [ Alexander Couzens ]
+  * rspro_server: fix releasing timed out clients
+
+ -- Oliver Smith <osmith@sysmocom.de>  Fri, 20 Feb 2026 13:31:51 +0100
+
 osmo-remsim (1.1.2) unstable; urgency=medium
 
   [ Alexander Couzens ]
