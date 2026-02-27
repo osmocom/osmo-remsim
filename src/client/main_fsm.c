@@ -331,6 +331,11 @@ static void main_st_operational(struct osmo_fsm_inst *fi, uint32_t event, void *
 	case MF_E_MDM_TPDU:
 		tpdu = data;
 		OSMO_ASSERT(tpdu);
+		if (tpdu->len < 5 || tpdu->len > 260) {
+			LOGPFSML(fi, LOGL_ERROR, "Modem submitted illegal TPDU length %zu (%s), dropping\n", tpdu->len,
+				 osmo_hexdump_nospc(tpdu->buf, tpdu->len));
+			break;
+		}
 		LOGPFSML(fi, LOGL_INFO, "Tx tpduModemToCard (%s)\n", osmo_hexdump_nospc(tpdu->buf, tpdu->len));
 		/* forward to bankd */
 		bank_slot2rspro(&bslot, &bc->bankd_slot);
