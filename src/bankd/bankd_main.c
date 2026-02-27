@@ -820,6 +820,12 @@ static int worker_handle_tpduModemToCard(struct bankd_worker *worker, const Rspr
 		return -106;
 	}
 
+	if (mdm2sim->data.size < 5 || mdm2sim->data.size > 260) {
+		LOGW(worker, "Illegal TPDU length %u octets, not passing to driver/reader\n",
+		     mdm2sim->data.size);
+		return -107;
+	}
+
 	rc = worker->ops->transceive(worker, mdm2sim->data.buf, mdm2sim->data.size,
 				     rx_buf, &rx_buf_len);
 	if (rc < 0)
