@@ -521,9 +521,10 @@ struct value_string worker_state_names[] = {
 
 static int worker_send_rspro(struct bankd_worker *worker, RsproPDU_t *pdu);
 
-static void worker_set_state(struct bankd_worker *worker, enum bankd_worker_state new_state)
+static void worker_set_state(struct bankd_worker *worker, enum bankd_worker_state new_state, bool quiet)
 {
-	LOGW(worker, "Changing state to %s\n", get_value_string(worker_state_names, new_state));
+	if (!quiet)
+		LOGW(worker, "Changing state to %s\n", get_value_string(worker_state_names, new_state));
 	worker->state = new_state;
 	worker->timeout = 0;
 }
@@ -540,25 +541,26 @@ static void worker_set_state_timeout(struct bankd_worker *worker, enum bankd_wor
 /* signal handler for receiving SIGMAPDEL from main thread */
 static void handle_sig_mapdel(int sig)
 {
-	LOGW(g_worker, "SIGMAPDEL received: Main thread informs us our map is gone\n");
+	/* DO NOT LOG ANYTHING HERE, IT WILL DEADLOCK WITH THE osmo_log_tgt_mutex */
 	OSMO_ASSERT(sig == SIGMAPDEL);
 	if (g_worker->state >= BW_ST_CONN_CLIENT_MAPPED) {
 		g_worker->slot.bank_id = 0xffff;
 		g_worker->slot.slot_nr = 0xffff;
-		worker_set_state(g_worker, BW_ST_CONN_CLIENT_UNMAPPED);
+		worker_set_state(g_worker, BW_ST_CONN_CLIENT_UNMAPPED, true);
 	}
 }
 
 /* signal handler for receiving SIGMAPADD from main thread */
 static void handle_sig_mapadd(int sig)
 {
-	LOGW(g_worker, "SIGMAPADD received\n");
+	/* DO NOT LOG ANYTHING HERE, IT WILL DEADLOCK WITH THE osmo_log_tgt_mutex */
 	/* do nothing */
 }
 
 static void handle_sig_usr1(int sig)
 {
 	OSMO_ASSERT(sig == SIGUSR1);
+	/* FIXME: WE SHOULD NOT LOG ANYTHING HERE, IT WILL DEADLOCK WITH THE osmo_log_tgt_mutex */
 
 	if (pthread_equal(g_bankd->main, pthread_self())) {
 		struct bankd_worker *worker;
@@ -612,7 +614,7 @@ static int worker_open_card(struct bankd_worker *worker)
 	if (rc < 0)
 		return rc;
 
-	worker_set_state(worker, BW_ST_CONN_CLIENT_MAPPED_CARD);
+	worker_set_state(worker, BW_ST_CONN_CLIENT_MAPPED_CARD, false);
 	/* FIXME: notify client about this state change */
 
 	return 0;
@@ -763,7 +765,7 @@ static int worker_handle_connectClientReq(struct bankd_worker *worker, const Rsp
 	}
 	worker->client.clslot.client_id = pdu->msg.choice.connectClientReq.clientSlot->clientId;
 	worker->client.clslot.slot_nr = pdu->msg.choice.connectClientReq.clientSlot->slotNr;
-	worker_set_state(worker, BW_ST_CONN_CLIENT);
+	worker_set_state(worker, BW_ST_CONN_CLIENT, false);
 
 	if (worker_try_slotmap(worker) >= 0)
 		res = ResultCode_ok;
@@ -1041,7 +1043,7 @@ static void *worker_main(void *arg)
 
 	g_worker = (struct bankd_worker *) arg;
 
-	worker_set_state(g_worker, BW_ST_INIT);
+	worker_set_state(g_worker, BW_ST_INIT, false);
 
 	/* not permitted in multithreaded environment */
 	talloc_disable_null_tracking();
@@ -1065,7 +1067,7 @@ static void *worker_main(void *arg)
 
 		g_worker->client.peer_addr_len = sizeof(g_worker->client.peer_addr);
 
-		worker_set_state(g_worker, BW_ST_ACCEPTING);
+		worker_set_state(g_worker, BW_ST_ACCEPTING, false);
 		/* first wait for an incoming TCP connection */
 		rc = accept(g_worker->bankd->accept_fd, (struct sockaddr *) &g_worker->client.peer_addr,
 			    &g_worker->client.peer_addr_len);
@@ -1075,7 +1077,7 @@ static void *worker_main(void *arg)
 		g_worker->client.fd = rc;
 		worker_client_addrstr(buf, sizeof(buf), g_worker);
 		LOGW(g_worker, "Accepted connection from %s\n", buf);
-		worker_set_state(g_worker, BW_ST_CONN_WAIT_ID);
+		worker_set_state(g_worker, BW_ST_CONN_WAIT_ID, false);
 
 		/* run the main worker transceive loop body until there was some error */
 		while (1) {
