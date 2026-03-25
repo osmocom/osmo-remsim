@@ -331,7 +331,7 @@ static void _update_client_for_slotmap(struct slot_mapping *map, struct rspro_se
 
 	/* determine if IP/port of bankd have changed */
 	if (conn->client.bankd.port != bankd_port || conn->client.bankd.ip != bankd_ip) {
-		struct in_addr ia = { .s_addr = bankd_ip };
+		struct in_addr ia = { .s_addr = htonl(bankd_ip) };
 		LOGPFSML(conn->fi, LOGL_NOTICE, "Bankd IP/Port changed to %s:%u\n", inet_ntoa(ia), bankd_port);
 		conn->client.bankd.ip = bankd_ip;
 		conn->client.bankd.port = bankd_port;
