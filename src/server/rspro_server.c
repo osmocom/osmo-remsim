@@ -712,7 +712,7 @@ err:
 /* data was received from one of the client connections to the RSPRO socket */
 static int sock_read_cb(struct osmo_stream_srv *peer, int res, struct msgb *msg)
 {
-	enum ipaccess_proto ipa_proto = osmo_ipa_msgb_cb_proto(msg);
+	enum ipaccess_proto ipa_proto;
 	struct rspro_client_conn *conn = osmo_stream_srv_get_data(peer);
 	RsproPDU_t *pdu;
 	int rc;
@@ -722,6 +722,7 @@ static int sock_read_cb(struct osmo_stream_srv *peer, int res, struct msgb *msg)
 		goto err;
 	}
 
+	ipa_proto = osmo_ipa_msgb_cb_proto(msg);
 	switch (ipa_proto) {
 	case IPAC_PROTO_IPACCESS:
 		rc = _ipa_srv_conn_ccm(conn, msg);
