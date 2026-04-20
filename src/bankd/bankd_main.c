@@ -1102,6 +1102,16 @@ static void *worker_main(void *arg)
 			close(g_worker->client.fd);
 		memset(&g_worker->client.peer_addr, 0, sizeof(g_worker->client.peer_addr));
 		g_worker->client.fd = -1;
+		if (g_worker->state >= BW_ST_CONN_CLIENT_MAPPED) {
+			struct slot_mapping *slmap;
+			slmap = slotmap_by_client(g_worker->bankd->slotmaps, &g_worker->client.clslot);
+			if (slmap) {
+				slotmap_del(g_bankd->slotmaps, slmap);
+				g_worker->slot.bank_id = 0xffff;
+				g_worker->slot.slot_nr = 0xffff;
+				worker_set_state(g_worker, BW_ST_CONN_CLIENT_UNMAPPED, true);
+			}
+		}
 		g_worker->client.clslot.client_id = g_worker->client.clslot.slot_nr = 0;
 	}
 
