@@ -562,6 +562,12 @@ static void handle_sig_mapadd(int sig)
 	/* do nothing */
 }
 
+/* signal handler for receiving SIGPIPE from worker thread */
+static void handle_sig_pipe(int sig)
+{
+	/* do nothing */
+}
+
 static void handle_sig_usr1(int sig)
 {
 	OSMO_ASSERT(sig == SIGUSR1);
@@ -1067,6 +1073,8 @@ static void *worker_main(void *arg)
 
 	g_worker->slot.bank_id = 0xffff;
 	g_worker->slot.slot_nr = 0xffff;
+
+	signal(SIGPIPE, handle_sig_pipe);
 
 	/* we continuously perform the same loop here, recycling the worker thread
 	 * once the client connection is gone or we have some trouble with the card/reader */
