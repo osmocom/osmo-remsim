@@ -55,6 +55,7 @@
 #define SIGMAPADD	SIGRTMIN+2
 
 static void handle_sig_usr1(int sig);
+static void handle_sig_pipe(int sig);
 static void handle_sig_mapdel(int sig);
 static void handle_sig_mapadd(int sig);
 
@@ -439,6 +440,7 @@ int main(int argc, char **argv)
 	g_bankd->main = pthread_self();
 	signal(SIGMAPDEL, handle_sig_mapdel);
 	signal(SIGMAPADD, handle_sig_mapadd);
+	signal(SIGPIPE, handle_sig_pipe);
 	signal(SIGUSR1, handle_sig_usr1);
 
 	LOGP(DMAIN, LOGL_INFO, "Reading PCSC slots...\n");
@@ -552,6 +554,13 @@ static void handle_sig_mapdel(int sig)
 
 /* signal handler for receiving SIGMAPADD from main thread */
 static void handle_sig_mapadd(int sig)
+{
+	/* DO NOT LOG ANYTHING HERE, IT WILL DEADLOCK WITH THE osmo_log_tgt_mutex */
+	/* do nothing */
+}
+
+/* signal handler for receiving SIGPIPE from worker thread */
+static void handle_sig_pipe(int sig)
 {
 	/* DO NOT LOG ANYTHING HERE, IT WILL DEADLOCK WITH THE osmo_log_tgt_mutex */
 	/* do nothing */
