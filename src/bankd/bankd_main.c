@@ -700,8 +700,10 @@ static int worker_try_slotmap(struct bankd_worker *worker)
 {
 	struct slot_mapping *slmap;
 
-	slmap = slotmap_by_client(worker->bankd->slotmaps, &worker->client.clslot);
+	slotmaps_rdlock(worker->bankd->slotmaps);
+	slmap = slotmap_by_client_nolock(worker->bankd->slotmaps, &worker->client.clslot);
 	if (!slmap) {
+		slotmaps_unlock(worker->bankd->slotmaps);
 		LOGW(worker, "No slotmap (yet) for client C(%u:%u)\n",
 			worker->client.clslot.client_id, worker->client.clslot.slot_nr);
 		/* check in 10s if the map has been installed meanwhile by main thread */
@@ -712,6 +714,7 @@ static int worker_try_slotmap(struct bankd_worker *worker)
 			slmap->client.client_id, slmap->client.slot_nr,
 			slmap->bank.bank_id, slmap->bank.slot_nr);
 		worker->slot = slmap->bank;
+		slotmaps_unlock(worker->bankd->slotmaps);
 		worker_set_state_timeout(worker, BW_ST_CONN_CLIENT_MAPPED, 10);
 		return worker_open_card(worker);
 	}

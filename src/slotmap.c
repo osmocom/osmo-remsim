@@ -53,20 +53,27 @@ uint32_t slotmap_get_id(const struct slot_mapping *map)
 	return (map->bank.bank_id << 16) | map->bank.slot_nr;
 }
 
+/* lookup of map by client:slot */
+struct slot_mapping *slotmap_by_client_nolock(struct slotmaps *maps, const struct client_slot *client)
+{
+	struct slot_mapping *map;
+
+	llist_for_each_entry(map, &maps->mappings, list) {
+		if (client_slot_equals(&map->client, client))
+			return map;
+	}
+	return NULL;
+}
+
 /* thread-safe lookup of map by client:slot */
 struct slot_mapping *slotmap_by_client(struct slotmaps *maps, const struct client_slot *client)
 {
 	struct slot_mapping *map;
 
 	slotmaps_rdlock(maps);
-	llist_for_each_entry(map, &maps->mappings, list) {
-		if (client_slot_equals(&map->client, client)) {
-			slotmaps_unlock(maps);
-			return map;
-		}
-	}
+	map = slotmap_by_client_nolock(maps, client);
 	slotmaps_unlock(maps);
-	return NULL;
+	return map;
 }
 
 /* thread-safe lookup of map by bank:slot */
@@ -83,7 +90,6 @@ struct slot_mapping *slotmap_by_bank(struct slotmaps *maps, const struct bank_sl
 	}
 	slotmaps_unlock(maps);
 	return NULL;
-
 }
 
 /* thread-safe creating of a new bank<->client map */

@@ -70,6 +70,9 @@ struct slotmaps {
 
 uint32_t slotmap_get_id(const struct slot_mapping *map);
 
+/* lookup of map by client:slot */
+struct slot_mapping *slotmap_by_client_nolock(struct slotmaps *maps, const struct client_slot *client);
+
 /* thread-safe lookup of map by client:slot */
 struct slot_mapping *slotmap_by_client(struct slotmaps *maps, const struct client_slot *client);
 
