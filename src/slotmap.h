@@ -72,9 +72,11 @@ uint32_t slotmap_get_id(const struct slot_mapping *map);
 
 /* thread-safe lookup of map by client:slot */
 struct slot_mapping *slotmap_by_client(struct slotmaps *maps, const struct client_slot *client);
+struct slot_mapping *_slotmap_by_client(struct slotmaps *maps, const struct client_slot *client);
 
 /* thread-safe lookup of map by bank:slot */
 struct slot_mapping *slotmap_by_bank(struct slotmaps *maps, const struct bank_slot *bank);
+struct slot_mapping *_slotmap_by_bank(struct slotmaps *maps, const struct bank_slot *bank);
 
 /* thread-safe creating of a new bank<->client map */
 struct slot_mapping *slotmap_add(struct slotmaps *maps, const struct bank_slot *bank, const struct client_slot *client);

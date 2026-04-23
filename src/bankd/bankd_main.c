@@ -162,7 +162,7 @@ static void bankd_srvc_remove_mapping(struct slot_mapping *map)
 {
 	struct bank_slot bs = map->bank;
 
-	slotmap_del(g_bankd->slotmaps, map);
+	_slotmap_del(g_bankd->slotmaps, map);
 
 	/* kill/reset the respective worker, if any! */
 	send_signal_to_worker(&bs, NULL, SIGMAPDEL);
@@ -209,11 +209,13 @@ static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t
 			rspro2client_slot(&cs, &creq->client);
 
 			/* check if slot map exists */
-			map = slotmap_by_bank(g_bankd->slotmaps, &bs);
+			slotmaps_rdlock(g_bankd->slotmaps);
+			map = _slotmap_by_bank(g_bankd->slotmaps, &bs);
 			if (map) {
 				if (client_slot_equals(&map->client, &cs)) {
 					LOGPFSML(srvc->fi, LOGL_ERROR, "ignoring identical slotmap\n");
 					resp = rspro_gen_CreateMappingRes(ResultCode_ok);
+					slotmaps_unlock(g_bankd->slotmaps);
 					goto send_resp;
 				} else {
 					LOGPFSML(srvc->fi, LOGL_NOTICE, "slot already connected to client %d:%d. Removing old mapping.\n",
@@ -221,6 +223,7 @@ static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t
 					bankd_srvc_remove_mapping(map);
 				}
 			}
+			slotmaps_unlock(g_bankd->slotmaps);
 
 			/* check if client map exists */
 			map = slotmap_by_client(g_bankd->slotmaps, &cs);
@@ -256,7 +259,8 @@ send_resp:
 		} else {
 			rspro2bank_slot(&bs, &rreq->bank);
 			/* Remove a mapping */
-			map = slotmap_by_bank(g_bankd->slotmaps, &bs);
+			slotmaps_rdlock(g_bankd->slotmaps);
+			map = _slotmap_by_bank(g_bankd->slotmaps, &bs);
 			if (!map) {
 				LOGPFSML(srvc->fi, LOGL_ERROR, "B(%lu:%lu) could not find to-be-deleted slotmap\n", rreq->bank.bankId, rreq->bank.slotNr);
 				resp = rspro_gen_RemoveMappingRes(ResultCode_unknownSlotmap);
@@ -271,6 +275,7 @@ send_resp:
 					resp = rspro_gen_RemoveMappingRes(ResultCode_ok);
 				}
 			}
+			slotmaps_unlock(g_bankd->slotmaps);
 		}
 		server_conn_send_rspro(srvc, resp);
 		break;
@@ -700,8 +705,10 @@ static int worker_try_slotmap(struct bankd_worker *worker)
 {
 	struct slot_mapping *slmap;
 
-	slmap = slotmap_by_client(worker->bankd->slotmaps, &worker->client.clslot);
+	slotmaps_rdlock(worker->bankd->slotmaps);
+	slmap = _slotmap_by_client(worker->bankd->slotmaps, &worker->client.clslot);
 	if (!slmap) {
+		slotmaps_unlock(worker->bankd->slotmaps);
 		LOGW(worker, "No slotmap (yet) for client C(%u:%u)\n",
 			worker->client.clslot.client_id, worker->client.clslot.slot_nr);
 		/* check in 10s if the map has been installed meanwhile by main thread */
@@ -712,6 +719,7 @@ static int worker_try_slotmap(struct bankd_worker *worker)
 			slmap->client.client_id, slmap->client.slot_nr,
 			slmap->bank.bank_id, slmap->bank.slot_nr);
 		worker->slot = slmap->bank;
+		slotmaps_unlock(worker->bankd->slotmaps);
 		worker_set_state_timeout(worker, BW_ST_CONN_CLIENT_MAPPED, 10);
 		return worker_open_card(worker);
 	}
@@ -1104,13 +1112,15 @@ static void *worker_main(void *arg)
 		g_worker->client.fd = -1;
 		if (g_worker->state >= BW_ST_CONN_CLIENT_MAPPED) {
 			struct slot_mapping *slmap;
-			slmap = slotmap_by_client(g_worker->bankd->slotmaps, &g_worker->client.clslot);
+			slotmaps_rdlock(g_worker->bankd->slotmaps);
+			slmap = _slotmap_by_client(g_worker->bankd->slotmaps, &g_worker->client.clslot);
 			if (slmap) {
-				slotmap_del(g_bankd->slotmaps, slmap);
+				_slotmap_del(g_bankd->slotmaps, slmap);
 				g_worker->slot.bank_id = 0xffff;
 				g_worker->slot.slot_nr = 0xffff;
 				worker_set_state(g_worker, BW_ST_CONN_CLIENT_UNMAPPED, true);
 			}
+			slotmaps_unlock(g_worker->bankd->slotmaps);
 		}
 		g_worker->client.clslot.client_id = g_worker->client.clslot.slot_nr = 0;
 	}
