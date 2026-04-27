@@ -44,7 +44,9 @@ ber_decode(asn_codec_ctx_t *opt_codec_ctx,
 	} else {
 		/* If context is not given, be security-conscious anyway */
 		memset(&s_codec_ctx, 0, sizeof(s_codec_ctx));
-		s_codec_ctx.max_stack_size = _ASN_DEFAULT_STACK_MAX;
+		/* TODO: disable stack check until the root cause can be debugged. See OS#7002
+		         s_codec_ctx.max_stack_size = _ASN_DEFAULT_STACK_MAX; */
+		s_codec_ctx.max_stack_size = 0;
 		opt_codec_ctx = &s_codec_ctx;
 	}
 
