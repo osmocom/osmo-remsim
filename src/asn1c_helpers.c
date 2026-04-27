@@ -7,6 +7,8 @@
 
 #include "asn1c_helpers.h"
 
+int asn_debug = 0;
+
 const char *asn_type_name(const asn_TYPE_descriptor_t *td)
 {
 	return td->name;

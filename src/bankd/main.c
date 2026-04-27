@@ -30,10 +30,10 @@
 #include <winscard.h>
 
 #include "internal.h"
+#include "asn1c_helpers.h"
 
 static void *g_ctx;
 __thread void *talloc_asn1_ctx;
-int asn_debug;
 
 int main(int argc, char **argv)
 {

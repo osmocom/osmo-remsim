@@ -44,6 +44,7 @@
 #include <asn_application.h>
 #include <osmocom/rspro/RsproPDU.h>
 
+#include "asn1c_helpers.h"
 #include "bankd.h"
 #include "rspro_client_fsm.h"
 #include "debug.h"
@@ -69,8 +70,6 @@ static void *worker_main(void *arg);
 /***********************************************************************
 * bankd core / main thread
 ***********************************************************************/
-
-int asn_debug;
 
 static void bankd_init(struct bankd *bankd)
 {

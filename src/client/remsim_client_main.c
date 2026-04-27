@@ -10,11 +10,11 @@
 #include <osmocom/core/fsm.h>
 #include <osmocom/core/application.h>
 
+#include "asn1c_helpers.h"
 #include "client.h"
 
 static void *g_tall_ctx;
 void __thread *talloc_asn1_ctx;
-int asn_debug;
 
 static void handle_sig_usr1(int signal)
 {
