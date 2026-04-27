@@ -82,8 +82,6 @@ static void bankd_init(struct bankd *bankd)
 	log_set_print_tid(osmo_stderr_target, 1);
 	log_enable_multithread();
 
-	asn_debug = 0;
-
 	/* initialize members of 'bankd' */
 	bankd->slotmaps = slotmap_init(bankd);
 	INIT_LLIST_HEAD(&bankd->workers);

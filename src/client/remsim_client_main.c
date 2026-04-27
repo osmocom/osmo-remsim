@@ -216,7 +216,5 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	asn_debug = 0;
-
 	client_user_main(g_client);
 }
