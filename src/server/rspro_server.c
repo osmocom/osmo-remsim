@@ -881,8 +881,8 @@ int event_fd_cb(struct osmo_fd *ofd, unsigned int what)
 	pthread_rwlock_rdlock(&srv->rwlock);
 	llist_for_each_entry(conn, &srv->banks, list) {
 		slotmaps_rdlock(srv->slotmaps);
-		non_empty_new = llist_empty(&conn->bank.maps_new);
-		non_empty_del = llist_empty(&conn->bank.maps_delreq);
+		non_empty_new = !llist_empty(&conn->bank.maps_new);
+		non_empty_del = !llist_empty(&conn->bank.maps_delreq);
 		slotmaps_unlock(srv->slotmaps);
 
 		/* trigger FSM to send any pending new/deleted maps */
