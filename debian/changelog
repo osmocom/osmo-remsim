@@ -1,3 +1,28 @@
+osmo-remsim (1.2.0) unstable; urgency=medium
+
+  [ Alexander Couzens ]
+  * bankd: csv: fix crash on invalid lines
+  * bankd: csv: fail on invalid csv lines
+  * rspro_server: don't access the msg on error cases
+  * rspro_util: asn1 decode: fix memleak when decoding fails
+  * asn1: ber_decoder: disable stack size check on ctx = NULL
+  * asn1: move asn_debug into librspro
+  * Remove unconditional assignment of asn_debug = 0
+  * rspro_server: use correct byte order in log message "Bankd IP/Port changed to <IP>:<Port>
+
+  [ Harald Welte ]
+  * remsim-client: Don't attempt to pass on illegal TPDU length
+  * remsim-bankd: Don't pass on illegal TPDUs of illegal length
+  * bankd: Avoid osmocom logging mutex deadlock in signal handling
+
+  [ Andreas Eversberg ]
+  * Fix: Remove slot mapping at bankd when client disconnects
+  * Fix: Prevent race conditions when accessing slotmap in bankd
+  * Fix: Prevent bankd from exiting upon SIGPIPE
+  * Fix unhandled (un)mapping events
+
+ -- Alexander Couzens <lynxis@fe80.eu>  Tue, 26 May 2026 07:57:46 +0000
+
 osmo-remsim (1.1.3) unstable; urgency=medium
 
   [ Pau Espin Pedrol ]
