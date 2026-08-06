@@ -549,6 +549,7 @@ static void destroy_ifd_client(struct ifd_client *ic)
 }
 
 #define MAX_SLOTS	256
+static int num_slots = 1;
 static struct ifd_client *ifd_client[MAX_SLOTS];
 
 #define LUN2SLOT(lun) ((lun) & 0xffff)
@@ -569,7 +570,8 @@ RESPONSECODE IFDHCreateChannelByName(DWORD Lun, LPSTR DeviceName)
 		.client_id = 0,
 		.client_slot = 0,
 	};
-	char *r, *client_id, *slot_nr, *host, *port;
+	char device_name[strlen(DeviceName) + 1];
+	char *r, *client_id, *slots, *host, *port;
 
 	if (LUN2RDR(Lun) != 0)
 		return IFD_NO_SUCH_DEVICE;
@@ -579,15 +581,20 @@ RESPONSECODE IFDHCreateChannelByName(DWORD Lun, LPSTR DeviceName)
 
 	ensure_osmo_ctx();
 
-	client_id = strtok_r(DeviceName, ":", &r);
+	strcpy(device_name, DeviceName);
+
+	client_id = strtok_r(device_name, ":", &r);
 	if (!client_id)
 		goto end_parse;
 	cfg.client_id = atoi(client_id);
+	cfg.client_slot = LUN2SLOT(Lun);
 
-	slot_nr = strtok_r(NULL, ":", &r);
-	if (!slot_nr)
+	slots = strtok_r(NULL, ":", &r);
+	if (!slots)
 		goto end_parse;
-	cfg.client_slot = atoi(slot_nr);
+	num_slots = atoi(slots);
+	if (num_slots < 1 || num_slots > MAX_SLOTS)
+		return IFD_NO_SUCH_DEVICE;
 
 	host = strtok_r(NULL, ":", &r);
 	if (!host)
@@ -718,7 +725,7 @@ RESPONSECODE IFDHGetCapabilities(DWORD Lun, DWORD Tag, PDWORD Length, PUCHAR Val
 		/* Return the number of slots in this reader in Value[0] */
 		if (*Length < 1)
 			goto err;
-		*Value = 1;
+		*Value = num_slots;
 		*Length = 1;
 		break;
 	case TAG_IFD_THREAD_SAFE:
