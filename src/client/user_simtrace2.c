@@ -415,12 +415,18 @@ int client_user_main(struct bankd_client *bc)
 	bc->cardem = ci;
 
 	memset(ifm, 0, sizeof(*ifm));
-	ifm->vendor = cfg->usb.vendor_id;
-	ifm->product = cfg->usb.product_id;
-	ifm->configuration = cfg->usb.config_id;
-	ifm->interface = cfg->usb.if_num;
-	ifm->altsetting = cfg->usb.altsetting;
-	ifm->addr = cfg->usb.addr;
+	if (cfg->usb.vendor_id > 0)
+		ifm->vendor = cfg->usb.vendor_id;
+	if (cfg->usb.product_id > 0)
+		ifm->product = cfg->usb.product_id;
+	if (cfg->usb.config_id > 0)
+		ifm->configuration = cfg->usb.config_id;
+	if (cfg->usb.if_num > 0)
+		ifm->interface = cfg->usb.if_num;
+	if (cfg->usb.altsetting > 0)
+		ifm->altsetting = cfg->usb.altsetting;
+	if (cfg->usb.addr > 0)
+		ifm->addr = cfg->usb.addr;
 	if (cfg->usb.path)
 		osmo_strlcpy(ifm->path, cfg->usb.path, sizeof(ifm->path));
 	transp->udp_fd = -1;
