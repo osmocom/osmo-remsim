@@ -214,7 +214,7 @@ int main(int argc, char **argv)
 	OSMO_ASSERT(cfg);
 	handle_options(cfg, argc, argv);
 
-	g_client = remsim_client_create(g_tall_ctx, hostname, "remsim-client",cfg);
+	g_client = remsim_client_create(g_tall_ctx, hostname, "remsim-client", cfg);
 
 	osmo_fsm_inst_dispatch(g_client->srv_conn.fi, SRVC_E_ESTABLISH, NULL);
 
