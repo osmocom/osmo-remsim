@@ -82,7 +82,7 @@ __attribute__((unused)) static int process_do_error(struct osmo_st2_cardem_inst 
 	return 0;
 }
 
-static struct osmo_apdu_context ac; // this will hold the complete APDU (across calls)
+static struct osmo_apdu_context ac, prev_ac; // this will hold the complete APDU and previous APDU (across calls)
 
 /*! \brief Process a RX-DATA indication message from the SIMtrace2 */
 static int process_do_rx_da(struct osmo_st2_cardem_inst *ci, uint8_t *buf, int len)
@@ -96,8 +96,8 @@ static int process_do_rx_da(struct osmo_st2_cardem_inst *ci, uint8_t *buf, int l
 		osmo_hexdump(data->data, data->data_len));
 
  	/* parse the APDU data in the USB message */
-	rc = osmo_apdu_segment_in(&ac, data->data, data->data_len,
-				  data->flags & CEMU_DATA_F_TPDU_HDR);
+	rc = osmo_apdu_segment_in2(&ac, &prev_ac, data->data, data->data_len,
+				   data->flags & CEMU_DATA_F_TPDU_HDR);
 
 	if (rc & APDU_ACT_TX_CAPDU_TO_CARD) {
 		/* there is no pending data coming from the modem */
