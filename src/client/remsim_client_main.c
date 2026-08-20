@@ -163,9 +163,19 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 			cfg->usb.path = optarg;
 			break;
 #endif
+		case '?':
+			/* unsupported/unrecognized argument */
+			exit(2);
+			break;
 		default:
 			break;
 		}
+	}
+
+	if (argc > optind) {
+		while (optind < argc)
+			fprintf(stderr, "Unsupported positional arguments on command line %s\n", argv[optind++]);
+		exit(2);
 	}
 }
 

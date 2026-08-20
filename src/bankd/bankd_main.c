@@ -399,7 +399,19 @@ static void handle_options(int argc, char **argv)
 		case 'e':
 			log_set_log_level(osmo_stderr_target, atoi(optarg));
 			break;
+		case '?':
+			/* unsupported/unrecognized argument */
+			exit(2);
+			break;
+		default:
+			break;
 		}
+	}
+
+	if (argc > optind) {
+		while (optind < argc)
+			fprintf(stderr, "Unsupported positional arguments on command line %s\n", argv[optind++]);
+		exit(2);
 	}
 }
 

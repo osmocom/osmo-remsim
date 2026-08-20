@@ -71,6 +71,10 @@ static void handle_options(int argc, char **argv)
 		case 'L':
 			log_set_use_color(osmo_stderr_target, 0);
 			break;
+		case '?':
+			/* unsupported/unrecognized argument */
+			exit(2);
+			break;
 		default:
 			/* ignore */
 			break;
@@ -78,7 +82,8 @@ static void handle_options(int argc, char **argv)
 	}
 
 	if (argc > optind) {
-		fprintf(stderr, "Unsupported extra positional arguments in command line\n");
+		while (optind < argc)
+			fprintf(stderr, "Unsupported positional arguments on command line %s\n", argv[optind++]);
 		exit(2);
 	}
 }
