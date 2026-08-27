@@ -39,6 +39,9 @@ static void printf_help()
 #ifdef SIMTRACE_SUPPORT
 		"  -Z --set-sim-presence <0-1> Define the presence pin behaviour (only supported on some boards)\n"
 #endif
+#ifdef SOCKET_SUPPORT
+		"  -S --socket-name PATH      Unix socket name\n"
+#endif
 #ifdef USB_SUPPORT
 		"  -V --usb-vendor VENDOR_ID\n"
 		"  -P --usb-product PRODUCT_ID\n"
@@ -69,6 +72,9 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 			{ "atr-ignore-rspro", 0, 0, 'r' },
 			{ "event-script", 1, 0, 'e' },
 			{" disable-color", 0, 0, 'L' },
+#ifdef SOCKET_SUPPORT
+			{ "socket-name", 1, 0, 'S' },
+#endif
 #ifdef USB_SUPPORT
 			{ "usb-vendor", 1, 0, 'V' },
 			{ "usb-product", 1, 0, 'P' },
@@ -84,6 +90,9 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 		c = getopt_long(argc, argv, "hvd:i:p:c:n:a:re:L"
 #ifdef SIMTRACE_SUPPORT
 						"Z:"
+#endif
+#ifdef SOCKET_SUPPORT
+						"S:"
 #endif
 #ifdef USB_SUPPORT
 						"V:P:C:I:S:A:H:"
@@ -138,6 +147,11 @@ static void handle_options(struct client_config *cfg, int argc, char **argv)
 		case 'Z':
 			cfg->simtrace.presence_valid = true;
 			cfg->simtrace.presence_pol = atoi(optarg);
+			break;
+#endif
+#ifdef SOCKET_SUPPORT
+		case 'S':
+			osmo_talloc_replace_string(cfg, &cfg->socket.name, optarg);
 			break;
 #endif
 #ifdef USB_SUPPORT

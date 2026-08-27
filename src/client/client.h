@@ -92,6 +92,11 @@ struct client_config {
 		bool presence_valid;
 		bool presence_pol;
 	} simtrace;
+
+	/* only valid for socket client */
+	struct {
+		char *name;
+	} socket;
 };
 
 struct bankd_client {

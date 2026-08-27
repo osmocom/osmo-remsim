@@ -21,6 +21,18 @@ osmo_remsim_client_shell_LDADD = $(top_builddir)/src/libosmo-rspro.la \
 				 $(OSMOCORE_LIBS) \
 				 $(NULL)
 
+bin_PROGRAMS = osmo-remsim-client-socket
+
+osmo_remsim_client_socket_SOURCES = user_socket.c remsim_client_main.c \
+				   remsim_client.c main_fsm.c ../rspro_client_fsm.c ../debug.c
+osmo_remsim_client_socket_CPPFLAGS = -DSOCKET_SUPPORT
+osmo_remsim_client_socket_CFLAGS = $(AM_CFLAGS)
+osmo_remsim_client_socket_LDADD = $(top_builddir)/src/libosmo-rspro.la \
+				  $(OSMONETIF_LIBS) \
+				  $(OSMOGSM_LIBS) \
+				  $(OSMOCORE_LIBS) \
+				  $(NULL)
+
 if BUILD_CLIENT_IFDHANDLER
 EXTRA_DIST=PkgInfo osmo-remsim-client-reader_conf.in
 serialconf_DATA=osmo-remsim-client-reader_conf
