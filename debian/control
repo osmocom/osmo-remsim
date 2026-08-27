@@ -89,6 +89,14 @@ Description: Osmocom Remote SIM - Interactive Client
  The remsim-client-shell is for manually interacting with a remote SIM
  card via remsim-bankd + remsim-server.  It's mostly a test/debug tool.
 
+Package: osmo-remsim-client-socket
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Osmocom Remote SIM - Socket Client
+ The remsim-client-socket is similar to remsim-client-shell, but uses a
+ unix socket instead of stdin and stdout to exchange APDUs.
+
 Package: libifd-osmo-remsim-client0
 Architecture: any
 Multi-Arch: same

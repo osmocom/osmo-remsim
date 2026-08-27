@@ -33,6 +33,7 @@ gen_rspro.stamp
 
 src/client/osmo-remsim-client-reader_conf
 src/client/osmo-remsim-client-shell
+src/client/osmo-remsim-client-socket
 src/client/osmo-remsim-client-st2
 src/bankd/pcsc_test
 src/bankd/osmo-remsim-bankd
@@ -42,7 +43,6 @@ contrib/deps
 deps
 
 debian/tmp
-debian/osmo-remsim-*
 debian/libosmo-rspro0
 debian/libosmo-rspro-dev
 debian/*.substvars

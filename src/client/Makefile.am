@@ -65,4 +65,18 @@ osmo_remsim_client_st2_LDADD = $(builddir)/libremsim_client_common.la \
 			       $(NULL)
 endif
 
+if BUILD_CLIENT_SOCKET
+bin_PROGRAMS += osmo-remsim-client-socket
+
+osmo_remsim_client_socket_SOURCES = user_socket.c remsim_client_main.c
+osmo_remsim_client_socket_CPPFLAGS = -DSOCKET_SUPPORT
+osmo_remsim_client_socket_CFLAGS = $(AM_CFLAGS)
+osmo_remsim_client_socket_LDADD = $(builddir)/libremsim_client_common.la \
+				  $(top_builddir)/src/libosmo-rspro.la \
+				  $(OSMONETIF_LIBS) \
+				  $(OSMOGSM_LIBS) \
+				  $(OSMOCORE_LIBS) \
+				  $(NULL)
+endif
+
 noinst_HEADERS = client.h

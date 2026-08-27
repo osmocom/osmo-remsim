@@ -91,6 +91,15 @@ fi
 AM_CONDITIONAL(BUILD_CLIENT_IFDHANDLER, test "x$osmo_ac_build_client_ifdhandler" = "xyes")
 AC_SUBST(BUILD_CLIENT_IFDHANDLER)
 
+AC_ARG_ENABLE([remsim-client-socket], [AS_HELP_STRING([--disable-remsim-client-socket],
+						      [Build osmo-remsim-client-socket])],
+	[osmo_ac_build_client_socket="$enableval"],[osmo_ac_build_client_socket="yes"])
+if test "$osmo_ac_build_client_socket" = "yes"; then
+	AC_DEFINE(BUILD_CLIENT_SOCKET, 1, [Define if we want to build osmo-remsim-client-socket])
+fi
+AM_CONDITIONAL(BUILD_CLIENT_SOCKET, test "x$osmo_ac_build_client_socket" = "xyes")
+AC_SUBST(BUILD_CLIENT_SOCKET)
+
 
 AC_CONFIG_MACRO_DIR([m4])
 
