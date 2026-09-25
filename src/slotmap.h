@@ -22,6 +22,7 @@ static inline bool bank_slot_equals(const struct bank_slot *a, const struct bank
 struct client_slot {
 	uint16_t client_id;
 	uint16_t slot_nr;
+	bool maintenance;
 };
 
 static inline bool client_slot_equals(const struct client_slot *a, const struct client_slot *b)
@@ -59,6 +60,12 @@ struct slot_mapping {
 #ifdef REMSIM_SERVER
 	struct llist_head bank_list;
 	enum slot_mapping_state state;
+	/* production client configuration */
+	bool has_production_cfg;
+	struct client_slot production_cfg;
+	/* maintenance client configuration */
+	bool has_maintenance_cfg;
+	struct client_slot maintenance_cfg;
 #endif
 };
 

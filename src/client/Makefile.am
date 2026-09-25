@@ -21,7 +21,7 @@ osmo_remsim_client_shell_LDADD = $(top_builddir)/src/libosmo-rspro.la \
 				 $(OSMOCORE_LIBS) \
 				 $(NULL)
 
-bin_PROGRAMS = osmo-remsim-client-socket
+bin_PROGRAMS += osmo-remsim-client-socket
 
 osmo_remsim_client_socket_SOURCES = user_socket.c remsim_client_main.c \
 				   remsim_client.c main_fsm.c ../rspro_client_fsm.c ../debug.c

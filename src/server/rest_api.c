@@ -17,6 +17,8 @@
 #include "slotmap.h"
 #include "rspro_server.h"
 
+static void _slotmap_mark_deleted(struct slot_mapping *map, bool keep_in_list);
+
 static json_t *comp_id2json(const struct app_comp_id *comp_id)
 {
 	json_t *ret = json_object();
@@ -121,13 +123,13 @@ static json_t *slotmap2json(const struct slot_mapping *slotmap)
 {
 	json_t *ret = json_object();
 	json_object_set_new(ret, "bank", bank_slot2json(&slotmap->bank));
-	json_object_set_new(ret, "client", client_slot2json(&slotmap->client));
+	json_object_set_new(ret, "client", client_slot2json(&slotmap->production_cfg));
 	json_object_set_new(ret, "state", json_string(slotmap_state_name(slotmap->state)));
 	return ret;
 }
 static int json2slotmap(struct slot_mapping *out, json_t *in)
 {
-	json_t *jbank, *jclient;
+	json_t *jbank, *jclient, *jmaintenance;
 	int rc;
 
 	if (!json_is_object(in))
@@ -138,6 +140,8 @@ static int json2slotmap(struct slot_mapping *out, json_t *in)
 	jclient = json_object_get(in, "client");
 	if (!jclient || !json_is_object(jclient))
 		return -EINVAL;
+	jmaintenance = json_object_get(in, "maintenance");
+	out->has_maintenance_cfg = (jmaintenance && json_is_true(jmaintenance));
 
 	rc = json2bank_slot(&out->bank, jbank);
 	if (rc < 0)
@@ -284,6 +288,8 @@ static int api_cb_slotmaps_get(const struct _u_request *req, struct _u_response 
 
 	slotmaps_rdlock(g_rps->slotmaps);
 	llist_for_each_entry(map, &g_rps->slotmaps->mappings, list) {
+		if (!map->has_production_cfg)
+			continue;
 		json_array_append_new(json_maps, slotmap2json(map));
 	}
 	slotmaps_unlock(g_rps->slotmaps);
@@ -325,10 +331,71 @@ static int api_cb_slotmaps_post(const struct _u_request *req, struct _u_response
 	rc = json2slotmap(&slotmap, json_req);
 	if (rc < 0)
 		goto err;
+
+	slotmaps_wrlock(g_rps->slotmaps);
+	llist_for_each_entry(map, &g_rps->slotmaps->mappings, list) {
+		if (!!memcmp(&map->bank, &slotmap.bank, sizeof(struct bank_slot)))
+			continue;
+		if (slotmap.has_maintenance_cfg) {
+			if (map->has_production_cfg && !memcmp(&map->production_cfg, &slotmap.client,
+								sizeof(struct client_slot))) {
+				LOGP(DREST, LOGL_NOTICE, "REST: Cannot add slotmap\n");
+				slotmaps_unlock(g_rps->slotmaps);
+				goto err;
+			}
+			/* Set/change maintenance config and override production config */
+			if (map->has_production_cfg || map->has_maintenance_cfg) {
+printf("JOLLY: delete um zum maintenance zu schwenken\n");
+printf("JOLLY: delete um zum maintenance zu schwenken\n");
+printf("JOLLY: delete um zum maintenance zu schwenken\n");
+printf("JOLLY: delete um zum maintenance zu schwenken\n");
+printf("JOLLY: delete um zum maintenance zu schwenken\n");
+				map->has_maintenance_cfg = true;
+				map->maintenance_cfg = slotmap.client;
+				if (map->state == SLMAP_S_NEW)
+{
+printf("JOLLY: wir sind new, also einfach maintenance kopieren\n");
+					map->client = map->maintenance_cfg;
+}
+				else
+					_slotmap_mark_deleted(map, true);
+				slotmaps_unlock(g_rps->slotmaps);
+				goto ok;
+			}
+			break;
+		}
+		if (map->has_maintenance_cfg) {
+			if (!memcmp(&map->maintenance_cfg, &slotmap.client, sizeof(struct client_slot))) {
+				LOGP(DREST, LOGL_NOTICE, "REST: Cannot add slotmap\n");
+				slotmaps_unlock(g_rps->slotmaps);
+				goto err;
+			}
+			/* Set production config while beeing in maintenance state. */
+			if (map->has_production_cfg) {
+				LOGP(DREST, LOGL_NOTICE, "REST: Cannot add slotmap\n");
+				slotmaps_unlock(g_rps->slotmaps);
+				goto err;
+			}
+			map->has_production_cfg = true;
+			map->production_cfg = slotmap.client;
+			slotmaps_unlock(g_rps->slotmaps);
+			goto ok;
+		}
+		break;
+	}
+	slotmaps_unlock(g_rps->slotmaps);
+
 	map = slotmap_add(g_rps->slotmaps, &slotmap.bank, &slotmap.client);
 	if (!map) {
 		LOGP(DREST, LOGL_NOTICE, "REST: Cannot add slotmap\n");
 		goto err;
+	}
+	if (slotmap.has_maintenance_cfg) {
+		map->has_maintenance_cfg = true;
+		map->maintenance_cfg = map->client;
+	} else {
+		map->has_production_cfg = true;
+		map->production_cfg = map->client;
 	}
 	slotmap_state_change(map, SLMAP_S_NEW, NULL);
 
@@ -344,7 +411,7 @@ static int api_cb_slotmaps_post(const struct _u_request *req, struct _u_response
 	}
 	pthread_rwlock_unlock(&srv->rwlock);
 
-
+ok:
 	json_decref(json_req);
 	ulfius_set_empty_body_response(resp, 201);
 
@@ -356,18 +423,22 @@ err:
 }
 
 /* caller is holding a write lock on slotmaps->rwlock */
-static void _slotmap_mark_deleted(struct slot_mapping *map)
+static void _slotmap_mark_deleted(struct slot_mapping *map, bool keep_in_list)
 {
 	struct rspro_client_conn *conn = bankd_conn_by_id(g_rps, map->bank.bank_id);
 
-	/* delete map from global list to ensure it's not found by further lookups,
-	 * particularly in case somebody wants to create a new map for the same bank/slot */
-	llist_del(&map->list);
-	/* safely initialize list head to avoid trouble when del_slotmap() does another llist_del() */
-	INIT_LLIST_HEAD(&map->list);
+	if (!keep_in_list) {
+		/* delete map from global list to ensure it's not found by further lookups,
+		 * particularly in case somebody wants to create a new map for the same bank/slot */
+		llist_del(&map->list);
+		/* safely initialize list head to avoid trouble when del_slotmap() does another llist_del() */
+		INIT_LLIST_HEAD(&map->list);
+	}
 
 	switch (map->state) {
 	case SLMAP_S_NEW:
+		if (keep_in_list)
+			break;
 		/* new map, not yet sent to bank: we can remove it immediately */
 		/* delete from bank list (if any) */
 		llist_del(&map->bank_list);
@@ -401,9 +472,11 @@ static void _slotmap_mark_deleted(struct slot_mapping *map)
 static int api_cb_slotmaps_del(const struct _u_request *req, struct _u_response *resp, void *user_data)
 {
 	const char *slotmap_id_str = u_map_get(req->map_url, "slotmap_id");
+	const char *maintenance_str = u_map_get(req->map_url, "maintenance");
 	struct slot_mapping *map;
 	int status = 404;
 	unsigned long map_id;
+	bool maintenance;
 
 	if (!slotmap_id_str) {
 		status = 400;
@@ -415,16 +488,47 @@ static int api_cb_slotmaps_del(const struct _u_request *req, struct _u_response 
 		goto err;
 	}
 
+	if (maintenance_str)
+		printf("JOLLLY %s\n", maintenance_str);
+
+	maintenance = (maintenance_str && !strcmp(maintenance_str, "true"));
+
 	slotmaps_wrlock(g_rps->slotmaps);
 	llist_for_each_entry(map, &g_rps->slotmaps->mappings, list) {
-		if (slotmap_get_id(map) == map_id) {
-			_slotmap_mark_deleted(map);
+		if (slotmap_get_id(map) != map_id)
+			continue;
+		if (maintenance) {
+			/* Delete maintenence mapping, but there is no maintenence mapping. */
+			if (!map->has_maintenance_cfg)
+				break;
+			/* Delete maintenance mapping. */
+if (map->has_production_cfg)
+printf("REMOVE maintenance GO production\n");
+else
+printf("REMOVE maintenance NO production\n");
+			map->has_maintenance_cfg = false;
+			_slotmap_mark_deleted(map, map->has_production_cfg);
 			status = 200;
 			break;
 		}
+		/* Delete production mapping while there is maintenance mapping. */
+		if (map->has_maintenance_cfg) {
+printf("REMOVE production STAY in maintenance\n");
+			/* There is no production mapping. */
+			if (!map->has_production_cfg)
+				break;
+			map->has_production_cfg = false;
+			status = 200;
+			break;
+		}
+		/* Delete production mapping. */
+printf("REMOVE production NO maintenance\n");
+		map->has_production_cfg = false;
+		_slotmap_mark_deleted(map, false);
+		status = 200;
+		break;
 	}
 	slotmaps_unlock(g_rps->slotmaps);
-	trigger_main_thread_via_eventfd();
 
 
 	ulfius_set_empty_body_response(resp, status);
@@ -443,7 +547,7 @@ static int api_cb_global_reset_post(const struct _u_request *req, struct _u_resp
 	/* mark all slot mappings as deleted */
 	slotmaps_wrlock(g_rps->slotmaps);
 	llist_for_each_entry_safe(map, map2, &g_rps->slotmaps->mappings, list) {
-		_slotmap_mark_deleted(map);
+		_slotmap_mark_deleted(map, false);
 	}
 	slotmaps_unlock(g_rps->slotmaps);
 	trigger_main_thread_via_eventfd();

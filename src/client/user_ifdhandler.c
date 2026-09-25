@@ -611,6 +611,7 @@ end_parse:
 
 	ic = create_ifd_client(&cfg);
 	if (ic) {
+		printf("CREATE LUN::::%lu old=%p new=%p  %p\n", Lun, ifd_client[LUN2SLOT(Lun)], ic, &ifd_client[0]);
 		ifd_client[LUN2SLOT(Lun)] = ic;
 		return IFD_SUCCESS;
 	} else
@@ -688,6 +689,7 @@ RESPONSECODE IFDHGetCapabilities(DWORD Lun, DWORD Tag, PDWORD Length, PUCHAR Val
 	}
 
 	ic = ifd_client[LUN2SLOT(Lun)];
+	printf("CAPA LUN::::%lu client=%p\n", Lun, ifd_client[LUN2SLOT(Lun)]);
 	if (!ic) {
 		r = IFD_NO_SUCH_DEVICE;
 		goto err;

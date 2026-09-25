@@ -43,16 +43,21 @@ def rest_delete(suffix):
         print("delete failed")
 
 #rest calls
-def slotmap_create(bank_id, bank_slot, client_id, client_slot):
+def slotmap_create(bank_id, bank_slot, client_id, client_slot, maintenance):
     js = {
         'bank': {'bankId': int(bank_id), 'slotNr': int(bank_slot)},
         'client': {'clientId': int(client_id), 'slotNr': int(client_slot)},
         }
+    if maintenance:
+        js['maintenance'] = True
     return rest_post('/slotmaps', js)
 
-def slotmap_delete(bank_id, bank_slot):
+def slotmap_delete(bank_id, bank_slot, maintenance):
     slotmap_id = bank_id * 65536 + bank_slot
-    return rest_delete("/slotmaps/%u"%slotmap_id)
+    url = "/slotmaps/%u" % slotmap_id
+    if maintenance:
+        url += "?maintenance=true"
+    return rest_delete(url)
 
 def reset_global():
     return rest_post('/global-reset')
@@ -61,9 +66,10 @@ def main(argv):
     global server_port, server_host, verbose
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-H", "--host",    help="host to connect to",                        default="127.0.0.1")
-    parser.add_argument("-p", "--port",    help="port to connect to",                        default="9997")
-    parser.add_argument("-v", "--verbose", help="increase output verbosity", action="count", default=0)
+    parser.add_argument("-H", "--host",    help="host to connect to",                                default="127.0.0.1")
+    parser.add_argument("-p", "--port",    help="port to connect to",                                default="9997")
+    parser.add_argument("-v", "--verbose", help="increase output verbosity", action="count",         default=0)
+    parser.add_argument("--maintenance",   help="set maintenance mode to true", action="store_true", default=False)
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-r", "--reset",          help="remove all mappings  (POST /global-reset)", action="store_true")
     group.add_argument("-c", "--show-clients",   help="show clients         (GET /clients)",nargs='?',const="all",default=None)
@@ -103,10 +109,10 @@ def main(argv):
             rest_get("/slotmaps/" + str(args.show_slotmaps))
         return
     if args.create_slotmap:
-        slotmap_create(args.create_slotmap[0],args.create_slotmap[1],args.create_slotmap[2],args.create_slotmap[3])
+        slotmap_create(args.create_slotmap[0],args.create_slotmap[1],args.create_slotmap[2],args.create_slotmap[3],args.maintenance)
         return
     if args.delete_slotmap:
-        slotmap_delete(args.delete_slotmap[0],args.delete_slotmap[1])
+        slotmap_delete(args.delete_slotmap[0],args.delete_slotmap[1],args.maintenance)
         return
     rest_get("/clients")
     rest_get("/banks")

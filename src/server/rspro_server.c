@@ -424,6 +424,13 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 			LOGPFSML(fi, LOGL_NOTICE, "CreateMapRes but no unacknowledged map");
 			break;
 		}
+		if ((map->has_maintenance_cfg && !!memcmp(&map->maintenance_cfg, &map->client, sizeof(struct client_slot))) ||
+		    (!map->has_maintenance_cfg && map->has_production_cfg && !!memcmp(&map->production_cfg, &map->client, sizeof(struct client_slot)))) {
+LOGPFSML(fi, LOGL_NOTICE, "TEST TEST TEST");
+LOGPFSML(fi, LOGL_NOTICE, "TEST TEST TEST");
+LOGPFSML(fi, LOGL_NOTICE, "TEST TEST TEST");
+LOGPFSML(fi, LOGL_NOTICE, "TEST TEST TEST");
+		}
 		_slotmap_state_change(map, SLMAP_S_ACTIVE, &conn->bank.maps_active);
 		slotmaps_unlock(slotmaps);
 		_update_client_for_slotmap(map, conn->srv, conn);
@@ -443,6 +450,19 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 		/* update client! */
 		OSMO_ASSERT(map->state == SLMAP_S_DELETING);
 		_update_client_for_slotmap(map, conn->srv, conn);
+		if (map->has_maintenance_cfg || map->has_production_cfg) {
+			if (map->has_maintenance_cfg) {
+				map->client = map->maintenance_cfg;
+				LOGPFSML(fi, LOGL_DEBUG, "RemoveMapRes, now changing to maintenance mapping.\n");
+			} else {
+				map->client = map->production_cfg;
+				LOGPFSML(fi, LOGL_DEBUG, "RemoveMapRes, now changing to production mapping.\n");
+			}
+			RsproPDU_t *pdu = slotmap2CreateMappingReq(map);
+			client_conn_send(conn, pdu);
+			_slotmap_state_change(map, SLMAP_S_UNACKNOWLEDGED, &conn->bank.maps_unack);
+			break;
+		}
 		/* slotmap_del() will remove it from both global and bank list */
 		slotmap_del(map->maps, map);
 		break;
@@ -450,6 +470,8 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 		slotmaps_wrlock(slotmaps);
 		/* send any pending create requests */
 		llist_for_each_entry_safe(map, map2, &conn->bank.maps_new, bank_list) {
+printf("jolly: processing new map: client=%d slot=%d\n", map->client.client_id, map->client.slot_nr);
+	
 			RsproPDU_t *pdu = slotmap2CreateMappingReq(map);
 			client_conn_send(conn, pdu);
 			_slotmap_state_change(map, SLMAP_S_UNACKNOWLEDGED, &conn->bank.maps_unack);
