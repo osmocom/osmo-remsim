@@ -278,12 +278,18 @@ out_err:
 
 static int api_cb_slotmaps_get(const struct _u_request *req, struct _u_response *resp, void *user_data)
 {
+	const char *maintenance_str = u_map_get(req->map_url, "maintenance");
 	struct slot_mapping *map;
 	json_t *json_body = json_object();
 	json_t *json_maps = json_array();
+	bool maintenance;
+
+	maintenance = (maintenance_str && !strcmp(maintenance_str, "true"));
 
 	slotmaps_rdlock(g_rps->slotmaps);
 	llist_for_each_entry(map, &g_rps->slotmaps->mappings, list) {
+		if (map->maintenance != maintenance)
+			continue;
 		json_array_append_new(json_maps, slotmap2json(map));
 	}
 	slotmaps_unlock(g_rps->slotmaps);
@@ -309,12 +315,17 @@ static void trigger_main_thread_via_eventfd(void)
 
 static int api_cb_slotmaps_post(const struct _u_request *req, struct _u_response *resp, void *user_data)
 {
+	const char *maintenance_str = u_map_get(req->map_url, "maintenance");
 	struct rspro_server *srv = g_rps;
-	struct slot_mapping slotmap, *map;
+	struct slot_mapping slotmap, *map, *other_map;
 	struct rspro_client_conn *conn;
 	json_error_t json_err;
 	json_t *json_req = NULL;
+	bool suspending_map = false;
+	bool maintenance;
 	int rc;
+
+	maintenance = (maintenance_str && !strcmp(maintenance_str, "true"));
 
 	json_req = ulfius_get_json_body_request(req, &json_err);
 	if (!json_req) {
@@ -325,12 +336,45 @@ static int api_cb_slotmaps_post(const struct _u_request *req, struct _u_response
 	rc = json2slotmap(&slotmap, json_req);
 	if (rc < 0)
 		goto err;
-	map = slotmap_add(g_rps->slotmaps, &slotmap.bank, &slotmap.client, false);
+
+	/* Suspend existing normal mapping. */
+	if (maintenance) {
+		other_map = slotmap_by_bank_and_maintenance(g_rps->slotmaps, &slotmap.bank, false);
+		if (other_map && !other_map->suspend) {
+			suspending_map = true;
+			other_map->suspend = true;
+			/* If the normal mapping is already active, trigger suspension. */
+			if (other_map->state == SLMAP_S_ACTIVE) {
+				conn = bankd_conn_by_id(g_rps, other_map->bank.bank_id);
+				slotmap_state_change(other_map, SLMAP_S_DELETE_REQ, &conn->bank.maps_delreq);
+				/* Notify the conn FSM about delete request. */
+				trigger_main_thread_via_eventfd();
+			}
+		}
+	}
+
+	map = slotmap_add(g_rps->slotmaps, &slotmap.bank, &slotmap.client, maintenance);
 	if (!map) {
 		LOGP(DREST, LOGL_NOTICE, "REST: Cannot add slotmap\n");
 		goto err;
 	}
 	slotmap_state_change(map, SLMAP_S_NEW, NULL);
+
+	if (!map->maintenance) {
+		/* If there is already a maintenance mapping. */
+		other_map = slotmap_by_bank_and_maintenance(g_rps->slotmaps, &map->bank, true);
+		if (other_map) {
+			/* Put our map (not other map) into inactive state. */
+			slotmap_state_change(map, SLMAP_S_INACTIVE, NULL);
+			goto done;
+		}
+	}
+
+	/* If we are suspended an exisisting mapping, we stay inactive until the mapping was removed. */
+	if (suspending_map) {
+		slotmap_state_change(map, SLMAP_S_INACTIVE, NULL);
+		goto done;
+	}
 
 	/* check if any already-connected bankd matches this new map. If yes, associate it */
 	pthread_rwlock_rdlock(&srv->rwlock);
@@ -344,7 +388,7 @@ static int api_cb_slotmaps_post(const struct _u_request *req, struct _u_response
 	}
 	pthread_rwlock_unlock(&srv->rwlock);
 
-
+done:
 	json_decref(json_req);
 	ulfius_set_empty_body_response(resp, 201);
 
@@ -402,9 +446,11 @@ static void _slotmap_mark_deleted(struct slot_mapping *map)
 static int api_cb_slotmaps_del(const struct _u_request *req, struct _u_response *resp, void *user_data)
 {
 	const char *slotmap_id_str = u_map_get(req->map_url, "slotmap_id");
+	const char *maintenance_str = u_map_get(req->map_url, "maintenance");
 	struct slot_mapping *map;
 	int status = 404;
 	unsigned long map_id;
+	bool maintenance;
 
 	if (!slotmap_id_str) {
 		status = 400;
@@ -416,16 +462,17 @@ static int api_cb_slotmaps_del(const struct _u_request *req, struct _u_response 
 		goto err;
 	}
 
+	maintenance = (maintenance_str && !strcmp(maintenance_str, "true"));
+
 	slotmaps_wrlock(g_rps->slotmaps);
 	llist_for_each_entry(map, &g_rps->slotmaps->mappings, list) {
-		if (slotmap_get_id(map) == map_id) {
-			_slotmap_mark_deleted(map);
-			status = 200;
-			break;
-		}
+		if (slotmap_get_id(map) != map_id || map->maintenance != maintenance)
+			continue;
+		_slotmap_mark_deleted(map);
+		status = 200;
+		break;
 	}
 	slotmaps_unlock(g_rps->slotmaps);
-	trigger_main_thread_via_eventfd();
 
 
 	ulfius_set_empty_body_response(resp, status);

@@ -62,6 +62,8 @@ struct slot_mapping {
 	enum slot_mapping_state state;
 	/* this mapping is for maintenenance */
 	bool maintenance;
+	/* this mapping is (to be) suspended */
+	bool suspend;
 #endif
 };
 
