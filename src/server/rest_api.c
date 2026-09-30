@@ -325,7 +325,7 @@ static int api_cb_slotmaps_post(const struct _u_request *req, struct _u_response
 	rc = json2slotmap(&slotmap, json_req);
 	if (rc < 0)
 		goto err;
-	map = slotmap_add(g_rps->slotmaps, &slotmap.bank, &slotmap.client);
+	map = slotmap_add(g_rps->slotmaps, &slotmap.bank, &slotmap.client, false);
 	if (!map) {
 		LOGP(DREST, LOGL_NOTICE, "REST: Cannot add slotmap\n");
 		goto err;

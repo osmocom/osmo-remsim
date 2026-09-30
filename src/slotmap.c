@@ -92,9 +92,30 @@ struct slot_mapping *slotmap_by_bank(struct slotmaps *maps, const struct bank_sl
 	return NULL;
 }
 
+/* thread-safe lookup of map by bank:slot with specific maintenance flag */
+struct slot_mapping *slotmap_by_bank_and_maintenance(struct slotmaps *maps, const struct bank_slot *bank,
+						     bool maintenance)
+{
+	struct slot_mapping *map;
+
+	slotmaps_rdlock(maps);
+	llist_for_each_entry(map, &maps->mappings, list) {
+#ifdef REMSIM_SERVER
+		if (map->maintenance != maintenance)
+			continue;
+#endif
+		if (bank_slot_equals(&map->bank, bank)) {
+			slotmaps_unlock(maps);
+			return map;
+		}
+	}
+	slotmaps_unlock(maps);
+	return NULL;
+}
+
 /* thread-safe creating of a new bank<->client map */
-struct slot_mapping *slotmap_add(struct slotmaps *maps, const struct bank_slot *bank,
-				 const struct client_slot *client)
+struct slot_mapping *slotmap_add(struct slotmaps *maps, const struct bank_slot *bank, const struct client_slot *client,
+				 bool maintenance)
 {
 	struct slot_mapping *map;
 	char mapname[64];
@@ -103,10 +124,10 @@ struct slot_mapping *slotmap_add(struct slotmaps *maps, const struct bank_slot *
 	 * and hence we don't have any races by first grabbing + releasing the read
 	 * lock twice before grabbing the writelock below */
 
-	map = slotmap_by_bank(maps, bank);
+	map = slotmap_by_bank_and_maintenance(maps, bank, maintenance);
 	if (map) {
-		LOGP(DSLOTMAP, LOGL_ERROR, "BANKD %u:%u already in use, cannot add new map\n",
-			bank->bank_id, bank->slot_nr);
+		LOGP(DSLOTMAP, LOGL_ERROR, "BANKD %u:%u (maintenance %d) already in use, cannot add new map\n",
+			bank->bank_id, bank->slot_nr, maintenance);
 		return NULL;
 	}
 
@@ -131,6 +152,7 @@ struct slot_mapping *slotmap_add(struct slotmaps *maps, const struct bank_slot *
 #ifdef REMSIM_SERVER
 	map->state = SLMAP_S_NEW;
 	INIT_LLIST_HEAD(&map->bank_list); /* to ensure llist_del() always succeeds */
+	map->maintenance = maintenance;
 #endif
 	slotmaps_unlock(maps);
 

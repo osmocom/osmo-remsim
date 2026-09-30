@@ -229,7 +229,7 @@ static int bankd_srvc_handle_rx(struct rspro_server_conn *srvc, const RsproPDU_t
 			}
 
 			/* Add a new mapping */
-			map = slotmap_add(g_bankd->slotmaps, &bs, &cs);
+			map = slotmap_add(g_bankd->slotmaps, &bs, &cs, false);
 			if (!map) {
 				LOGPFSML(srvc->fi, LOGL_ERROR, "could not create slotmap\n");
 				resp = rspro_gen_CreateMappingRes(ResultCode_illegalSlotId);

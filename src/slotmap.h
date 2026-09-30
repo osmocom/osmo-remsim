@@ -59,6 +59,8 @@ struct slot_mapping {
 #ifdef REMSIM_SERVER
 	struct llist_head bank_list;
 	enum slot_mapping_state state;
+	/* this mapping is for maintenenance */
+	bool maintenance;
 #endif
 };
 
@@ -79,8 +81,13 @@ struct slot_mapping *slotmap_by_client(struct slotmaps *maps, const struct clien
 /* thread-safe lookup of map by bank:slot */
 struct slot_mapping *slotmap_by_bank(struct slotmaps *maps, const struct bank_slot *bank);
 
+/* thread-safe lookup of map by bank:slot and maintenance flag */
+struct slot_mapping *slotmap_by_bank_and_maintenance(struct slotmaps *maps, const struct bank_slot *bank,
+						     bool maintenance);
+
 /* thread-safe creating of a new bank<->client map */
-struct slot_mapping *slotmap_add(struct slotmaps *maps, const struct bank_slot *bank, const struct client_slot *client);
+struct slot_mapping *slotmap_add(struct slotmaps *maps, const struct bank_slot *bank, const struct client_slot *client,
+				 bool maintenance);
 
 /* thread-safe removal of a bank<->client map */
 void slotmap_del(struct slotmaps *maps, struct slot_mapping *map);
