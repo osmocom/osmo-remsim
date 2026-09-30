@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <pthread.h>
 #include <osmocom/core/linuxlist.h>
+#include <osmocom/core/timer.h>
 
 #define REMSIM_SERVER 1
 
@@ -60,6 +61,9 @@ struct slot_mapping {
 #ifdef REMSIM_SERVER
 	struct llist_head bank_list;
 	enum slot_mapping_state state;
+	/* optional timer to limit mapping duration */
+	struct osmo_timer_list timer;
+	int timeout;
 	/* priority of mapping: any signed integer (negative, 0, or positive);
 	 * higher value means higher priority; default is 0 */
 	int priority;
@@ -96,6 +100,10 @@ struct slot_mapping *slotmap_by_bank_and_highest_prio(struct slotmaps *maps, con
 /* thread-safe creating of a new bank<->client map */
 struct slot_mapping *slotmap_add(struct slotmaps *maps, const struct bank_slot *bank, const struct client_slot *client,
 				 int priority);
+
+#ifdef REMSIM_SERVER
+void slotmap_start_timer(struct slot_mapping *map, void(*timeout_cb)(void *data));
+#endif
 
 /* thread-safe removal of a bank<->client map */
 void slotmap_del(struct slotmaps *maps, struct slot_mapping *map);

@@ -181,6 +181,15 @@ struct slot_mapping *slotmap_add(struct slotmaps *maps, const struct bank_slot *
 	return map;
 }
 
+#ifdef REMSIM_SERVER
+void slotmap_start_timer(struct slot_mapping *map, void(*timeout_cb)(void *data))
+{
+	osmo_timer_setup(&map->timer, timeout_cb, map);
+	osmo_timer_schedule(&map->timer, map->timeout, 0);
+}
+
+#endif
+
 /* thread-safe removal of a bank<->client map */
 void _slotmap_del(struct slotmaps *maps, struct slot_mapping *map)
 {
@@ -190,6 +199,7 @@ void _slotmap_del(struct slotmaps *maps, struct slot_mapping *map)
 
 	llist_del(&map->list);
 #ifdef REMSIM_SERVER
+	osmo_timer_del(&map->timer);
 	llist_del(&map->bank_list);
 #endif
 
