@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <pthread.h>
 #include <osmocom/core/linuxlist.h>
+#include <osmocom/core/timer.h>
 
 #define REMSIM_SERVER 1
 
@@ -62,6 +63,8 @@ struct slot_mapping {
 	enum slot_mapping_state state;
 	/* this mapping is for maintenenance */
 	bool maintenance;
+	int maintenance_timeout;
+	struct osmo_timer_list maintenance_timer;
 	/* this mapping is (to be) suspended */
 	bool suspend;
 #endif

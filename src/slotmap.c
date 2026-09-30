@@ -171,6 +171,7 @@ void _slotmap_del(struct slotmaps *maps, struct slot_mapping *map)
 
 	llist_del(&map->list);
 #ifdef REMSIM_SERVER
+	osmo_timer_del(&map->maintenance_timer);
 	llist_del(&map->bank_list);
 #endif
 

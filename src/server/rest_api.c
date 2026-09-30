@@ -316,6 +316,7 @@ static void trigger_main_thread_via_eventfd(void)
 static int api_cb_slotmaps_post(const struct _u_request *req, struct _u_response *resp, void *user_data)
 {
 	const char *maintenance_str = u_map_get(req->map_url, "maintenance");
+	const char *timeout_str = u_map_get(req->map_url, "timeout");
 	struct rspro_server *srv = g_rps;
 	struct slot_mapping slotmap, *map, *other_map;
 	struct rspro_client_conn *conn;
@@ -323,9 +324,11 @@ static int api_cb_slotmaps_post(const struct _u_request *req, struct _u_response
 	json_t *json_req = NULL;
 	bool suspending_map = false;
 	bool maintenance;
+	int timeout;
 	int rc;
 
 	maintenance = (maintenance_str && !strcmp(maintenance_str, "true"));
+	timeout = (timeout_str) ? atoi(timeout_str) : 0;
 
 	json_req = ulfius_get_json_body_request(req, &json_err);
 	if (!json_req) {
@@ -368,6 +371,8 @@ static int api_cb_slotmaps_post(const struct _u_request *req, struct _u_response
 			slotmap_state_change(map, SLMAP_S_INACTIVE, NULL);
 			goto done;
 		}
+	} else {
+		map->maintenance_timeout = timeout;
 	}
 
 	/* If we are suspended an exisisting mapping, we stay inactive until the mapping was removed. */
