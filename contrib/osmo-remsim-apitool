@@ -11,11 +11,11 @@ def build_url(suffix):
     BASE_PATH = "/api/backend/v1"
     return ("http://" + server_host + ":" + server_port + BASE_PATH + suffix)
 
-def rest_get(suffix):
+def rest_get(suffix, params = None):
     if verbose:
         print("GET "+ build_url(suffix))
     try:
-        resp = requests.get(build_url(suffix))
+        resp = requests.get(build_url(suffix), params=params)
     except:
         print("REST GET failed")
         return
@@ -28,31 +28,48 @@ def rest_get(suffix):
     else:
         return None
 
-def rest_post(suffix, js = None):
+def rest_post(suffix, params = None, js = None):
     if verbose:
         print("POST "+ build_url(suffix)+ str(js))
-    resp = requests.post(build_url(suffix), json=js)
+    resp = requests.post(build_url(suffix), json=js, params=params)
     if not resp.ok:
         print("post failed")
 
-def rest_delete(suffix):
+def rest_delete(suffix, params = None):
     if verbose:
         print("DELETE "+ build_url(suffix))
-    resp = requests.delete(build_url(suffix))
+    resp = requests.delete(build_url(suffix), params=params)
     if not resp.ok:
         print("delete failed")
 
 #rest calls
-def slotmap_create(bank_id, bank_slot, client_id, client_slot):
+def slotmap_create(bank_id, bank_slot, client_id, client_slot, priority, timeout):
     js = {
         'bank': {'bankId': int(bank_id), 'slotNr': int(bank_slot)},
         'client': {'clientId': int(client_id), 'slotNr': int(client_slot)},
         }
-    return rest_post('/slotmaps', js)
+    url = "/slotmaps"
+    params = {}
+    if priority:
+        params['priority'] = str(priority)
+    if timeout > 0:
+        params['timeout'] = str(timeout)
+    return rest_post(url, params, js)
 
-def slotmap_delete(bank_id, bank_slot):
+def slotmap_delete(bank_id, bank_slot, priority):
     slotmap_id = bank_id * 65536 + bank_slot
-    return rest_delete("/slotmaps/%u"%slotmap_id)
+    url = "/slotmaps/%u" % slotmap_id
+    params = {}
+    if priority:
+        params['priority'] = str(priority)
+    return rest_delete(url, params)
+
+def slotmap_show(priority):
+    url = "/slotmaps/"
+    params = {}
+    if priority:
+        params['priority'] = str(priority)
+    return rest_get(url, params)
 
 def reset_global():
     return rest_post('/global-reset')
@@ -61,14 +78,16 @@ def main(argv):
     global server_port, server_host, verbose
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-H", "--host",    help="host to connect to",                        default="127.0.0.1")
-    parser.add_argument("-p", "--port",    help="port to connect to",                        default="9997")
-    parser.add_argument("-v", "--verbose", help="increase output verbosity", action="count", default=0)
+    parser.add_argument("-H", "--host",    help="host to connect to",                                     default="127.0.0.1")
+    parser.add_argument("-p", "--port",    help="port to connect to",                                     default="9997")
+    parser.add_argument("-v", "--verbose", help="increase output verbosity", action="count",              default=0)
+    parser.add_argument("--priority",      help="create/delete/show slotmaps of given priority",          default=None)
+    parser.add_argument("--timeout",       help="timeout (in seconds) for automatic removal of mapping",  default=0)
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-r", "--reset",          help="remove all mappings  (POST /global-reset)", action="store_true")
     group.add_argument("-c", "--show-clients",   help="show clients         (GET /clients)",nargs='?',const="all",default=None)
     group.add_argument("-b", "--show-banks",     help="show banks           (GET /banks)",nargs='?',const="all",default=None)
-    group.add_argument("-s", "--show-slotmaps",  help="show slotmaps        (GET /slotmaps)",nargs='?',const="all",default=None)
+    group.add_argument("-s", "--show-slotmaps",  help="show slotmaps        (GET /slotmaps)", action="store_true")
     group.add_argument("-m", "--create-slotmap", help="create new slotmap   (POST /slotmaps)", type=int, nargs=4,metavar=('bank_id', 'bank_slot','client_id','client_slot'))
     group.add_argument("-d", "--delete-slotmap", help="delete slotmapping   (DELETE /slotmaps/<id>)", type=int, nargs=2, metavar=('bank_id','bank_slot'))
     group.add_argument("-a", "--show-all",       help="show all (default if no argument given)", action="store_true")
@@ -97,20 +116,18 @@ def main(argv):
             rest_get("/banks/" + str(args.show_banks))
         return
     if args.show_slotmaps:
-        if args.show_slotmaps == "all":
-            rest_get("/slotmaps")
-        else:
-            rest_get("/slotmaps/" + str(args.show_slotmaps))
+        slotmap_show(args.priority)
         return
     if args.create_slotmap:
-        slotmap_create(args.create_slotmap[0],args.create_slotmap[1],args.create_slotmap[2],args.create_slotmap[3])
+        slotmap_create(args.create_slotmap[0],args.create_slotmap[1],args.create_slotmap[2],args.create_slotmap[3],
+                       args.priority, int(args.timeout))
         return
     if args.delete_slotmap:
-        slotmap_delete(args.delete_slotmap[0],args.delete_slotmap[1])
+        slotmap_delete(args.delete_slotmap[0],args.delete_slotmap[1],args.priority)
         return
     rest_get("/clients")
     rest_get("/banks")
-    rest_get("/slotmaps")
+    slotmap_show(args.priority)
 
 if __name__ == "__main__":
     main(sys.argv)
