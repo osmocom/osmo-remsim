@@ -368,7 +368,8 @@ static void _slotmap_mark_deleted(struct slot_mapping *map)
 
 	switch (map->state) {
 	case SLMAP_S_NEW:
-		/* new map, not yet sent to bank: we can remove it immediately */
+	case SLMAP_S_INACTIVE:
+		/* new or inactive map, not yet sent to bank: we can remove it immediately */
 		/* delete from bank list (if any) */
 		llist_del(&map->bank_list);
 		/* safely initialize list head to avoid trouble when del_slotmap() does another llist_del() */
