@@ -410,6 +410,23 @@ static void clnt_st_connected_client(struct osmo_fsm_inst *fi, uint32_t event, v
 	}
 }
 
+/* Handle timeout for mapping. */
+static void mapping_timeout(void *data)
+{
+	struct slot_mapping *map = data;
+	struct rspro_client_conn *conn;
+
+	conn = bankd_conn_by_id(g_rps, map->bank.bank_id);
+	if (!conn)
+		return;
+
+	/* The timer fires in ACTIVE state, so we trigger deletion now. */
+	if (map->state == SLMAP_S_ACTIVE) {
+		slotmap_state_change(map, SLMAP_S_DELETE_REQ, &conn->bank.maps_delreq);
+		osmo_fsm_inst_dispatch(conn->fi, CLNTC_E_PUSH, NULL);
+	}
+}
+
 static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
 	struct rspro_client_conn *conn = fi->priv;
@@ -439,6 +456,12 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 			RsproPDU_t *pdu = slotmap2RemoveMappingReq(map);
 			client_conn_send(conn, pdu);
 			slotmap_state_change(map, SLMAP_S_DELETING, &conn->bank.maps_deleting);
+			break;
+		}
+		/* If mapping has been created, start mapping timeout timer. */
+		if (map->timeout) {
+			osmo_timer_setup(&map->timer, mapping_timeout, map);
+			osmo_timer_schedule(&map->timer, map->timeout, 0);
 		}
 		break;
 	case CLNTC_E_REMOVE_MAP_RES: /* Bankd acknowledges mapping was removed */
@@ -479,6 +502,8 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 			slotmap_state_change(other_map, SLMAP_S_UNACKNOWLEDGED, &conn->bank.maps_unack);
 			break;
 		}
+		/* Delete mapping timeout timer. */
+		osmo_timer_del(&map->timer);
 		/* If maintenance mapping is to be deleted, reactivate inactive mapping. */
 		if (map->maintenance) {
 			/* Search for non maintenance mapping. */
