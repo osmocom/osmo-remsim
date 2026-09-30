@@ -21,6 +21,8 @@
 
 #define S(x)	(1 << (x))
 
+extern struct rspro_server *g_rps;
+
 static RsproPDU_t *slotmap2CreateMappingReq(const struct slot_mapping *slotmap)
 {
 	ClientSlot_t clslot;
@@ -410,7 +412,7 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 	struct rspro_client_conn *conn = fi->priv;
 	struct slotmaps *slotmaps = conn->srv->slotmaps;
 	const __attribute__((unused)) RsproPDU_t *rx = NULL;
-	struct slot_mapping *map, *map2;
+	struct slot_mapping *map, *map2, *other_map;
 
 	switch (event) {
 	case CLNTC_E_CREATE_MAP_RES: /* Bankd acknowledges mapping was created */
@@ -427,6 +429,14 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 		_slotmap_state_change(map, SLMAP_S_ACTIVE, &conn->bank.maps_active);
 		slotmaps_unlock(slotmaps);
 		_update_client_for_slotmap(map, conn->srv, conn);
+		/* If mapping needs to be suspended while it was created, suspend it now.
+		 * This solves the race condition, where the mapping needs to be suspended
+		 * while it is being activated. */
+		if (map->suspend) {
+			RsproPDU_t *pdu = slotmap2RemoveMappingReq(map);
+			client_conn_send(conn, pdu);
+			slotmap_state_change(map, SLMAP_S_DELETING, &conn->bank.maps_deleting);
+		}
 		break;
 	case CLNTC_E_REMOVE_MAP_RES: /* Bankd acknowledges mapping was removed */
 		rx = data;
@@ -443,6 +453,40 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 		/* update client! */
 		OSMO_ASSERT(map->state == SLMAP_S_DELETING);
 		_update_client_for_slotmap(map, conn->srv, conn);
+		/* If mapping has been suspended, put it into INACTIVE state. */
+		if (map->suspend) {
+			slotmap_state_change(map, SLMAP_S_INACTIVE, NULL);
+			/* Search for maintenance mapping, so it can be created. */
+			other_map = slotmap_by_bank_and_maintenance(slotmaps, &map->bank, true);
+			if (!other_map) {
+				LOGPFSML(fi, LOGL_NOTICE, "no maintenance mapping found, resuming clinet=%d:%d\n",
+					 map->client.client_id, map->client.slot_nr);
+				/* If not found, resume suspended mapping by sending a create request.
+				 * This solves the race condition, where the maintenance mapping gets removed,
+				 * while the normal mapping is beein suspended. */
+				RsproPDU_t *pdu = slotmap2CreateMappingReq(map);
+				client_conn_send(conn, pdu);
+				slotmap_state_change(map, SLMAP_S_UNACKNOWLEDGED, &conn->bank.maps_unack);
+				map->suspend = false;
+				break;
+			}
+			/* Send create request for maintenance mapping. */
+			RsproPDU_t *pdu = slotmap2CreateMappingReq(other_map);
+			client_conn_send(conn, pdu);
+			slotmap_state_change(other_map, SLMAP_S_UNACKNOWLEDGED, &conn->bank.maps_unack);
+			break;
+		}
+		/* If maintenance mapping is to be deleted, reactivate inactive mapping. */
+		if (map->maintenance) {
+			/* Search for non maintenance mapping. */
+			other_map = slotmap_by_bank_and_maintenance(slotmaps, &map->bank, false);
+			if (other_map) {
+				/* Send create request for maintenance mapping. */
+				RsproPDU_t *pdu = slotmap2CreateMappingReq(other_map);
+				client_conn_send(conn, pdu);
+				slotmap_state_change(other_map, SLMAP_S_UNACKNOWLEDGED, &conn->bank.maps_unack);
+			}
+		}
 		/* slotmap_del() will remove it from both global and bank list */
 		slotmap_del(map->maps, map);
 		break;
