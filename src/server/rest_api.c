@@ -278,12 +278,18 @@ out_err:
 
 static int api_cb_slotmaps_get(const struct _u_request *req, struct _u_response *resp, void *user_data)
 {
+	const char *priority_str = u_map_get(req->map_url, "priority");
 	struct slot_mapping *map;
 	json_t *json_body = json_object();
 	json_t *json_maps = json_array();
+	int priority;
+
+	priority = (priority_str) ? atoi(priority_str) : 0;
 
 	slotmaps_rdlock(g_rps->slotmaps);
 	llist_for_each_entry(map, &g_rps->slotmaps->mappings, list) {
+		if (map->priority != priority)
+			continue;
 		json_array_append_new(json_maps, slotmap2json(map));
 	}
 	slotmaps_unlock(g_rps->slotmaps);
@@ -309,12 +315,17 @@ static void trigger_main_thread_via_eventfd(void)
 
 static int api_cb_slotmaps_post(const struct _u_request *req, struct _u_response *resp, void *user_data)
 {
+	const char *priority_str = u_map_get(req->map_url, "priority");
 	struct rspro_server *srv = g_rps;
-	struct slot_mapping slotmap, *map;
+	struct slot_mapping slotmap, *map, *other_map;
 	struct rspro_client_conn *conn;
 	json_error_t json_err;
 	json_t *json_req = NULL;
+	bool suspending_map = false;
+	int priority;
 	int rc;
+
+	priority = (priority_str) ? atoi(priority_str) : 0;
 
 	json_req = ulfius_get_json_body_request(req, &json_err);
 	if (!json_req) {
@@ -325,12 +336,46 @@ static int api_cb_slotmaps_post(const struct _u_request *req, struct _u_response
 	rc = json2slotmap(&slotmap, json_req);
 	if (rc < 0)
 		goto err;
-	map = slotmap_add(g_rps->slotmaps, &slotmap.bank, &slotmap.client, 0);
+
+	if (slotmap_by_bank_and_prio(g_rps->slotmaps, &slotmap.bank, priority)) {
+		LOGP(DREST, LOGL_NOTICE, "REST: Slotmap to bank with same priority already exits.\n");
+		goto err;
+	}
+
+	other_map = slotmap_by_bank_and_highest_prio(g_rps->slotmaps, &slotmap.bank);
+
+	/* Request suspension of mapping with lower priority, if not already requested. */
+	if (other_map && priority > other_map->priority && !other_map->suspend_requested) {
+		suspending_map = true;
+		other_map->suspend_requested = true;
+		/* If the normal mapping is already active, trigger suspension. */
+		if (other_map->state == SLMAP_S_ACTIVE) {
+			conn = bankd_conn_by_id(g_rps, other_map->bank.bank_id);
+			slotmap_state_change(other_map, SLMAP_S_DELETE_REQ, &conn->bank.maps_delreq);
+			/* Notify the conn FSM about delete request. */
+			trigger_main_thread_via_eventfd();
+		}
+	}
+
+	map = slotmap_add(g_rps->slotmaps, &slotmap.bank, &slotmap.client, priority);
 	if (!map) {
 		LOGP(DREST, LOGL_NOTICE, "REST: Cannot add slotmap\n");
 		goto err;
 	}
 	slotmap_state_change(map, SLMAP_S_NEW, NULL);
+
+	/* If there is already a mapping with higher priority. */
+	if (other_map && other_map->priority > priority) {
+		/* Put our map (not other map) into inactive state. */
+		slotmap_state_change(map, SLMAP_S_INACTIVE, NULL);
+		goto done;
+	}
+
+	/* If mapping with lower priority is suspending, wait in INACTIVE state. */
+	if (suspending_map) {
+		slotmap_state_change(map, SLMAP_S_INACTIVE, NULL);
+		goto done;
+	}
 
 	/* check if any already-connected bankd matches this new map. If yes, associate it */
 	pthread_rwlock_rdlock(&srv->rwlock);
@@ -344,7 +389,7 @@ static int api_cb_slotmaps_post(const struct _u_request *req, struct _u_response
 	}
 	pthread_rwlock_unlock(&srv->rwlock);
 
-
+done:
 	json_decref(json_req);
 	ulfius_set_empty_body_response(resp, 201);
 
@@ -402,9 +447,11 @@ static void _slotmap_mark_deleted(struct slot_mapping *map)
 static int api_cb_slotmaps_del(const struct _u_request *req, struct _u_response *resp, void *user_data)
 {
 	const char *slotmap_id_str = u_map_get(req->map_url, "slotmap_id");
+	const char *priority_str = u_map_get(req->map_url, "priority");
 	struct slot_mapping *map;
 	int status = 404;
 	unsigned long map_id;
+	int priority;
 
 	if (!slotmap_id_str) {
 		status = 400;
@@ -416,16 +463,17 @@ static int api_cb_slotmaps_del(const struct _u_request *req, struct _u_response 
 		goto err;
 	}
 
+	priority = (priority_str) ? atoi(priority_str) : 0;
+
 	slotmaps_wrlock(g_rps->slotmaps);
 	llist_for_each_entry(map, &g_rps->slotmaps->mappings, list) {
-		if (slotmap_get_id(map) == map_id) {
-			_slotmap_mark_deleted(map);
-			status = 200;
-			break;
-		}
+		if (slotmap_get_id(map) != map_id || map->priority != priority)
+			continue;
+		_slotmap_mark_deleted(map);
+		status = 200;
+		break;
 	}
 	slotmaps_unlock(g_rps->slotmaps);
-	trigger_main_thread_via_eventfd();
 
 
 	ulfius_set_empty_body_response(resp, status);

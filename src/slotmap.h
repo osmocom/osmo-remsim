@@ -63,6 +63,8 @@ struct slot_mapping {
 	/* priority of mapping: any signed integer (negative, 0, or positive);
 	 * higher value means higher priority; default is 0 */
 	int priority;
+	/* this mapping needs to be suspended */
+	bool suspend_requested;
 #endif
 };
 

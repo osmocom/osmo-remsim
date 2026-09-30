@@ -21,6 +21,8 @@
 
 #define S(x)	(1 << (x))
 
+extern struct rspro_server *g_rps;
+
 static RsproPDU_t *slotmap2CreateMappingReq(const struct slot_mapping *slotmap)
 {
 	ClientSlot_t clslot;
@@ -381,6 +383,9 @@ static void clnt_st_connected_bankd_onenter(struct osmo_fsm_inst *fi, uint32_t p
 	/* Link all known mappings to this new bank */
 	slotmaps_wrlock(slotmaps);
 	llist_for_each_entry(map, &slotmaps->mappings, list) {
+		/* Skip inactive mappings. */
+		if (map->state == SLMAP_S_INACTIVE)
+			continue;
 		if (map->bank.bank_id == conn->bank.bank_id)
 			_slotmap_state_change(map, SLMAP_S_NEW, &conn->bank.maps_new);
 	}
@@ -410,7 +415,8 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 	struct rspro_client_conn *conn = fi->priv;
 	struct slotmaps *slotmaps = conn->srv->slotmaps;
 	const __attribute__((unused)) RsproPDU_t *rx = NULL;
-	struct slot_mapping *map, *map2;
+	struct slot_mapping *map, *map2, *other_map;
+	struct bank_slot bank;
 
 	switch (event) {
 	case CLNTC_E_CREATE_MAP_RES: /* Bankd acknowledges mapping was created */
@@ -427,6 +433,14 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 		_slotmap_state_change(map, SLMAP_S_ACTIVE, &conn->bank.maps_active);
 		slotmaps_unlock(slotmaps);
 		_update_client_for_slotmap(map, conn->srv, conn);
+		/* If mapping needs to be suspended while it was created, suspend it now.
+		 * This solves the race condition, where the mapping needs to be suspended
+		 * while it is being activated. */
+		if (map->suspend_requested) {
+			RsproPDU_t *pdu = slotmap2RemoveMappingReq(map);
+			client_conn_send(conn, pdu);
+			slotmap_state_change(map, SLMAP_S_DELETING, &conn->bank.maps_deleting);
+		}
 		break;
 	case CLNTC_E_REMOVE_MAP_RES: /* Bankd acknowledges mapping was removed */
 		rx = data;
@@ -443,8 +457,37 @@ static void clnt_st_connected_bankd(struct osmo_fsm_inst *fi, uint32_t event, vo
 		/* update client! */
 		OSMO_ASSERT(map->state == SLMAP_S_DELETING);
 		_update_client_for_slotmap(map, conn->srv, conn);
+		/* If mapping has been suspended, put it into INACTIVE state. */
+		if (map->suspend_requested) {
+			slotmap_state_change(map, SLMAP_S_INACTIVE, NULL);
+			map->suspend_requested = false;
+			/* Search for mapping with the highest priority, so it can be created. */
+			other_map = slotmap_by_bank_and_highest_prio(slotmaps, &map->bank);
+			if (other_map == map) {
+				/* If there is no higher priority mapping found, resume suspended mapping by sending
+				 * a create request. This solves the race condition, where the higher priority mapping
+				 * gets removed, while the lower priority mapping was suspended. */
+				LOGPFSML(fi, LOGL_NOTICE,
+					 "Mapping with higher priority is gone, resuming client=%d:%d\n",
+					 map->client.client_id, map->client.slot_nr);
+			}
+			/* Send create request for the currently highest priority mapping. */
+			RsproPDU_t *pdu = slotmap2CreateMappingReq(other_map);
+			client_conn_send(conn, pdu);
+			slotmap_state_change(other_map, SLMAP_S_UNACKNOWLEDGED, &conn->bank.maps_unack);
+			break;
+		}
 		/* slotmap_del() will remove it from both global and bank list */
+		bank = map->bank;
 		slotmap_del(map->maps, map);
+		/* If there is a lower priority mapping, resume it. */
+		other_map = slotmap_by_bank_and_highest_prio(slotmaps, &bank);
+		if (other_map) {
+			/* Send create request for resuming normal mapping. */
+			RsproPDU_t *pdu = slotmap2CreateMappingReq(other_map);
+			client_conn_send(conn, pdu);
+			slotmap_state_change(other_map, SLMAP_S_UNACKNOWLEDGED, &conn->bank.maps_unack);
+		}
 		break;
 	case CLNTC_E_PUSH: /* check if any create or delete requests are pending */
 		slotmaps_wrlock(slotmaps);
