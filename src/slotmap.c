@@ -38,6 +38,7 @@ const struct value_string slot_map_state_name[] = {
 	{ SLMAP_S_ACTIVE,		"ACTIVE" },
 	{ SLMAP_S_DELETE_REQ,		"DELETE_REQ" },
 	{ SLMAP_S_DELETING,		"DELETING" },
+	{ SLMAP_S_INACTIVE,		"INACTIVE" },
 	{ 0, NULL }
 };
 
