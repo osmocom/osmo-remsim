@@ -216,6 +216,7 @@ osmo-remsim-client-shell currently has the following command-line options:
 
 *osmo-remsim-client-shell* [...]
 
+[#osmo-remsim-client-shell-options]
 ==== OPTIONS
 
 *-h, --help*::
@@ -262,6 +263,53 @@ R-APDU: 9f 17
 * The `9f17` is a response TPDU provided by the remote card in response to the command
 
 The program continues in this loop (read command APDU as hex-dump from stdin; provide response on stdout)
+until it is terminated by Ctrl+C or by other means.
+
+== osmo-remsim-client-socket
+
+The osmo-remsim-client-socket is similar to osmo-remsim-client-shell, but uses a Unix socket instead of stdin and
+stdout to exchange APDUs.
+
+This allows applications to access a remote SIM without implementing the RSPro protocol. The application must
+implement a Unix socket client.
+
+=== Running
+
+osmo-remsim-client-socket currently has the following command-line options:
+
+==== SYNOPSIS
+
+*osmo-remsim-client-shell* -S PATH [...]
+
+==== OPTIONS
+
+All options of <<osmo-remsim-client-shell-options, osmo-remsim-client-shell>> apply to osmo-remsim-client-socket.
+Additionally the following option is available:
+
+*-S, --scoket-name PATH*::
+  Specify the Unix socket name. An application connects to this socket to exchange APDUs.
+
+==== Examples
+
+.remsim-server is at 192.168.11.10; we are client 23 slot 0
+----
+./osmo-remsim-client-socket -i 192.168.11.10 -c 23 -S /tmp/remsim_c23_s0
+DRSPRO INFO ../rspro_client_fsm.c:454 RSPRO_CLIENT(bankd){REESTABLISH}: Creating TCP connection to server at 192.168.11.10:9999
+DRSPRO NOTICE ../rspro_client_fsm.c:145 RSPRO_CLIENT(bankd){REESTABLISH}: RSPRO link to 192.168.11.10:9999 UP
+DMAIN INFO user_socket.c:25 SIM inseterd
+DMAIN NOTICE main_fsm.c:280 CLIENT_MAIN(main){OPERATIONAL}: Rx setAtrReq(3b9f96801f878031e073fe211b674a4c753034054ba9)
+DMAIN INFO user_socket.c:79 SET_ATR 3b 9f 96 80 1f 87 80 31 e0 73 fe 21 1b 67 4a 4c 75 30 34 05 4b a9
+DMAIN INFO main_fsm.c:339 CLIENT_MAIN(main){OPERATIONAL}: Tx tpduModemToCard (0070000001)
+DMAIN NOTICE main_fsm.c:268 CLIENT_MAIN(main){OPERATIONAL}: Rx tpduCardToModem(019000)
+DMAIN INFO user_socket.c:57 APDU response 01 90 00
+...
+----
+
+* The SET_ATR is performed by osmo-remsim-bankd to inform the Unix socket client about the ATR of the real remote card.
+* The `0070000001` is a command TPDU sent by the socket client
+* The `019000` is a response TPDU provided by the remote card in response to the command
+
+The program continues in this loop (exchange APDUs between remote card and Unix socket client)
 until it is terminated by Ctrl+C or by other means.
 
 == libifd_remsim_client
