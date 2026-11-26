@@ -705,6 +705,7 @@ static int blocking_ipa_read(struct bankd_worker *worker, uint8_t *buf, unsigned
 static int worker_send_rspro(struct bankd_worker *worker, RsproPDU_t *pdu)
 {
 	struct msgb *msg = rspro_enc_msg(pdu);
+	unsigned int len, written = 0;
 	int rc;
 
 	if (!msg) {
@@ -718,14 +719,21 @@ static int worker_send_rspro(struct bankd_worker *worker, RsproPDU_t *pdu)
 	ipa_prepend_header_ext(msg, IPAC_PROTO_EXT_RSPRO);
 	ipa_prepend_header(msg, IPAC_PROTO_OSMO);
 
-	/* actually send it through the socket */
-	rc = write(worker->client.fd, msgb_data(msg), msgb_length(msg));
-	if (rc == msgb_length(msg))
-		rc = 0;
-	else {
-		LOGW(worker, "error during write: %d != %d\n", rc, msgb_length(msg));
-		rc = -1;
+	/* actually send it through the socket; a blocking write() may still
+	 * transfer less than requested, e.g. if interrupted by a signal */
+	len = msgb_length(msg);
+	while (written < len) {
+		rc = write(worker->client.fd, msgb_data(msg) + written, len - written);
+		if (rc == -1 && errno == EINTR)
+			continue;
+		if (rc <= 0) {
+			LOGW(worker, "error during write (%u of %u bytes written): %s\n",
+			     written, len, rc < 0 ? strerror(errno) : "no progress");
+			break;
+		}
+		written += rc;
 	}
+	rc = (written == len) ? 0 : -1;
 
 	msgb_free(msg);
 
