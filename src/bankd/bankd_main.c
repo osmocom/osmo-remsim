@@ -1028,7 +1028,7 @@ restart_wait:
 		return 0;
 	}
 
-	hh_ext = (struct ipaccess_head_ext *) buf + sizeof(*hh);
+	hh_ext = (struct ipaccess_head_ext *) hh->data;
 	if (data_len < sizeof(*hh_ext)) {
 		LOGW(worker, "Received short message\n");
 		return -5;
