@@ -639,6 +639,33 @@ static int worker_open_card(struct bankd_worker *worker)
 }
 
 
+/* blocking recv of exactly 'len' bytes from the client socket.  Returns 'len' on
+ * success, a smaller non-negative value if the peer closed the connection, -23 if
+ * the worker got unmapped meanwhile, or a negative value on error. */
+static int blocking_recv_exact(struct bankd_worker *worker, uint8_t *buf, unsigned int len)
+{
+	unsigned int received = 0;
+	int rc;
+
+	/* we use 'recv' and not 'read' below, as 'recv' will always fail with -EINTR
+	 * in case of a signal being received */
+
+	while (received < len) {
+		rc = recv(worker->client.fd, buf + received, len - received, 0);
+		if (rc == -1 && errno == EINTR) {
+			if (worker->state == BW_ST_CONN_CLIENT_UNMAPPED)
+				return -23;
+			continue;
+		} else if (rc < 0)
+			return rc;
+		else if (rc == 0)
+			break; /* connection closed by peer */
+		received += rc;
+	}
+
+	return received;
+}
+
 static int blocking_ipa_read(struct bankd_worker *worker, uint8_t *buf, unsigned int buf_size)
 {
 	struct ipaccess_head *hh;
@@ -650,17 +677,9 @@ static int blocking_ipa_read(struct bankd_worker *worker, uint8_t *buf, unsigned
 
 	hh = (struct ipaccess_head *) buf;
 
-	/* we use 'recv' and not 'read' below, as 'recv' will always fail with -EINTR
-	 * in case of a signal being received */
-
-restart_hdr:
 	/* 1) blocking recv from the socket (IPA header) */
-	rc = recv(worker->client.fd, buf, sizeof(*hh), 0);
-	if (rc == -1 && errno == EINTR) {
-		if (worker->state == BW_ST_CONN_CLIENT_UNMAPPED)
-			return -23;
-		goto restart_hdr;
-	} else if (rc < 0)
+	rc = blocking_recv_exact(worker, buf, sizeof(*hh));
+	if (rc < 0)
 		return rc;
 	else if (rc < sizeof(*hh))
 		return -2;
@@ -673,14 +692,9 @@ restart_hdr:
 	}
 	needed = len; //- sizeof(*hh);
 
-restart_body:
 	/* 2) blocking recv from the socket (payload) */
-	rc = recv(worker->client.fd, buf+sizeof(*hh), needed, 0);
-	if (rc == -1 && errno == EINTR) {
-		if (worker->state == BW_ST_CONN_CLIENT_UNMAPPED)
-			return -23;
-		goto restart_body;
-	} else if (rc < 0)
+	rc = blocking_recv_exact(worker, buf + sizeof(*hh), needed);
+	if (rc < 0)
 		return rc;
 	else if (rc < needed)
 		return -3;
