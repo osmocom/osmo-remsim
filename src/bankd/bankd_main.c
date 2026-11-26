@@ -666,6 +666,11 @@ restart_hdr:
 		return -2;
 
 	len = ntohs(hh->len);
+	if (sizeof(*hh) + len > buf_size) {
+		LOGW(worker, "IPA message too long (%u + %u > %u bytes)\n",
+		     (unsigned int) sizeof(*hh), len, buf_size);
+		return -8;
+	}
 	needed = len; //- sizeof(*hh);
 
 restart_body:
